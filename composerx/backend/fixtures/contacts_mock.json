@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Alex Morgan",
+    "email": "alex.morgan@example.com",
+    "phone": "+1-415-555-0101",
+    "note": "Newsletter — product updates"
+  },
+  {
+    "name": "Jamie Rivera",
+    "email": "jamie.rivera@example.com",
+    "phone": "+1-212-555-0142",
+    "note": "Enterprise pilot Q2"
+  },
+  {
+    "name": "Sam Okonkwo",
+    "email": "sam.okonkwo@example.com",
+    "phone": "+44-20-7946-0958",
+    "note": "London office lead"
+  },
+  {
+    "name": "Priya Shah",
+    "email": "priya.shah@example.com",
+    "phone": "+91-22-5551-3300",
+    "note": "Prefers plain-text summaries"
+  },
+  {
+    "name": "Chris Nielsen",
+    "email": "chris.nielsen@example.com",
+    "phone": "+45-32-12-34-56",
+    "note": "Copenhagen distributor"
+  },
+  {
+    "name": "Morgan Lee",
+    "email": "morgan.lee@example.com",
+    "phone": "+1-604-555-0187",
+    "note": "Weekly digest opt-in"
+  },
+  {
+    "name": "Taylor Brooks",
+    "email": "taylor.brooks@example.com",
+    "phone": "+1-512-555-0163",
+    "note": "Event invitations only"
+  },
+  {
+    "name": "Jordan Hayes",
+    "email": "jordan.hayes@example.com",
+    "phone": "+1-617-555-0199",
+    "note": "Renewal reminder Dec"
+  },
+  {
+    "name": "Riley Chen",
+    "email": "riley.chen@example.com",
+    "phone": "+86-21-5550-8844",
+    "note": "Shanghai partner contact"
+  },
+  {
+    "name": "Casey Nguyen",
+    "email": "casey.nguyen@example.com",
+    "phone": "+1-714-555-0120",
+    "note": "Wholesale pricing tier B"
+  },
+  {
+    "name": "Quinn Foster",
+    "email": "quinn.foster@example.com",
+    "phone": "+353-1-555-0144",
+    "note": "Dublin startup week follow-up"
+  },
+  {
+    "name": "Avery Patel",
+    "email": "avery.patel@example.com",
+    "phone": "+1-647-555-0175",
+    "note": "Toronto workshop attendee"
+  },
+  {
+    "name": "Reese Walters",
+    "email": "reese.walters@example.com",
+    "phone": "+49-30-5551-9922",
+    "note": "Berlin meetup 2025"
+  },
+  {
+    "name": "Skyler Kim",
+    "email": "skyler.kim@example.com",
+    "phone": "+82-2-555-3300",
+    "note": "Seoul reseller channel"
+  },
+  {
+    "name": "Drew Martinez",
+    "email": "drew.martinez@example.com",
+    "phone": "+34-91-555-7700",
+    "note": "Madrid EU compliance cc"
+  }
+]

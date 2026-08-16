@@ -1,0 +1,11 @@
+last_name,first_name,middle_name,staff_guid,email,phone_number,facility_id,employ_type,description
+Anderson,Rachel,,EMP-NVH-001,rachel.anderson@nvu.edu,503-555-0101,1,full-time,Principal North Valley High
+Torres,Miguel,A,EMP-ESE-002,miguel.torres@esc.edu,541-555-0102,2,full-time,4th grade homeroom teacher
+Singh,Priya,,EMP-HVM-003,priya.singh@hvs.edu,541-555-0103,3,full-time,Middle school science lead
+Johnson,Mark,E,EMP-SRP-004,mark.johnson@phu.edu,541-555-0104,4,part-time,Reading specialist 0.6 FTE
+Williams,Alicia,,EMP-LFA-005,alicia.williams@lps.edu,503-555-0105,5,full-time,STEM lab coordinator
+Davis,Robert,,EMP-CGH-006,robert.davis@cgi.edu,503-555-0106,6,full-time,Athletic director
+Garcia,Maria,Isabel,EMP-PHE-007,maria.garcia@phu.edu,541-555-0107,7,full-time,Cafeteria and nutrition manager
+Lee,James,,EMP-RAC-008,james.lee@rad.edu,541-555-0108,8,full-time,Theater production manager
+Thompson,Karen,L,EMP-PTH-009,karen.thompson@pmd.edu,503-555-0109,9,full-time,Transportation dispatcher
+Brown,David,,EMP-WCK-010,david.brown@wce.edu,503-555-0110,10,full-time,K-8 assistant principal

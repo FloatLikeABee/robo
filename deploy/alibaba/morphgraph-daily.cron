@@ -1,0 +1,4 @@
+# Daily GraphRAG sync (install under /etc/cron.d/ or crontab -e)
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+0 3 * * * root cd /opt/robo/morphgraph-worker && ./morphgraph-worker sync --mode=daily >> /var/log/robo/morphgraph-daily.log 2>&1

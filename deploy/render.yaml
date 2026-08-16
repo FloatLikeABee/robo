@@ -1,0 +1,155 @@
+# Render Blueprint — https://render.com/docs/infrastructure-as-code
+# Apply: Dashboard → New → Blueprint → deploy/render.yaml
+#    or: ./scripts/deploy.sh render apply
+#
+# Prerequisites:
+#   - External MySQL + MongoDB + Redis (env group robo-secrets)
+#   - Persistent disks for morph / formx / composerx
+#   - Set secret values in Render Dashboard after first apply
+
+databases: []
+
+services:
+  # ── Auth hub ───────────────────────────────────────────────
+  - type: web
+    name: userspanel-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/userspanel.Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - fromGroup: robo-secrets
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: userspanel-admin
+    runtime: static
+    buildCommand: cd UsersPanel/admin && npm ci && npm run build
+    staticPublishPath: UsersPanel/admin/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=300
+
+  # ── Morph (API + SPA) ──────────────────────────────────────
+  - type: web
+    name: morph-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/morph.Dockerfile
+    dockerContext: .
+    plan: starter
+    disk:
+      name: morph-data
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - fromGroup: robo-secrets
+      - key: DB_PATH
+        value: /data/badger
+      - key: PORT
+        value: 10000
+
+  # ── FormsX ─────────────────────────────────────────────────
+  - type: web
+    name: formx-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/formx.Dockerfile
+    dockerContext: .
+    plan: starter
+    disk:
+      name: formx-uploads
+      mountPath: /uploads
+      sizeGB: 5
+    envVars:
+      - fromGroup: robo-secrets
+      - key: UPLOAD_DIR
+        value: /uploads
+      - key: SERVER_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: formx-ui
+    runtime: static
+    buildCommand: cd formx/frontend && npm ci && npm run build
+    staticPublishPath: formx/frontend/dist
+
+  # ── ComposerX ──────────────────────────────────────────────
+  - type: web
+    name: composerx-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/composerx.Dockerfile
+    dockerContext: .
+    plan: starter
+    disk:
+      name: composerx-storage
+      mountPath: /storage
+      sizeGB: 5
+    envVars:
+      - fromGroup: robo-secrets
+      - key: TRAN_MONGO_DB
+        value: alterathena
+      - key: TRAN_FILE_STORAGE_PATH
+        value: /storage
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: composerx-ui
+    runtime: static
+    buildCommand: cd composerx/frontend && npm ci && npm run build
+    staticPublishPath: composerx/frontend/dist
+
+  # ── Booki ──────────────────────────────────────────────────
+  - type: web
+    name: booki-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/booki.Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - fromGroup: robo-secrets
+      - key: APP_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: booki-ui
+    runtime: static
+    buildCommand: cd booki/frontend && npm ci && npm run build
+    staticPublishPath: booki/frontend/dist
+
+  # ── Morph Engi ─────────────────────────────────────────────
+  - type: web
+    name: morph-engi-api
+    runtime: docker
+    dockerfilePath: ./deploy/docker/morph-engi.Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - fromGroup: robo-secrets
+      - key: APP_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+
+  - type: web
+    name: morph-engi-ui
+    runtime: static
+    buildCommand: cd morph-engi/frontend && npm ci && npm run build
+    staticPublishPath: morph-engi/frontend/dist
+
+  # ── Morph Utils shell ──────────────────────────────────────
+  - type: web
+    name: morph-utils-ui
+    runtime: static
+    buildCommand: cd morph-utils/frontend && npm ci && npm run build
+    staticPublishPath: morph-utils/frontend/dist
+
+# SharpReport: deploy separately on Alibaba ECS via SharpReport/deploy/docker-compose.yml
+# (Java + Metabase needs more RAM than typical Render starter plans).

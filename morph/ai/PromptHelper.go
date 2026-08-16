@@ -1,0 +1,241 @@
+package ai
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"idongivaflyinfa/models"
+)
+
+// BuildSQLPrompt constructs a prompt for SQL generation based on user request and reference SQL files
+func BuildSQLPrompt(userPrompt string, sqlFiles []models.SQLFile) string {
+	var contextBuilder strings.Builder
+	contextBuilder.WriteString("You are a SQL expert assistant. Below are reference SQL files that you should use as examples and guidelines:\n\n")
+
+	for _, sqlFile := range sqlFiles {
+		contextBuilder.WriteString(fmt.Sprintf("--- SQL File: %s ---\n", sqlFile.Name))
+		contextBuilder.WriteString(sqlFile.Content)
+		contextBuilder.WriteString("\n\n")
+	}
+
+	contextBuilder.WriteString("--- User Request ---\n")
+	contextBuilder.WriteString(userPrompt)
+	contextBuilder.WriteString("\n\n")
+	contextBuilder.WriteString("Based on the SQL files provided above, generate the correct SQL query for the user's request. Return only the SQL query without any explanation or markdown formatting.")
+
+	return contextBuilder.String()
+}
+
+// BuildFormHTMLPrompt constructs a prompt for form HTML page generation based on form JSON
+func BuildFormHTMLPrompt(formJSON string, formName string, formDescription string) string {
+	var promptBuilder strings.Builder
+	promptBuilder.WriteString("You are a professional web developer. Generate a beautiful, modern, and professional HTML form page.\n\n")
+	
+	promptBuilder.WriteString("Theme Colors (STRICT):\n")
+	promptBuilder.WriteString("- Primary/Accent: Dark Orange ONLY (use colors like #FF8C00, #FF7F00, or #E67300). Do NOT use any other accent colors.\n")
+	promptBuilder.WriteString("- Background: Really Dark Grey ONLY (use colors like #121212, #181818, or #1e1e1e). Do NOT introduce other background colors.\n")
+	promptBuilder.WriteString("- Text: Light grey or white for contrast on dark background.\n")
+	promptBuilder.WriteString("- Inputs: Background slightly darker than main background, with borders just a bit lighter than the dark grey (e.g. border colors around #303030–#3a3a3a). No colorful borders.\n")
+	promptBuilder.WriteString("- Overall: A minimal, professional dark theme using ONLY dark grey and dark orange, no other colors.\n\n")
+	
+	promptBuilder.WriteString("Form Information:\n")
+	if formName != "" {
+		promptBuilder.WriteString(fmt.Sprintf("Form Name: %s\n", formName))
+	}
+	if formDescription != "" {
+		promptBuilder.WriteString(fmt.Sprintf("Form Description: %s\n", formDescription))
+	}
+	promptBuilder.WriteString("\n")
+	
+	promptBuilder.WriteString("IMPORTANT: You must ONLY use the \"UDGridSections\" part of the JSON below. ")
+	promptBuilder.WriteString("All other properties (InIPBoundary, RequireIPAddress, ID, DataTypeId, etc.) are configuration and should be HIDDEN from the visible form. ")
+	promptBuilder.WriteString("Only render the sections and their fields (UDGridFields) as form elements.\n\n")
+	
+	promptBuilder.WriteString("Form JSON Structure:\n")
+	promptBuilder.WriteString(formJSON)
+	promptBuilder.WriteString("\n\n")
+	
+	promptBuilder.WriteString("Requirements:\n")
+	promptBuilder.WriteString("1. Extract ONLY the UDGridSections array from the JSON\n")
+	promptBuilder.WriteString("2. For each section, create a section header with the section Name\n")
+	promptBuilder.WriteString("3. For each field in UDGridFields, create appropriate form inputs based on TypeName:\n")
+	promptBuilder.WriteString("   - Text: <input type=\"text\">\n")
+	promptBuilder.WriteString("   - Email: <input type=\"email\">\n")
+	promptBuilder.WriteString("   - Phone Number: <input type=\"tel\">\n")
+	promptBuilder.WriteString("   - Date/Time: <input type=\"datetime-local\">\n")
+	promptBuilder.WriteString("   - Boolean: <input type=\"checkbox\"> or radio buttons\n")
+	promptBuilder.WriteString("   - Currency: <input type=\"number\" step=\"0.01\">\n")
+	promptBuilder.WriteString("   - Attachment: <input type=\"file\">\n")
+	promptBuilder.WriteString("4. Use DisplayName for field labels\n")
+	promptBuilder.WriteString("5. Mark required fields (Required: true) with an asterisk (*) and use the 'required' attribute\n")
+	promptBuilder.WriteString("6. Create a professional, modern design using ONLY dark grey and dark orange (no other colors)\n")
+	promptBuilder.WriteString("7. Use proper spacing, padding, and typography\n")
+	promptBuilder.WriteString("8. Make the form responsive and mobile-friendly\n")
+	promptBuilder.WriteString("9. Add a submit button at the bottom\n")
+	promptBuilder.WriteString("10. Include proper form validation styling\n")
+	promptBuilder.WriteString("11. Use CSS embedded in <style> tag\n")
+	promptBuilder.WriteString("12. Add hover effects and transitions for better UX\n")
+	promptBuilder.WriteString("13. Ensure good contrast for accessibility\n")
+	promptBuilder.WriteString("14. Use modern CSS features (flexbox/grid)\n")
+	promptBuilder.WriteString("\nReturn ONLY the complete HTML code, including <!DOCTYPE html>, <html>, <head>, and <body> tags. ")
+	promptBuilder.WriteString("Do not include any markdown code blocks or explanations. ")
+	promptBuilder.WriteString("The HTML must be self-contained and render a functional form based on the UDGridSections data.")
+
+	return promptBuilder.String()
+}
+
+// BuildFormSelectionPrompt builds the system + user prompt for choosing a form by name.
+// formNamesDescriptions is a plain list like "Student Registration Form (registers students with name, age, etc.), Staff Attendance Form (name, staff number, time)"
+// No form IDs are included; the caller maps the chosen name back to ID.
+func BuildFormSelectionPrompt(userMessage string, formNamesDescriptions string) (systemPrompt string, userPrompt string) {
+	systemPrompt = `You are a form assistant. The user wants to register or fill out a form. You must pick exactly one form that best matches their request.
+
+Available forms (name and short description only):
+` + formNamesDescriptions + `
+
+Rules:
+- Reply with exactly ONE form name from the list above, nothing else. Use the exact form name as written.
+- If no form fits the user's request, reply with exactly: NONE
+- Do not include IDs, explanations, or extra text. Only the form name or NONE.`
+	userPrompt = "User said: " + userMessage
+	return systemPrompt, userPrompt
+}
+
+// BuildFieldGatheringPrompt builds the system prompt and appends conversation + latest user message
+// so the model can decide either "complete" with answers JSON or "ask" for missing fields.
+func BuildFieldGatheringPrompt(conversationHistory []models.RegConvTurn, formFields []models.FormField, latestUserMessage string) (systemPrompt string, conversationForModel string) {
+	var fieldsDesc strings.Builder
+	for _, f := range formFields {
+		req := ""
+		if f.Required {
+			req = " (required)"
+		}
+		fieldsDesc.WriteString(fmt.Sprintf("- %s (field name: %s)%s\n", f.Label, f.Name, req))
+	}
+	systemPrompt = `You are a form-filling assistant. We are filling a form. The form has these fields:
+` + fieldsDesc.String() + `
+
+You have a conversation so far. Based on the full conversation and the latest user message, decide:
+1. If we have values for ALL required fields (from the conversation and latest message combined), reply with ONLY this JSON, no other text:
+   {"complete":true,"answers":{"field_name":"value","field_name2":"value2",...}}
+   Use the exact field names (e.g. ` + "`name`" + `, ` + "`age`" + `) as keys. Include every field we know; required ones must have a value.
+2. If we are still missing any required field (or you are unsure), reply with ONLY this JSON:
+   {"complete":false,"ask":"A short, friendly question asking the user for the missing information."}
+
+Rules:
+- Output ONLY valid JSON. No markdown, no code fences, no explanation.
+- For "ask", be concise and ask for one or two missing items at a time.
+- Infer obvious field values from the user's wording. For example, if the user talks about the student using male pronouns like "he", "his", or phrases like "he's 13", then set any gender/sex field to "male". If they use female pronouns like "she", "her", or "she's 13", set it to "female". Only leave a gender/sex field empty if the conversation truly gives no clear indication.`
+	var convBuilder strings.Builder
+	for _, t := range conversationHistory {
+		convBuilder.WriteString(fmt.Sprintf("%s: %s\n", t.Role, t.Content))
+	}
+	convBuilder.WriteString("user: " + latestUserMessage)
+	conversationForModel = convBuilder.String()
+	return systemPrompt, conversationForModel
+}
+
+// BuildFieldGatheringPromptWithCurrent builds a prompt for updating existing answers (confirmation-edit flow).
+// The model should merge the user's change request into currentAnswers and return complete JSON or ask.
+func BuildFieldGatheringPromptWithCurrent(formFields []models.FormField, currentAnswers map[string]interface{}, userMessage string) (systemPrompt string, userPrompt string) {
+	var fieldsDesc strings.Builder
+	for _, f := range formFields {
+		req := ""
+		if f.Required {
+			req = " (required)"
+		}
+		fieldsDesc.WriteString(fmt.Sprintf("- %s (field name: %s)%s\n", f.Label, f.Name, req))
+	}
+	var currentJSON string
+	if len(currentAnswers) > 0 {
+		b, _ := json.Marshal(currentAnswers)
+		currentJSON = string(b)
+	} else {
+		currentJSON = "{}"
+	}
+	systemPrompt = `You are a form-filling assistant. The user has already provided the following values and is now requesting a change. Merge their request into the current values.
+
+Form fields:
+` + fieldsDesc.String() + `
+
+Current values (JSON): ` + currentJSON + `
+
+Rules:
+- Reply with ONLY valid JSON. No markdown, no code fences, no explanation.
+- If you can apply the user's change and have ALL required fields filled, reply: {"complete":true,"answers":{...}} with every field name as key and the updated value. Use existing values for any field not being changed.
+- If you need clarification, reply: {"complete":false,"ask":"A short question."}
+- Use the exact field names as keys.`
+	userPrompt = "User says: " + userMessage
+	return systemPrompt, userPrompt
+}
+
+// BuildDocumentIntentPrompt builds a prompt to classify document intent: FORM, RESEARCH, or SUMMARY.
+func BuildDocumentIntentPrompt(userMessage, extractedText, aiResult string) string {
+	return fmt.Sprintf(`You are a classifier. Based on the user's message and the extracted/summarized document content, decide the single best action.
+
+User message: %s
+
+Document content (extracted/summarized): %s
+
+Reply with exactly ONE word:
+- FORM: if the content describes or implies a form (registration, application, survey, questionnaire, data collection form, student form, staff form, or any structured form to collect fields). Also choose FORM if the user explicitly asks to create a form from the document.
+- RESEARCH: if the user wants to research the topic further, find more information, or the content is a topic that would benefit from web search (e.g. "research this", "find out more", "what do people say about", general knowledge topic).
+- SUMMARY: if we should just show the summary (user did not ask for a form or research; default when unclear).
+
+Reply with only: FORM or RESEARCH or SUMMARY`, userMessage, aiResult+"\n\n"+extractedText)
+}
+
+// BuildFormTemplateFromContentPrompt builds a prompt to generate a FormTemplate (name, description, user_type, fields) from document content.
+func BuildFormTemplateFromContentPrompt(content string, userContext string) string {
+	return fmt.Sprintf(`Generate a form template from the following document content. Output valid JSON only, no markdown or explanation.
+
+Required JSON structure (use exactly these keys):
+{
+  "name": "Form Name",
+  "description": "Short description",
+  "user_type": "student" or "staff" or "general",
+  "fields": [
+    {"name": "field_id", "label": "Display Label", "type": "text|email|number|tel|date|select", "required": true/false, "placeholder": "", "options": []}
+  ]
+}
+
+Rules:
+- "name" and "description" must reflect the document.
+- "user_type": use "student" for student-related forms, "staff" for staff/employee forms, "general" for anything else.
+- "fields": extract every field/question the document describes. Use "name" as a short id (e.g. name, age, email). Use "label" for human-readable label. Use "type" text, email, number, tel, date, or select. For select, include "options" array.
+- For select fields, set "options" to an array of strings if the document specifies choices; otherwise use type "text".
+
+Document content:
+%s
+
+User context (if any): %s
+
+Return ONLY the JSON object.`, content, userContext)
+}
+
+// BuildSheetTemplateFromUserPrompt asks the model for a sheet template (same JSON shape as FormTemplate) from a chat message.
+func BuildSheetTemplateFromUserPrompt(userPrompt string) string {
+	return fmt.Sprintf(`Generate a sheet template for a school web application. A "sheet" is a reusable template for collecting structured rows of data (like a spreadsheet or attendance log).
+Output valid JSON only, no markdown or explanation.
+
+Required JSON structure (use exactly these keys):
+{
+  "name": "Sheet name",
+  "description": "Short description",
+  "user_type": "student" or "staff" or "general",
+  "fields": [
+    {"name": "field_id", "label": "Column header", "type": "text|email|number|tel|date|select", "required": true/false, "placeholder": "", "options": []}
+  ]
+}
+
+Rules:
+- Infer columns from the user's request (e.g. date, route, student names, attendance, notes).
+- "user_type": "student" for student-facing tracking, "staff" for staff logs, "general" otherwise.
+- Use "select" with "options" when choices are implied (e.g. present/absent).
+
+User request:
+%s
+
+Return ONLY the JSON object.`, userPrompt)
+}

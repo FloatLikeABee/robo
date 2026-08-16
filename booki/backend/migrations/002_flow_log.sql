@@ -1,0 +1,2 @@
+-- Flow log is included in internal/database/schema.sql (SQLite).
+-- This file is retained for migration history only.

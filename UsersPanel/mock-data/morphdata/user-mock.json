@@ -1,0 +1,12 @@
+[
+  {"login_id": "nvu.admin", "first_name": "Nora", "last_name": "Vega", "email": "nora.vega@nvu.edu", "phone": "503-555-6100", "administrator": "true"},
+  {"login_id": "mtorres.staff", "first_name": "Miguel", "last_name": "Torres", "email": "mtorres@esc.edu", "phone": "541-555-6101", "administrator": "false"},
+  {"login_id": "data.clerk", "first_name": "Dana", "last_name": "Clark", "email": "dana.clark@nvu.edu", "phone": "503-555-6102", "administrator": "false"},
+  {"login_id": "fleet.ops", "first_name": "Fleet", "last_name": "Ops", "email": "transport@nvu.edu", "phone": "503-555-6103", "administrator": "false"},
+  {"login_id": "hvs.registrar", "first_name": "Henry", "last_name": "Voss", "email": "henry.voss@hvs.edu", "phone": "541-555-6104", "administrator": "false"},
+  {"login_id": "readonly.audit", "first_name": "Alex", "last_name": "Morgan", "email": "audit@nvu.edu", "phone": "503-555-6105", "administrator": "false"},
+  {"login_id": "phu.nurse", "first_name": "Paula", "last_name": "Hughes", "email": "phu.nurse@phu.edu", "phone": "541-555-6106", "administrator": "false"},
+  {"login_id": "rad.coach", "first_name": "Rina", "last_name": "Adebayo", "email": "rad.coach@rad.edu", "phone": "541-555-6107", "administrator": "false"},
+  {"login_id": "wce.secretary", "first_name": "Wendy", "last_name": "Ellis", "email": "wce.secretary@wce.edu", "phone": "503-555-6108", "administrator": "false"},
+  {"login_id": "import.test", "first_name": "Import", "last_name": "Tester", "email": "import.test@example.com", "phone": "503-555-6199", "administrator": "false"}
+]

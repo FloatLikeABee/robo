@@ -1,0 +1,59 @@
+{
+  "description": "Example SAE application list — create one SAE app per image in ACR",
+  "registry": "registry.cn-hangzhou.aliyuncs.com/<namespace>/robo",
+  "apps": [
+    {
+      "name": "userspanel-api",
+      "image": "userspanel:latest",
+      "port": 5001,
+      "cpu": 1,
+      "memory_gb": 1,
+      "env_from": "/etc/robo/env.production"
+    },
+    {
+      "name": "morph-api",
+      "image": "morph:latest",
+      "port": 9090,
+      "cpu": 1,
+      "memory_gb": 2,
+      "nas_mounts": [{ "path": "/data", "purpose": "badger" }]
+    },
+    {
+      "name": "formx-api",
+      "image": "formx:latest",
+      "port": 29909,
+      "cpu": 1,
+      "memory_gb": 1,
+      "nas_mounts": [{ "path": "/uploads", "purpose": "uploads" }]
+    },
+    {
+      "name": "composerx-api",
+      "image": "composerx:latest",
+      "port": 8043,
+      "cpu": 1,
+      "memory_gb": 1,
+      "nas_mounts": [{ "path": "/storage", "purpose": "files" }],
+      "env": { "TRAN_MONGO_DB": "alterathena" }
+    },
+    {
+      "name": "booki-api",
+      "image": "booki:latest",
+      "port": 9095,
+      "cpu": 1,
+      "memory_gb": 1
+    },
+    {
+      "name": "morph-engi-api",
+      "image": "morph-engi:latest",
+      "port": 9096,
+      "cpu": 1,
+      "memory_gb": 1
+    }
+  ],
+  "notes": [
+    "Deploy UsersPanel first and set USERS_PANEL_BASE_URL on every other app.",
+    "Host SPAs on OSS + CDN; do not put Vite dist inside SAE unless needed.",
+    "SharpReport + Metabase: use a dedicated ECS with SharpReport/deploy/docker-compose.yml.",
+    "Neo4j GraphRAG: native install on ECS (no Docker) per docs/MORPH_GRAPH_RAG_PLAN.md."
+  ]
+}

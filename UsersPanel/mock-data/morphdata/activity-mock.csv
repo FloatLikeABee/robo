@@ -1,0 +1,11 @@
+Name,ActivityType,start_date,end_date,location,GUID,description
+Oregon Museum of Science Field Trip,excursion,2026-04-15,2026-04-15,OMSI Portland,ACT-2026-001,Grade 7 science curriculum visit with lab workshop
+Regional Choir Festival,performance,2026-03-08,2026-03-09,Eugene Hult Center,ACT-2026-002,Advanced choir overnight trip with adjudication
+Spring Athletics Track Meet,athletics,2026-05-02,2026-05-02,Summit Ridge Stadium,ACT-2026-003,Middle school track and field invitational
+Harbor Marine Biology Day,trip,2026-06-12,2026-06-12,Charleston Marine Lab,ACT-2026-004,8th grade tide pool and lab rotation
+Community Food Drive Route,service,2026-02-20,2026-02-20,Local food bank,ACT-2026-005,Student council neighborhood collection run
+College Campus Tour SF,college_visit,2026-10-14,2026-10-16,San Francisco Bay Area,ACT-2026-006,Junior class overnight university tours
+Robotics State Championship,competition,2026-05-18,2026-05-19,Oregon Convention Center,ACT-2026-007,FTC team regional finals Portland
+Wildfire Preparedness Drill,training,2026-09-25,2026-09-25,District transport hub,ACT-2026-008,Staff and driver evacuation tabletop exercise
+Winter Band Concert,performance,2026-12-11,2026-12-11,Riverside Arts Center,ACT-2026-009,Winter concert open to community
+Bus Safety Inspection Week,maintenance,2026-08-04,2026-08-08,Fleet maintenance yard,ACT-2026-010,Annual pre-term vehicle inspection cycle

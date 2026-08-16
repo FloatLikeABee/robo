@@ -1,0 +1,9 @@
+-- Single-row table: JSON object of label overrides (empty = use code defaults).
+CREATE TABLE IF NOT EXISTS PlatformUiConfig (
+  ID TINYINT NOT NULL PRIMARY KEY,
+  ConfigJSON LONGTEXT NOT NULL,
+  UpdatedOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO PlatformUiConfig (ID, ConfigJSON) VALUES (1, '{}')
+ON DUPLICATE KEY UPDATE ConfigJSON = ConfigJSON;

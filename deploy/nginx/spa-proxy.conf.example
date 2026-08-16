@@ -1,0 +1,74 @@
+# Example reverse proxy for a single ECS host.
+# Prefer separate hostnames per product when using ALB.
+#
+# Enable:
+#   sudo cp /etc/nginx/sites-available/robo.example /etc/nginx/sites-enabled/robo
+#   sudo nginx -t && sudo systemctl reload nginx
+
+upstream userspanel { server 127.0.0.1:5001; }
+upstream morph      { server 127.0.0.1:9090; }
+upstream formx      { server 127.0.0.1:29909; }
+upstream composerx  { server 127.0.0.1:8043; }
+upstream booki      { server 127.0.0.1:9095; }
+
+server {
+    listen 80;
+    server_name panel-api.example.com;
+    location / {
+        proxy_pass http://userspanel;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name morph.example.com;
+    client_max_body_size 50m;
+    location / {
+        proxy_pass http://morph;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name forms-api.example.com;
+    client_max_body_size 50m;
+    location / {
+        proxy_pass http://formx;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name mail-api.example.com;
+    client_max_body_size 50m;
+    location / {
+        proxy_pass http://composerx;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Static SPA example (after uploading dist/ to /var/www/formx-ui)
+server {
+    listen 80;
+    server_name forms.example.com;
+    root /var/www/formx-ui;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- API: on phones, localhost means the phone itself. Leave port in sync with SERVER_PORT (.env). Override with full URL if needed: content="http://192.168.1.5:8978/api/v1" -->
+    <meta name="academi-api-base" content="">
+    <meta name="academi-api-port" content="8978">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>Docs</title>
+    <link rel="stylesheet" href="styles.css?v=16">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app">
+        <!-- Header + section tabs (Booki / SurveyX style) -->
+        <header class="header">
+            <div class="header-top">
+                <div class="header-brand">
+                    <div class="header-brand-mark" aria-hidden="true">A</div>
+                    <div class="header-brand-text">
+                        <span class="header-brand-name">Docs</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button type="button" id="chatHistoryBtn" class="header-history-btn" aria-label="Chat history" title="Recent chats">☰</button>
+                    <div class="header-status">
+                        <div class="neural-glow" id="statusGlow"></div>
+                        <span id="statusText">Online</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="tab-bar" aria-label="Docs navigation">
+                <button class="tab-btn active" data-screen="chat">
+                    <span class="tab-icon">⌨</span>
+                    <span class="tab-label">Docs AI</span>
+                </button>
+                <button class="tab-btn" data-screen="community">
+                    <span class="tab-icon">◍</span>
+                    <span class="tab-label">Publish</span>
+                </button>
+                <button class="tab-btn" data-screen="docs">
+                    <span class="tab-icon">⧉</span>
+                    <span class="tab-label">Docs</span>
+                </button>
+            </nav>
+        </header>
+
+        <div class="chat-history-drawer" id="chatHistoryDrawer" hidden>
+            <div class="chat-history-backdrop" id="chatHistoryBackdrop"></div>
+            <aside class="chat-history-panel" aria-label="Chat history">
+                <div class="chat-history-header">
+                    <span class="chat-history-title">Recent chats</span>
+                    <div class="chat-history-actions">
+                        <button type="button" id="newChatSessionBtn" class="chat-history-new">＋ New</button>
+                        <button type="button" id="chatHistoryClose" class="chat-history-close" aria-label="Close">✕</button>
+                    </div>
+                </div>
+                <p class="chat-history-hint">Stored on this device’s server: up to <strong>35</strong> threads, <strong>72</strong> messages each (older turns drop off).</p>
+                <ul id="chatHistoryList" class="chat-history-list"></ul>
+            </aside>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Chat Screen (Default) -->
+            <div class="screen chat-screen active" id="chatScreen">
+                <div class="chat-toolbar" id="chatToolbar">
+                    <label class="toolbar-label" title="Asks clarifying questions before drafting; uses research when enabled">
+                        <input type="checkbox" id="documentModeToggle" />
+                        <span>Document agent</span>
+                    </label>
+                    <label class="toolbar-label" title="Web search for common learning approaches and reply with a Markdown guide (also when you ask how to learn a topic)">
+                        <input type="checkbox" id="helpLearnToggle" />
+                        <span>Learning guide</span>
+                    </label>
+                    <label class="toolbar-label" title="Attach Wikipedia / web / arXiv snippets to the reply">
+                        <input type="checkbox" id="researchToggle" checked />
+                        <span>Research</span>
+                    </label>
+                    <span class="file-icon-control">
+                        <input
+                            type="file"
+                            id="chatFileInput"
+                            class="hidden-file-input"
+                            accept=".pdf,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,application/pdf,text/plain,text/markdown,image/*"
+                            multiple
+                        />
+                        <label for="chatFileInput" class="toolbar-attach-btn" title="Attach PDF, text, or image" aria-label="Attach PDF, text, or image">
+                            <span aria-hidden="true">📄</span>
+                        </label>
+                    </span>
+                    <span class="attach-badge" id="attachBadge" hidden></span>
+                </div>
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Messages -->
+                    <div class="messages" id="messages">
+                        <div class="message ai-message">
+                            <div class="message-content">
+                                <p>Hello! I'm Docs, your AI study assistant. Ask me anything or use the ⚡ button for quick actions!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <div class="neural-glow active"></div>
+                    <span>Docs is thinking...</span>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <button id="suggestionsToggle" class="suggestions-toggle-btn" title="Quick Actions">
+                            <span>⚡</span>
+                        </button>
+                        <textarea
+                            id="messageInput"
+                            placeholder="Ask Docs anything..."
+                            maxlength="12000"
+                            rows="1"
+                        ></textarea>
+                        <button id="sendButton" class="send-btn" disabled>
+                            <span>▶</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggestions Panel (Modal) - Outside chat screen -->
+            <div class="suggestions-panel" id="suggestionsPanel">
+                <div class="suggestions-section">
+                    <h3 class="section-title">Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" data-query="Summarize this topic">⟐ Summarize</button>
+                        <button class="quick-action-btn" data-query="Explain in detail">⍰ Explain</button>
+                        <button class="quick-action-btn" data-query="Create a study plan">⟑ Study Plan</button>
+                        <button class="quick-action-btn" data-query="Give me examples">⏣ Examples</button>
+                    </div>
+                </div>
+                <div class="suggestions-section">
+                    <h3 class="section-title">Suggested Topics</h3>
+                    <div class="topic-tags">
+                        <span class="tag-chip glow" data-topic="#math">math</span>
+                        <span class="tag-chip glow" data-topic="#physics">physics</span>
+                        <span class="tag-chip glow" data-topic="#cs">cs</span>
+                        <span class="tag-chip glow" data-topic="#biology">biology</span>
+                        <span class="tag-chip glow" data-topic="#chemistry">chemistry</span>
+                        <span class="tag-chip glow" data-topic="#quantum">quantum</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Community Screen -->
+            <div class="screen community-screen" id="communityScreen">
+                <div class="community-toolbar">
+                    <h2 class="community-toolbar-title">Publish</h2>
+                    <p class="community-toolbar-hint" style="margin:0;font-size:12px;opacity:.75">
+                        Board moved to Data Access → Docs → Publish (HTML + optional AI analysis).
+                    </p>
+                </div>
+                <div id="communityFeed" class="community-feed" aria-live="polite"></div>
+                <button type="button" id="communityAddPostBtn" class="community-fab" aria-label="New post">＋</button>
+            </div>
+
+            <!-- Docs Screen -->
+            <div class="screen docs-screen" id="docsScreen">
+                <div class="docs-screen-body">
+                    <div class="docs-top-bar">
+                        <button type="button" id="createDocBtn" class="create-doc-btn">＋ Create doc</button>
+                    </div>
+                    <div class="search-bar neural">
+                        <input type="text" placeholder="Search documents..." id="docSearch">
+                        <button class="search-btn" type="button" aria-label="Search">⟲</button>
+                    </div>
+                    <div class="docs-grid" id="docsGrid">
+                        <p class="docs-empty" id="docsEmpty">No documents yet. Create one, upload from chat (📎), or use <strong>Document agent</strong> in Chat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Screen removed: use Morph Utils Settings -->
+            <div class="screen profile-screen" id="profileScreen" hidden aria-hidden="true">
+                <button type="button" id="themeToggle" class="toggle-btn" hidden>🌙 Dark</button>
+                <h2 id="profileUserName" hidden>Loading…</h2>
+            </div>
+        </main>
+    </div>
+
+    <div class="doc-modal" id="createDocModal" hidden>
+        <div class="doc-modal-backdrop" id="createDocModalBackdrop"></div>
+        <div class="doc-modal-panel doc-modal-panel--form" role="dialog" aria-labelledby="createDocModalHeading">
+            <div class="doc-modal-header">
+                <h3 id="createDocModalHeading">Create document</h3>
+                <button type="button" class="doc-modal-close" id="createDocModalClose" aria-label="Close">✕</button>
+            </div>
+            <div class="create-doc-form">
+                <label class="form-label">Attach file (optional)</label>
+                <div class="doc-file-row">
+                    <input
+                        type="file"
+                        id="createDocFile"
+                        class="hidden-file-input"
+                        accept=".pdf,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,application/pdf,text/plain,text/markdown,image/*"
+                    />
+                    <label for="createDocFile" class="doc-file-picker-btn" title="Attach PDF, text, or image" aria-label="Attach file">
+                        <span aria-hidden="true">📄</span>
+                    </label>
+                </div>
+                <p class="form-file-name" id="createDocFileName">No file selected</p>
+                <p class="form-hint">PDF, text, Markdown, or images — same as chat uploads. Or create from title + content only.</p>
+                <label class="form-label">Title</label>
+                <input type="text" id="createDocTitle" class="form-input" placeholder="e.g. Lecture 3 notes" maxlength="200" />
+                <label class="form-label">Content</label>
+                <textarea id="createDocContent" class="form-textarea" placeholder="Paste or type your notes… (not required if you only upload a file)" maxlength="500000" rows="8"></textarea>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="createDocCancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="createDocSaveBtn">Save</button>
+                    <button type="button" class="btn-primary" id="createDocSaveAnalyzeBtn">Save &amp; Help you learn</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-modal" id="learnModal" hidden>
+        <div class="doc-modal-backdrop" id="learnModalBackdrop"></div>
+        <div class="doc-modal-panel" role="dialog" aria-labelledby="learnModalHeading">
+            <div class="doc-modal-header">
+                <h3 id="learnModalHeading">Help you learn</h3>
+                <button type="button" class="doc-modal-close" id="learnModalClose" aria-label="Close">✕</button>
+            </div>
+            <div class="doc-modal-body doc-modal-body--md learn-modal-body" id="learnModalBody"></div>
+            <div class="learn-modal-actions">
+                <button type="button" class="btn-secondary" id="learnModalBackground" hidden title="Close and notify when the analysis is ready">
+                    Run in background
+                </button>
+                <button type="button" class="btn-secondary" id="learnModalDismiss">Close</button>
+                <button type="button" class="btn-primary" id="learnModalSaveDoc">Save analysis to Docs</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-modal" id="docModal" hidden>
+        <div class="doc-modal-backdrop" id="docModalBackdrop"></div>
+        <div class="doc-modal-panel" role="dialog" aria-labelledby="docModalTitle">
+            <div class="doc-modal-header">
+                <h3 id="docModalTitle"></h3>
+                <button type="button" class="doc-modal-close" id="docModalClose" aria-label="Close">✕</button>
+            </div>
+            <div class="doc-modal-body doc-modal-body--md" id="docModalBody"></div>
+        </div>
+    </div>
+
+    <div class="doc-modal" id="communityCreateModal" hidden>
+        <div class="doc-modal-backdrop" id="communityCreateModalBackdrop"></div>
+        <div class="doc-modal-panel community-modal-panel" role="dialog" aria-modal="true" aria-labelledby="communityCreateModalTitle">
+            <div class="doc-modal-header">
+                <h3 id="communityCreateModalTitle">New post</h3>
+                <button type="button" class="doc-modal-close" id="communityCreateModalClose" aria-label="Close">✕</button>
+            </div>
+            <div class="community-modal-body">
+                <textarea id="communityModalPostInput" class="community-post-input" placeholder="Share a question, tip, or resource…" maxlength="8000" rows="6"></textarea>
+                <label class="form-label">Attach file (optional)</label>
+                <div class="doc-file-row">
+                    <input
+                        type="file"
+                        id="communityPostFile"
+                        class="hidden-file-input"
+                        accept=".pdf,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,application/pdf,text/plain,text/markdown,image/*"
+                    />
+                    <label for="communityPostFile" class="doc-file-picker-btn" title="Attach file for AI analysis" aria-label="Attach file">
+                        <span aria-hidden="true">📄</span>
+                    </label>
+                    <span class="form-file-name" id="communityPostFileName">No file selected</span>
+                </div>
+                <label class="toolbar-label community-analyze-check">
+                    <input type="checkbox" id="communityAnalyzeToggle" checked />
+                    <span>Run AI analysis on attachment</span>
+                </label>
+                <div id="communityAnalysisPreview" class="community-analysis-preview" hidden></div>
+                <div class="community-modal-actions">
+                    <button type="button" class="btn-secondary" id="communityCreateModalCancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="communityModalPostSubmit">Post</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-modal" id="communityPostDetailModal" hidden>
+        <div class="doc-modal-backdrop" id="communityPostDetailBackdrop"></div>
+        <div class="doc-modal-panel community-detail-panel" role="dialog" aria-modal="true" aria-labelledby="communityPostDetailTitle">
+            <div class="doc-modal-header">
+                <h3 id="communityPostDetailTitle">Post</h3>
+                <button type="button" class="doc-modal-close" id="communityPostDetailClose" aria-label="Close">✕</button>
+            </div>
+            <div class="community-detail-scroll">
+                <p id="communityPostDetailMeta" class="community-detail-meta"></p>
+                <div id="communityPostDetailContent" class="community-detail-content"></div>
+                <div id="communityPostDetailTags" class="community-detail-tags"></div>
+                <div id="communityPostDetailDoc"></div>
+                <div class="community-detail-votes">
+                    <button type="button" class="action-btn community-detail-vote-up" id="communityDetailVoteUp">△ <span id="communityDetailUpCount">0</span></button>
+                    <button type="button" class="action-btn community-detail-vote-down" id="communityDetailVoteDown">▽ <span id="communityDetailDownCount">0</span></button>
+                </div>
+                <h4 class="community-detail-comments-heading">Comments</h4>
+                <div id="communityPostDetailComments" class="community-detail-comments-list"></div>
+                <textarea id="communityDetailReplyInput" class="community-reply-input" rows="3" placeholder="Write a reply…"></textarea>
+                <button type="button" class="btn-primary community-detail-reply-send" id="communityDetailReplySend">Reply</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    <script type="module" src="js/main.js?v=12"></script>
+</body>
+</html>

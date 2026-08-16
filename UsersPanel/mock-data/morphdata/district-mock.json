@@ -1,0 +1,12 @@
+[
+  {"name": "North Valley Unified", "district_id": "NVU-001", "district": "North Valley", "description": "Primary district covering northern suburbs and rural townships"},
+  {"name": "Eastside Cooperative", "district_id": "ESC-002", "district": "Eastside", "description": "Regional cooperative of charter-aligned campuses"},
+  {"name": "Harbor View Schools", "district_id": "HVS-003", "district": "Harbor View", "description": "Coastal district with marine science programs"},
+  {"name": "Summit Ridge Regional", "district_id": "SRR-004", "district": "Summit Ridge", "description": "Mountain community district grades K-12"},
+  {"name": "Lakefront Public Schools", "district_id": "LPS-005", "district": "Lakefront", "description": "Urban district with bilingual immersion tracks"},
+  {"name": "Cedar Grove ISD", "district_id": "CGI-006", "district": "Cedar Grove", "description": "Historic district founded 1952 serving midtown"},
+  {"name": "Prairie Hills Unified", "district_id": "PHU-007", "district": "Prairie Hills", "description": "Agricultural community district west of I-5"},
+  {"name": "Riverside Academy District", "district_id": "RAD-008", "district": "Riverside", "description": "Magnet-focused district for arts and STEM"},
+  {"name": "Pinewood Metropolitan", "district_id": "PMD-009", "district": "Pinewood", "description": "Large metro district with twelve sites"},
+  {"name": "Willow Creek Education", "district_id": "WCE-010", "district": "Willow Creek", "description": "Growing exurban district with transport hub"}
+]

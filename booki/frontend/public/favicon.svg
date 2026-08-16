@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Morph Booki">
+  <defs>
+    <linearGradient id="bk-bg" x1="6%" y1="4%" x2="94%" y2="96%">
+      <stop offset="0%" stop-color="#5b3fd6"/>
+      <stop offset="100%" stop-color="#1a1238"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#bk-bg)"/>
+  <path d="M9 7h5.5c2.8 0 5 2.2 5 5v13c0-1.8-1.5-3.2-3.5-3.2H9V7z" fill="rgba(255,255,255,0.12)" stroke="#faf5ff" stroke-width="1.2"/>
+  <path d="M23 7h-5.5c-2.8 0-5 2.2-5 5v13c0 1.8 1.5 3.2 3.5 3.2H23V7z" fill="rgba(255,255,255,0.06)" stroke="#faf5ff" stroke-width="1.2"/>
+  <line x1="16" y1="7" x2="16" y2="25" stroke="#facc15" stroke-width="1.1"/>
+  <line x1="11.5" y1="13" x2="14.5" y2="13" stroke="#facc15" stroke-width="1" stroke-linecap="round"/>
+  <line x1="17.5" y1="13" x2="20.5" y2="13" stroke="#facc15" stroke-width="1" stroke-linecap="round"/>
+</svg>

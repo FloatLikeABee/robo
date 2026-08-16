@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ComposerX">
+  <defs>
+    <linearGradient id="cx-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="55%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#cx-bg)"/>
+  <path d="M7 11h18v10H7V11Zm2 2 7 5 7-5H9Zm14 6v-4.5l-7 5-7-5V17h14Z" fill="#f8fbff"/>
+  <path d="M20 22h5v2h-5z" fill="#dbeafe"/>
+  <circle cx="25" cy="9" r="2.5" fill="#bfdbfe"/>
+</svg>

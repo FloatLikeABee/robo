@@ -1,0 +1,11 @@
+asset_tag,description,AssetType,ContractorID
+BUS-NVU-12,2019 Thomas C2 72-passenger route bus,bus,CTR-501
+BUS-NVU-14,2021 Blue Bird Vision spare route bus,bus,CTR-501
+VAN-HVS-03,Wheelchair-accessible transit van 8 passenger,van,CTR-502
+BUS-ESC-07,2018 IC CE elementary loop bus,bus,CTR-503
+GEN-SRR-01,40kW backup generator for campus power,generator,
+SWP-LFA-02,Commercial floor scrubber custodial equipment,equipment,
+RADIO-PTH-15,Two-way radio pack fleet dispatch set,equipment,
+LIFT-CGH-04,Wheelchair lift retrofit unit shop inventory,equipment,CTR-504
+GPS-FLEET-01,Telematics GPS bundle 24 vehicles,technology,CTR-501
+TRAIL-HVM-02,Equipment trailer for field athletics,trailer,

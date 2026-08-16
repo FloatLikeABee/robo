@@ -1,0 +1,12 @@
+[
+  {"name": "North Valley High", "facility_code": "NVH-101", "district_id": "1", "facility_type": "high", "description": "Grades 9-12 flagship campus", "location": "{\"city\":\"Springfield\",\"state\":\"OR\",\"zip\":\"97477\"}"},
+  {"name": "Eastside Elementary", "facility_code": "ESE-102", "district_id": "2", "facility_type": "elementary", "description": "K-5 neighborhood school", "location": "{\"city\":\"Eugene\",\"state\":\"OR\",\"zip\":\"97401\"}"},
+  {"name": "Harbor View Middle", "facility_code": "HVM-103", "district_id": "3", "facility_type": "middle", "description": "Grades 6-8 waterfront campus", "location": "{\"city\":\"Coos Bay\",\"state\":\"OR\",\"zip\":\"97420\"}"},
+  {"name": "Summit Ridge Primary", "facility_code": "SRP-104", "district_id": "4", "facility_type": "elementary", "description": "Rural K-5 with onsite clinic", "location": "{\"city\":\"Bend\",\"state\":\"OR\",\"zip\":\"97701\"}"},
+  {"name": "Lakefront Academy", "facility_code": "LFA-105", "district_id": "5", "facility_type": "magnet", "description": "STEM magnet grades 4-8", "location": "{\"city\":\"Portland\",\"state\":\"OR\",\"zip\":\"97201\"}"},
+  {"name": "Cedar Grove High", "facility_code": "CGH-106", "district_id": "6", "facility_type": "high", "description": "Historic brick campus downtown", "location": "{\"city\":\"Salem\",\"state\":\"OR\",\"zip\":\"97301\"}"},
+  {"name": "Prairie Hills Elementary", "facility_code": "PHE-107", "district_id": "7", "facility_type": "elementary", "description": "K-6 with farm-to-table program", "location": "{\"city\":\"Corvallis\",\"state\":\"OR\",\"zip\":\"97330\"}"},
+  {"name": "Riverside Arts Center", "facility_code": "RAC-108", "district_id": "8", "facility_type": "secondary", "description": "Performing arts focused 7-12", "location": "{\"city\":\"Medford\",\"state\":\"OR\",\"zip\":\"97501\"}"},
+  {"name": "Pinewood Transport Hub", "facility_code": "PTH-109", "district_id": "9", "facility_type": "admin", "description": "Central fleet and dispatch office", "location": "{\"city\":\"Beaverton\",\"state\":\"OR\",\"zip\":\"97005\"}"},
+  {"name": "Willow Creek K-8", "facility_code": "WCK-110", "district_id": "10", "facility_type": "k8", "description": "Combined elementary and middle wing", "location": "{\"city\":\"Hillsboro\",\"state\":\"OR\",\"zip\":\"97123\"}"}
+]

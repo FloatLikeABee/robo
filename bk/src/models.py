@@ -1,0 +1,2074 @@
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Optional, List, Dict, Any, Union
+from enum import Enum
+import json
+
+
+class DataFormat(str, Enum):
+    JSON = "json"
+    CSV = "csv"
+    TXT = "txt"
+    PDF = "pdf"
+    DOCX = "docx"
+
+
+class AgentType(str, Enum):
+    RAG = "rag"
+    TOOL = "tool"
+    HYBRID = "hybrid"
+
+
+class ToolType(str, Enum):
+    EMAIL = "email"
+    WEB_SEARCH = "web_search"
+    CALCULATOR = "calculator"
+    FINANCIAL = "financial"
+    WIKIPEDIA = "wikipedia"
+    CRAWLER = "crawler"
+    EQUALIZER = "equalizer"
+    DOCUMENT_READER = "document_reader"
+    YOUTUBE_SUMMARIZER = "youtube_summarizer"
+    ACADEMIC_SEARCH = "academic_search"
+    MIND_MAP = "mind_map"
+    DEBATE_ANALYZER = "debate_analyzer"
+    FIRST_PRINCIPLES = "first_principles"
+    IMAGE_GENERATOR = "image_generator"
+    STORY_GENERATOR = "story_generator"
+    TASK_PLANNER = "task_planner"
+    MULTI_AGENT = "multi_agent"
+    BROWSER_AUTOMATION = "browser_automation"
+    CUSTOM = "custom"
+
+
+class RAGDataInput(BaseModel):
+    name: str = Field(..., description="Name of the RAG data collection")
+    description: Optional[str] = Field(None, description="Description of the data")
+    format: DataFormat = Field(..., description="Data format")
+    content: str = Field(..., description="Data content")
+    tags: List[str] = Field(default=[], description="Tags for categorization")
+    metadata: Dict[str, Any] = Field(default={}, description="Additional metadata")
+
+
+class RAGDataValidation(BaseModel):
+    is_valid: bool
+    errors: List[str] = Field(default=[])
+    warnings: List[str] = Field(default=[])
+    record_count: Optional[int] = None
+
+
+class LLMProviderType(str, Enum):
+    GEMINI = "gemini"
+    QWEN = "qwen"
+    MISTRAL = "mistral"
+    GROQ = "groq"
+
+
+class SmartImportRequest(BaseModel):
+    """Request for Smart Import functionality"""
+    file_content: str = Field(..., description="File content as string (CSV or JSON)")
+    file_format: str = Field(..., description="File format: 'csv' or 'json'")
+    llm_provider: Optional[LLMProviderType] = Field(None, description="LLM provider to use for processing (default: system default)")
+    model_name: Optional[str] = Field(None, description="Model name to use (default: provider default)")
+    processing_instructions: Optional[str] = Field(None, description="Optional custom instructions for AI processing")
+    auto_name: bool = Field(default=True, description="Automatically generate collection name using AI")
+
+
+class SmartImportResponse(BaseModel):
+    """Response from Smart Import"""
+    success: bool = Field(..., description="Whether import was successful")
+    collection_name: str = Field(..., description="Name of the created/used RAG collection")
+    collection_description: str = Field(..., description="Description of the collection")
+    processed_data: Optional[str] = Field(None, description="Processed/cleaned data in RAG format")
+    original_record_count: Optional[int] = Field(None, description="Number of records in original file")
+    processed_record_count: Optional[int] = Field(None, description="Number of records after processing")
+    message: str = Field(..., description="Status message")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class AgentConfig(BaseModel):
+    name: str = Field(..., description="Agent name")
+    description: Optional[str] = Field(None, description="Agent description")
+    agent_type: AgentType = Field(..., description="Type of agent")
+    llm_provider: LLMProviderType = Field(default=LLMProviderType.GEMINI, description="LLM provider to use")
+    model_name: str = Field(..., description="Model name (e.g., gemini-2.5-flash, qwen3-max, glm-4.6)")
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=8192, ge=1, le=32768)
+    rag_collections: List[str] = Field(default=[], description="RAG collections to use")
+    tools: List[str] = Field(default=[], description="Tools to enable")
+    system_prompt: Optional[str] = Field(None, description="System prompt")
+    system_prompt_data: Optional[str] = Field(None, description="Data to inject into system prompt (replaces {data} placeholder)")
+    is_active: bool = Field(default=True, description="Whether agent is active")
+
+
+class ToolConfig(BaseModel):
+    name: str = Field(..., description="Tool name")
+    tool_type: ToolType = Field(..., description="Type of tool")
+    description: str = Field(..., description="Tool description")
+    config: Dict[str, Any] = Field(default={}, description="Tool configuration")
+    is_active: bool = Field(default=True, description="Whether tool is active")
+
+
+class QueryRequest(BaseModel):
+    query: str = Field(..., description="User query")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+    llm_provider: Optional[LLMProviderType] = Field(None, description="Override LLM provider for this query")
+
+
+class RAGQueryRequest(BaseModel):
+    query: str = Field(..., description="Query to search in the RAG collection")
+    n_results: int = Field(default=5, ge=1, le=100, description="Number of results to return")
+
+
+class QueryResponse(BaseModel):
+    response: str = Field(..., description="Agent response")
+    sources: List[Dict[str, Any]] = Field(default=[], description="Source documents")
+    metadata: Dict[str, Any] = Field(default={}, description="Response metadata")
+
+
+class ModelInfo(BaseModel):
+    name: str
+    size: Optional[Union[str, int]] = None
+    modified_at: Optional[str] = None
+    digest: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+
+
+class DirectLLMRequest(BaseModel):
+    query: str = Field(..., description="The query to send to the LLM")
+    model_name: str = Field(..., description="Model name to use (e.g., gemini-2.5-flash, qwen3-max)")
+    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Temperature for response generation")
+    max_tokens: Optional[int] = Field(8192, ge=1, le=32768, description="Maximum tokens in response")
+    use_web_search: Optional[bool] = Field(True, description="Whether to enable web search tool")
+    system_prompt: Optional[str] = Field(None, description="Optional system prompt")
+
+
+class DirectLLMResponse(BaseModel):
+    response: str = Field(..., description="LLM response")
+    model_used: str = Field(..., description="Model that was actually used")
+    web_search_used: bool = Field(..., description="Whether web search was used")
+    metadata: Dict[str, Any] = Field(default={}, description="Response metadata")
+
+
+class GatheringRequest(BaseModel):
+    """Request for AI-powered data gathering from Wikipedia, Reddit, and web."""
+    prompt: str = Field(..., description="Topic or question to research")
+    llm_provider: Optional[str] = Field(None, description="LLM provider: gemini, qwen, mistral (default: system default)")
+    model_name: Optional[str] = Field(None, description="Model name (default: provider default)")
+    max_iterations: Optional[int] = Field(10, ge=3, le=20, description="Max agent iterations (limits search, default: 10)")
+    max_tokens: Optional[int] = Field(8192, ge=512, le=32768, description="Max response tokens")
+    temperature: Optional[float] = Field(0.5, ge=0.0, le=1.0, description="LLM temperature")
+
+
+class GatheringResponse(BaseModel):
+    """Response from gathering endpoint."""
+    success: bool = Field(..., description="Whether gathering succeeded")
+    content: str = Field("", description="Gathered content (markdown)")
+    provider: Optional[str] = Field(None, description="LLM provider used")
+    model: Optional[str] = Field(None, description="Model used")
+    max_iterations: Optional[int] = Field(None, description="Max iterations applied")
+    metadata: Dict[str, Any] = Field(default={}, description="Additional metadata")
+    error: Optional[str] = Field(None, description="Error message if success is False")
+
+
+class GraphicDocumentRequest(BaseModel):
+    """Request for Graphic Document Generator: topic and optional LLM/image settings."""
+    topic: str = Field(..., min_length=1, description="Topic for the document (e.g. 'The Future of Renewable Energy')")
+    llm_provider: Optional[str] = Field("gemini", description="LLM provider: gemini, qwen, mistral")
+    model_name: Optional[str] = Field(None, description="Model name (default: provider default)")
+    max_images: Optional[int] = Field(3, ge=1, le=5, description="Number of images to generate (1–5, default: 3)")
+
+
+class GraphicDocumentResponse(BaseModel):
+    """Response from Graphic Document Generator."""
+    success: bool = Field(..., description="Whether generation succeeded")
+    markdown: str = Field("", description="Final markdown document with embedded image references")
+    error: Optional[str] = Field(None, description="Error message if success is False")
+    images_generated: int = Field(0, description="Number of images successfully generated and embedded")
+    html_filename: Optional[str] = Field(None, description="Saved HTML file name (with base64 images); fetch via GET /graphic-document/file/{html_filename}")
+
+
+class SystemStatus(BaseModel):
+    llm_providers_available: List[str]
+    default_llm_provider: str
+    available_models: List[ModelInfo]
+    rag_collections: List[str]
+    active_agents: List[str]
+    active_tools: List[str]
+
+
+class SystemPermissionsSettings(BaseModel):
+    """Dangerous capabilities that Ground Control may be allowed to use."""
+
+    allow_file_access: bool = Field(
+        default=False,
+        description="If true, Ground Control may read/write arbitrary files on the host filesystem.",
+    )
+    allow_shell_commands: bool = Field(
+        default=False,
+        description="If true, Ground Control may execute arbitrary system shell commands.",
+    )
+
+
+class ExternalPlatformCredential(BaseModel):
+    """Credential for an external platform (e.g. Reddit, Slack, GitHub)."""
+
+    platform: str = Field(..., description="Platform identifier, e.g. 'reddit', 'slack', 'github'.")
+    username: Optional[str] = Field(
+        None,
+        description="Username or account id for this platform (if applicable).",
+    )
+    access_token: Optional[str] = Field(
+        None,
+        description="Access token / API key / password (never returned in full via API).",
+    )
+
+
+class SystemSettings(BaseModel):
+    """High-level system configuration controllable from the UI."""
+
+    default_llm_provider: str = Field(..., description="Default LLM provider id (e.g. gemini, qwen, mistral, groq).")
+    default_model: str = Field(..., description="Default model name used when no override is specified.")
+    providers_enabled: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Enabled/disabled flags for each known provider (key is provider id).",
+    )
+    permissions: SystemPermissionsSettings = Field(
+        default_factory=SystemPermissionsSettings,
+        description="Dangerous host-level permissions for Ground Control.",
+    )
+    # Map of platform -> credential metadata (token field is masked in responses)
+    external_credentials: Dict[str, ExternalPlatformCredential] = Field(
+        default_factory=dict,
+        description="Per-platform credentials (username and token metadata).",
+    )
+    conversation_reference_cache_enabled: bool = Field(
+        default=False,
+        description="If true, after meaningful exchanges a background job summarizes key points "
+        "and injects them into later turns (dialogue, agents, advisers, customizations, flow dialogues). "
+        "Summaries use the system default LLM from settings, not each module's model.",
+    )
+    conversation_reference_min_exchange_chars: int = Field(
+        default=200,
+        ge=20,
+        le=100000,
+        description="Minimum combined user+assistant character count to trigger a background summary update.",
+    )
+
+
+class SystemSettingsResponse(BaseModel):
+    """Response model for system settings, with secrets masked."""
+
+    settings: SystemSettings
+    # Map platform -> whether a non-empty token is stored
+    platform_has_token: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Indicates which platforms currently have a stored secret/token.",
+    )
+
+
+class SystemSettingsUpdateRequest(BaseModel):
+    """Partial update request for system settings."""
+
+    default_llm_provider: Optional[str] = Field(
+        None,
+        description="New default provider (optional).",
+    )
+    default_model: Optional[str] = Field(
+        None,
+        description="New default model name (optional).",
+    )
+    providers_enabled: Optional[Dict[str, bool]] = Field(
+        None,
+        description="Optional map of provider -> enabled flag.",
+    )
+    permissions: Optional[SystemPermissionsSettings] = Field(
+        None,
+        description="Optional permissions override.",
+    )
+    external_credentials: Optional[Dict[str, ExternalPlatformCredential]] = Field(
+        None,
+        description="Optional map of platform -> credentials. If access_token is an empty string, the stored token is cleared.",
+    )
+    conversation_reference_cache_enabled: Optional[bool] = Field(
+        None,
+        description="Enable or disable rolling conversation-reference summaries.",
+    )
+    conversation_reference_min_exchange_chars: Optional[int] = Field(
+        None,
+        ge=20,
+        le=100000,
+        description="Minimum combined chars (user+assistant) to run a summary append.",
+    )
+
+
+class HelpRequest(BaseModel):
+    """Request for The Help assistant: ask a question about how the system works."""
+
+    question: str = Field(..., description="User question about how the system/modules work.")
+    rag_collection: str = Field(
+        default="system_help",
+        description="RAG collection to use for system documentation (default: 'system_help').",
+    )
+    n_results: int = Field(
+        default=6,
+        ge=1,
+        le=20,
+        description="Number of RAG chunks to retrieve as context.",
+    )
+
+
+class HelpSource(BaseModel):
+    """Source document used by The Help."""
+
+    collection: str = Field(..., description="RAG collection name.")
+    document_id: Optional[str] = Field(None, description="Underlying document id (if available).")
+    score: Optional[float] = Field(None, description="Similarity score (if available).")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata.")
+
+
+class HelpResponse(BaseModel):
+    """Response from The Help assistant."""
+
+    answer: str = Field(..., description="Markdown-formatted answer from The Help.")
+    sources: List[HelpSource] = Field(
+        default_factory=list,
+        description="RAG sources that were used to answer the question.",
+    )
+    used_rag: bool = Field(
+        default=False,
+        description="Whether any RAG context was actually used.",
+    )
+    error: Optional[str] = Field(
+        default=None,
+        description="Error message if The Help failed to answer.",
+    )
+
+
+class CustomizationProfile(BaseModel):
+    """Stored customization profile: instructions + optional RAG/LLM config."""
+
+    id: str = Field(..., description="Unique customization id")
+    name: str = Field(..., description="Display name")
+    description: Optional[str] = Field(None, description="Description / use case")
+    system_prompt: str = Field(..., description="Instruction / base command for this customization")
+    rag_collection: Optional[str] = Field(
+        None,
+        description="Optional RAG collection name to use as context",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None,
+        description="Optional LLM provider override for this customization",
+    )
+    model_name: Optional[str] = Field(
+        None,
+        description="Optional model override for this customization",
+    )
+    request_tool_id: Optional[str] = Field(
+        None,
+        description="Optional request tool ID. When set, system prompt + user query induce params/body to call this API.",
+    )
+    db_tool_id: Optional[str] = Field(
+        None,
+        description="Optional database tool ID. When set, system prompt + user query induce SQL to run against this DB.",
+    )
+    tool_response_mode: str = Field(
+        default="raw",
+        description="When a tool is configured: 'raw' returns tool result as-is; 'summarize' passes result to LLM for natural language response.",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this customization",
+    )
+
+
+class CustomizationCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    system_prompt: str
+    rag_collection: Optional[str] = None
+    llm_provider: Optional[LLMProviderType] = None
+    model_name: Optional[str] = None
+    request_tool_id: Optional[str] = None
+    db_tool_id: Optional[str] = None
+    tool_response_mode: str = "raw"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CustomizationQueryRequest(BaseModel):
+    """Query a customization profile with a short user prompt."""
+
+    query: str = Field(..., description="User query to run through the customization")
+    reference_session_id: Optional[str] = Field(
+        None,
+        description="Optional session id to scope rolling conversation-reference cache across queries.",
+    )
+    n_results: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Number of RAG documents to pull if rag_collection is set",
+    )
+    temperature: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=2.0,
+        description="Optional temperature override",
+    )
+    max_tokens: Optional[int] = Field(
+        None,
+        ge=1,
+        le=32768,
+        description="Optional max tokens override",
+    )
+
+
+class CustomizationQueryResponse(BaseModel):
+    response: str = Field(..., description="LLM response")
+    profile_id: str = Field(..., description="Customization profile used")
+    profile_name: str = Field(..., description="Customization profile name")
+    model_used: str = Field(..., description="Model that was actually used")
+    rag_collection_used: Optional[str] = Field(None, description="RAG collection used (if any)")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Response metadata")
+
+
+class AdviserFileInput(BaseModel):
+    """File content used to bootstrap an adviser-specific knowledge base."""
+
+    filename: str = Field(..., description="Original file name")
+    format: DataFormat = Field(..., description="Data format (json, csv, txt)")
+    content: str = Field(..., description="Raw file content as text")
+    description: Optional[str] = Field(
+        None,
+        description="Optional description of what this file contains or should be used for",
+    )
+
+
+class AdviserCreateRequest(BaseModel):
+    """Request payload for creating or updating an Adviser."""
+
+    name: str = Field(..., description="Display name of the adviser")
+    draft_system_prompt: str = Field(
+        ...,
+        description="Draft system prompt describing adviser behavior. This will be cleaned and normalized by the AI model before saving.",
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Optional draft description. If omitted or empty, the AI model will generate one from the prompt.",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None, description="Optional LLM provider override for this adviser"
+    )
+    model_name: Optional[str] = Field(
+        None, description="Optional model override for this adviser"
+    )
+    existing_rag_collections: List[str] = Field(
+        default_factory=list,
+        description="Names of existing RAG collections that this adviser should use",
+    )
+    files: List[AdviserFileInput] = Field(
+        default_factory=list,
+        description="Optional uploaded JSON/CSV/TXT files that will be turned into an adviser-specific RAG collection",
+    )
+
+
+class AdviserProfile(BaseModel):
+    """Stored Adviser configuration and runtime linkage to an underlying Agent."""
+
+    id: str = Field(..., description="Unique adviser id (URL-friendly)")
+    name: str = Field(..., description="Adviser display name")
+    description: Optional[str] = Field(None, description="Adviser description")
+    system_prompt: str = Field(..., description="Normalized system prompt for the adviser")
+    rag_collections: List[str] = Field(
+        default_factory=list,
+        description="All RAG collections used by this adviser (uploaded files + any existing collections)",
+    )
+    base_collection: Optional[str] = Field(
+        None,
+        description="Auto-created RAG collection that stores data from uploaded files, if any",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None, description="LLM provider actually configured for the underlying agent"
+    )
+    model_name: Optional[str] = Field(
+        None, description="Model actually configured for the underlying agent"
+    )
+    agent_id: Optional[str] = Field(
+        None,
+        description="ID of the underlying Agent this adviser uses for execution",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata about this adviser (e.g., creation source, tags)",
+    )
+
+
+class AdviserQueryRequest(BaseModel):
+    """Run-time query request for an Adviser."""
+
+    query: str = Field(..., description="User query to run through the adviser")
+    context: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional additional context that will be passed through to the underlying agent",
+    )
+
+
+class AdviserRunResponse(BaseModel):
+    """Response payload when executing an Adviser."""
+
+    response: str = Field(..., description="Adviser response text")
+    adviser_id: str = Field(..., description="Adviser id used for the run")
+    agent_id: str = Field(..., description="Underlying agent id that executed the query")
+    model_used: Optional[str] = Field(
+        None, description="Model actually used by the underlying agent"
+    )
+    rag_collections_used: List[str] = Field(
+        default_factory=list,
+        description="RAG collections that were attached to this adviser",
+    )
+    web_search_enabled: bool = Field(
+        default=True,
+        description="Indicates that the adviser has web search enabled as a tool",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional execution metadata (provider, temperature, etc.)",
+    )
+
+
+class AssistantProfile(BaseModel):
+    """Unified Assistant profile that replaces Adviser and Customization."""
+
+    id: str = Field(..., description="Unique assistant id (URL-friendly)")
+    name: str = Field(..., description="Assistant display name")
+    description: Optional[str] = Field(None, description="Assistant description")
+    system_prompt: str = Field(..., description="System prompt / instructions")
+    rag_collections: List[str] = Field(
+        default_factory=list,
+        description="RAG collections used as context",
+    )
+    base_collection: Optional[str] = Field(
+        None,
+        description="Auto-created RAG collection from uploaded files",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None, description="LLM provider configured for this assistant"
+    )
+    model_name: Optional[str] = Field(
+        None, description="Model configured for this assistant"
+    )
+    agent_id: Optional[str] = Field(
+        None,
+        description="ID of underlying agent used for execution",
+    )
+    request_tool_id: Optional[str] = Field(
+        None,
+        description="Optional request tool ID for API-backed assistants",
+    )
+    db_tool_id: Optional[str] = Field(
+        None,
+        description="Optional database tool ID for SQL-backed assistants",
+    )
+    tool_response_mode: str = Field(
+        default="raw",
+        description="'raw' returns tool result as-is; 'summarize' passes to LLM",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata including source='adviser' or 'customization'",
+    )
+
+
+class AssistantCreateRequest(BaseModel):
+    """Request payload for creating or updating an Assistant."""
+
+    name: str = Field(..., description="Display name")
+    system_prompt: str = Field(..., description="Instruction / base command")
+    description: Optional[str] = Field(None, description="Optional description")
+    llm_provider: Optional[LLMProviderType] = Field(None, description="Optional LLM provider")
+    model_name: Optional[str] = Field(None, description="Optional model override")
+    existing_rag_collections: List[str] = Field(
+        default_factory=list,
+        description="Names of existing RAG collections to use",
+    )
+    rag_collection: Optional[str] = Field(
+        None,
+        description="Single legacy RAG collection (used for customization migration)",
+    )
+    request_tool_id: Optional[str] = Field(None, description="Optional request tool ID")
+    db_tool_id: Optional[str] = Field(None, description="Optional database tool ID")
+    tool_response_mode: str = "raw"
+    files: List[Any] = Field(
+        default_factory=list,
+        description="Optional uploaded files to ingest into a base collection",
+    )
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AssistantQueryRequest(BaseModel):
+    """Run-time query request for an Assistant."""
+
+    query: str = Field(..., description="User query")
+    context: Optional[Dict[str, Any]] = Field(None, description="Optional context")
+
+
+class AssistantRunResponse(BaseModel):
+    """Response payload when executing an Assistant."""
+
+    response: str = Field(..., description="Assistant response text")
+    assistant_id: str = Field(..., description="Assistant id used")
+    agent_id: Optional[str] = Field(None, description="Underlying agent id")
+    model_used: Optional[str] = Field(None, description="Model used")
+    rag_collections_used: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DatabaseType(str, Enum):
+    SQLSERVER = "sqlserver"
+    MYSQL = "mysql"
+    MONGODB = "mongodb"
+    SQLITE = "sqlite"
+
+
+class DatabaseConnectionConfig(BaseModel):
+    """Database connection configuration
+    
+    For SQLite: 
+    - Use 'database' field for the SQLite file path (e.g., '/path/to/database.db' or './data.db')
+    - 'host', 'port', 'username', 'password' are not used
+    - 'additional_params' can include: timeout, check_same_thread, isolation_level
+    """
+    host: str = Field(..., description="Database host address (for SQLite: can be used as alternative to 'database' field for file path)")
+    port: int = Field(..., description="Database port number (not used for SQLite)")
+    database: str = Field(..., description="Database name (for SQLite: database file path, e.g., '/path/to/database.db')")
+    username: str = Field(..., description="Database username (not used for SQLite)")
+    password: str = Field(..., description="Database password (not used for SQLite)")
+    additional_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional connection parameters. For SQLite: timeout (float), check_same_thread (bool), isolation_level (str). For others: SSL settings, connection pool settings."
+    )
+
+
+class DatabaseConnectionConfigUpdate(BaseModel):
+    """Database connection configuration for updates (password optional)
+    
+    For SQLite: 
+    - Use 'database' field for the SQLite file path
+    - 'host', 'port', 'username', 'password' are not used
+    """
+    host: str = Field(..., description="Database host address (for SQLite: can be used as alternative to 'database' field for file path)")
+    port: int = Field(..., description="Database port number (not used for SQLite)")
+    database: str = Field(..., description="Database name (for SQLite: database file path)")
+    username: str = Field(..., description="Database username (not used for SQLite)")
+    password: Optional[str] = Field(None, description="Database password (optional, omit to keep existing, not used for SQLite)")
+    additional_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional connection parameters. For SQLite: timeout, check_same_thread, isolation_level."
+    )
+
+
+class DatabaseToolProfile(BaseModel):
+    """Stored database tool profile with connection and query configuration"""
+    id: str = Field(..., description="Unique database tool id")
+    name: str = Field(..., description="Display name")
+    description: Optional[str] = Field(None, description="Description / use case")
+    db_type: DatabaseType = Field(..., description="Database type (sqlserver, mysql, sqlite, mongodb)")
+    connection_config: DatabaseConnectionConfig = Field(..., description="Database connection configuration")
+    sql_statement: str = Field(..., description="SQL query statement (for SQL databases) or query (for MongoDB)")
+    is_active: bool = Field(default=True, description="Whether this database tool is active")
+    cache_ttl_hours: float = Field(default=1.0, description="Cache TTL in hours (default: 1 hour)")
+    allow_dynamic_sql: bool = Field(default=False, description="Allow dynamic SQL input at execution time")
+    preset_sql_statement: Optional[str] = Field(None, description="Optional preset/base SQL statement. If provided and allow_dynamic_sql is True, dynamic input will be appended as WHERE condition or used as full SQL if preset is empty.")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this database tool"
+    )
+
+
+class DatabaseToolCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    db_type: DatabaseType
+    connection_config: DatabaseConnectionConfig
+    sql_statement: str
+    is_active: bool = Field(default=True)
+    cache_ttl_hours: float = Field(default=1.0, ge=0.1, le=24.0, description="Cache TTL in hours (0.1 to 24 hours)")
+    allow_dynamic_sql: bool = Field(default=False, description="Allow dynamic SQL input at execution time")
+    preset_sql_statement: Optional[str] = Field(None, description="Optional preset/base SQL statement. If provided and allow_dynamic_sql is True, dynamic input will be appended as WHERE condition.")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DatabaseToolUpdateRequest(BaseModel):
+    """Update request for database tools (password optional)"""
+    name: str
+    description: Optional[str] = None
+    db_type: DatabaseType
+    connection_config: DatabaseConnectionConfigUpdate
+    sql_statement: str
+    is_active: bool = Field(default=True)
+    cache_ttl_hours: float = Field(default=1.0, ge=0.1, le=24.0, description="Cache TTL in hours (0.1 to 24 hours)")
+    allow_dynamic_sql: bool = Field(default=False, description="Allow dynamic SQL input at execution time")
+    preset_sql_statement: Optional[str] = Field(None, description="Optional preset/base SQL statement. If provided and allow_dynamic_sql is True, dynamic input will be appended as WHERE condition.")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DatabaseToolPreviewResponse(BaseModel):
+    """Preview response showing first 10 rows of query results"""
+    tool_id: str = Field(..., description="Database tool ID")
+    tool_name: str = Field(..., description="Database tool name")
+    columns: List[str] = Field(..., description="Column names")
+    rows: List[List[Any]] = Field(..., description="First 10 rows of data")
+    total_rows: Optional[int] = Field(None, description="Total number of rows (if available)")
+    cached: bool = Field(..., description="Whether data is from cache")
+    cache_expires_at: Optional[str] = Field(None, description="Cache expiration timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class DatabaseToolExecuteRequest(BaseModel):
+    """Request model for executing database query with dynamic SQL"""
+    sql_input: Optional[str] = Field(None, description="Optional dynamic SQL input (WHERE condition or full SQL statement)")
+
+
+class TextToSQLRequest(BaseModel):
+    """Request for Text-to-SQL: natural language question → SQL → retrieval → LLM summary.
+    Provide db_tool_id, or connection_config (ODBC-style), or connection_string (OLE DB e.g. SQLOLEDB)."""
+    question: str = Field(..., description="Natural language question about the data")
+    db_tool_id: Optional[str] = Field(None, description="Use an existing database tool profile by ID (optional)")
+    connection_config: Optional[DatabaseConnectionConfig] = Field(
+        None,
+        description="SQL Server connection (ODBC). host, port, database, username, password. Ignored if connection_string is set."
+    )
+    connection_string: Optional[str] = Field(
+        None,
+        description="OLE DB connection string (e.g. Provider=SQLOLEDB;Data Source=...;Initial Catalog=...;User ID=...;password=...). Used when db_tool_id and connection_config are not set."
+    )
+    schema_tables: Optional[List[str]] = Field(
+        None,
+        description="Table names to include in schema (e.g. ['LogiReportRunHistory', 'LogiReport', 'User']). Schema is introspected from DB if not provided via schema_text."
+    )
+    schema_text: Optional[str] = Field(
+        None,
+        description="Raw schema description or DDL. If set, used instead of introspecting schema_tables."
+    )
+    provider: str = Field(default="qwen", description="LLM provider: gemini, qwen, mistral")
+    model: Optional[str] = Field(None, description="LLM model name (default: provider default)")
+
+
+class TextToSQLResponse(BaseModel):
+    """Response from Text-to-SQL workflow"""
+    sql: str = Field(..., description="Generated SQL query")
+    columns: List[str] = Field(default_factory=list, description="Result column names")
+    rows: List[List[Any]] = Field(default_factory=list, description="Query result rows")
+    total_rows: int = Field(default=0, description="Number of rows returned")
+    summary: str = Field(..., description="LLM-generated natural language summary of the results")
+    error: Optional[str] = Field(None, description="Error message if any step failed")
+
+
+class TableHtmlRawRequest(BaseModel):
+    """Raw text upload for table HTML conversion (Swagger-friendly alternative to multipart)."""
+    content: str = Field(..., description="File contents as UTF-8 text (CSV or JSON)")
+    filename: str = Field(
+        ...,
+        description="Filename hint for format detection, e.g. data.csv or data.json",
+    )
+
+
+class TableHtmlResponse(BaseModel):
+    """CSV/JSON tabular data rendered as a standalone HTML document (dark blue theme)."""
+    html: str = Field(..., description="Full HTML document with embedded styles")
+    format_detected: str = Field(..., description="Detected format: csv, json, or jsonl")
+    column_count: int = Field(..., ge=0)
+    row_count: int = Field(..., ge=0)
+    columns: List[str] = Field(default_factory=list, description="Column headers")
+
+
+class RequestType(str, Enum):
+    HTTP = "http"
+    INTERNAL = "internal"
+
+
+class HTTPMethod(str, Enum):
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+    HEAD = "HEAD"
+    OPTIONS = "OPTIONS"
+
+
+class RequestConfig(BaseModel):
+    """Request configuration for HTTP or internal service calls"""
+    name: str = Field(..., description="Unique request name/task identifier")
+    description: Optional[str] = Field(None, description="Request description")
+    request_type: RequestType = Field(..., description="Type of request (http or internal)")
+    method: Optional[HTTPMethod] = Field(None, description="HTTP method (required for HTTP requests)")
+    url: Optional[str] = Field(None, description="HTTP URL (required for HTTP requests)")
+    endpoint: Optional[str] = Field(None, description="Internal service endpoint (required for internal requests)")
+    headers: Dict[str, str] = Field(default_factory=dict, description="HTTP headers")
+    params: Dict[str, Any] = Field(default_factory=dict, description="URL query parameters")
+    body: Optional[Union[str, Dict[str, Any], List[Any]]] = Field(None, description="Request body (string, JSON object, or array)")
+    timeout: float = Field(default=30.0, description="Request timeout in seconds")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class RequestProfile(BaseModel):
+    """Stored request profile with configuration and last response"""
+    id: str = Field(..., description="Unique request ID")
+    name: str = Field(..., description="Request name/task identifier")
+    description: Optional[str] = Field(None, description="Request description")
+    request_type: RequestType = Field(..., description="Type of request")
+    method: Optional[HTTPMethod] = Field(None, description="HTTP method")
+    url: Optional[str] = Field(None, description="HTTP URL")
+    endpoint: Optional[str] = Field(None, description="Internal service endpoint")
+    headers: Dict[str, str] = Field(default_factory=dict, description="HTTP headers")
+    params: Dict[str, Any] = Field(default_factory=dict, description="URL query parameters")
+    body: Optional[Union[str, Dict[str, Any], List[Any]]] = Field(None, description="Request body (string, JSON object, or array)")
+    timeout: float = Field(default=30.0, description="Request timeout in seconds")
+    wrap_json_body_as_array: bool = Field(
+        default=False,
+        description="If true, a JSON object body is sent as a one-element array [{...}]. Use for APIs that bind List<T> (e.g. ASP.NET) while keeping a single-object template or LLM output.",
+    )
+    last_response: Optional[Dict[str, Any]] = Field(None, description="Last response data")
+    last_executed_at: Optional[str] = Field(None, description="Last execution timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class RequestCreateRequest(BaseModel):
+    """Request to create a new request configuration"""
+    name: str = Field(..., description="Unique request name/task identifier")
+    description: Optional[str] = None
+    request_type: RequestType
+    method: Optional[HTTPMethod] = None
+    url: Optional[str] = None
+    endpoint: Optional[str] = None
+    headers: Dict[str, str] = Field(default_factory=dict)
+    params: Dict[str, Any] = Field(default_factory=dict)
+    body: Optional[Union[str, Dict[str, Any], List[Any]]] = None
+    timeout: float = Field(default=30.0, ge=1.0, le=300.0)
+    wrap_json_body_as_array: bool = False
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    
+    @field_validator('description', mode='before')
+    @classmethod
+    def convert_empty_description(cls, v):
+        """Convert empty strings to None for description"""
+        if v == "":
+            return None
+        return v
+    
+    @field_validator('url', mode='before')
+    @classmethod
+    def convert_empty_url(cls, v):
+        """Convert empty strings to None for url"""
+        if v == "":
+            return None
+        return v
+    
+    @field_validator('endpoint', mode='before')
+    @classmethod
+    def convert_empty_endpoint(cls, v):
+        """Convert empty strings to None for endpoint"""
+        if v == "":
+            return None
+        return v
+    
+    @field_validator('body', mode='before')
+    @classmethod
+    def convert_empty_body(cls, v):
+        """Convert empty strings to None for body field, accept lists/arrays"""
+        if v == "":
+            return None
+        # Accept lists, dicts, or strings as-is
+        return v
+    
+    @field_validator('timeout', mode='before')
+    @classmethod
+    def convert_timeout(cls, v):
+        """Convert integer timeout to float if needed"""
+        if v is None:
+            return 30.0
+        if isinstance(v, int):
+            return float(v)
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                return 30.0
+        return v
+    
+    @field_validator('request_type', mode='before')
+    @classmethod
+    def normalize_request_type(cls, v):
+        """Normalize request_type to enum value"""
+        if isinstance(v, str):
+            v_lower = v.lower()
+            if v_lower == 'http':
+                return RequestType.HTTP
+            elif v_lower == 'internal':
+                return RequestType.INTERNAL
+        return v
+    
+    @field_validator('method', mode='before')
+    @classmethod
+    def normalize_method(cls, v):
+        """Normalize HTTP method to enum value"""
+        if v is None:
+            return None
+        if isinstance(v, str) and v:
+            v_upper = v.upper()
+            try:
+                return HTTPMethod(v_upper)
+            except ValueError:
+                # Return None if invalid method instead of raising error
+                return None
+        return v
+    
+    @model_validator(mode='before')
+    @classmethod
+    def validate_model(cls, data):
+        """Pre-process the entire model data"""
+        if isinstance(data, dict):
+            # Convert empty strings to None for optional fields
+            for field in ['description', 'url', 'endpoint']:
+                if field in data and data[field] == "":
+                    data[field] = None
+            
+            # Handle body - convert empty string to None, allow arrays/dicts/strings
+            if 'body' in data:
+                if data['body'] == "":
+                    data['body'] = None
+                # Arrays, dicts, and strings are all valid - keep as-is
+            
+            # Convert timeout to float
+            if 'timeout' in data:
+                if data['timeout'] is None:
+                    data['timeout'] = 30.0
+                elif isinstance(data['timeout'], int):
+                    data['timeout'] = float(data['timeout'])
+                elif isinstance(data['timeout'], str):
+                    try:
+                        data['timeout'] = float(data['timeout'])
+                    except ValueError:
+                        data['timeout'] = 30.0
+            
+            # Normalize request_type
+            if 'request_type' in data and isinstance(data['request_type'], str):
+                v_lower = data['request_type'].lower()
+                if v_lower == 'http':
+                    data['request_type'] = RequestType.HTTP
+                elif v_lower == 'internal':
+                    data['request_type'] = RequestType.INTERNAL
+            
+            # Normalize method
+            if 'method' in data and data['method']:
+                if isinstance(data['method'], str):
+                    try:
+                        data['method'] = HTTPMethod(data['method'].upper())
+                    except ValueError:
+                        data['method'] = None
+        
+        return data
+
+
+class RequestUpdateRequest(BaseModel):
+    """Request to update an existing request configuration"""
+    name: str = Field(..., description="Unique request name/task identifier")
+    description: Optional[str] = None
+    request_type: RequestType
+    method: Optional[HTTPMethod] = None
+    url: Optional[str] = None
+    endpoint: Optional[str] = None
+    headers: Dict[str, str] = Field(default_factory=dict)
+    params: Dict[str, Any] = Field(default_factory=dict)
+    body: Optional[Union[str, Dict[str, Any], List[Any]]] = None
+    timeout: float = Field(default=30.0, ge=1.0, le=300.0)
+    wrap_json_body_as_array: bool = False
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RequestExecuteResponse(BaseModel):
+    """Response from executing a request"""
+    request_id: str = Field(..., description="Request ID")
+    request_name: str = Field(..., description="Request name")
+    success: bool = Field(..., description="Whether request was successful")
+    status_code: Optional[int] = Field(None, description="HTTP status code")
+    response_data: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Response data")
+    response_headers: Dict[str, str] = Field(default_factory=dict, description="Response headers")
+    execution_time: float = Field(..., description="Execution time in seconds")
+    error: Optional[str] = Field(None, description="Error message if request failed")
+    executed_at: str = Field(..., description="Execution timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    request_details: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Outgoing HTTP method, URL, query params, headers, and body as actually sent",
+    )
+
+
+class CrawlerRequest(BaseModel):
+    url: str = Field(..., description="URL to crawl")
+    use_js: bool = Field(default=False, description="Use JavaScript rendering (Playwright/Selenium)")
+    llm_provider: Optional[str] = Field(None, description="LLM provider to use for extraction (gemini/qwen)")
+    model: Optional[str] = Field(None, description="Model name to use")
+    collection_name: Optional[str] = Field(None, description="Override AI-generated collection name")
+    collection_description: Optional[str] = Field(None, description="Override AI-generated collection description")
+    follow_links: bool = Field(default=False, description="Follow links recursively to crawl entire site")
+    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum depth for recursive crawling (1-10)")
+    max_pages: int = Field(default=50, ge=1, le=1000, description="Maximum number of pages to crawl (1-1000)")
+    same_domain_only: bool = Field(default=True, description="Only follow links within the same domain")
+    headers: Optional[Dict[str, str]] = Field(None, description="Custom HTTP headers (e.g., Authorization tokens)")
+
+
+class CrawlerProfile(BaseModel):
+    """Crawler profile configuration"""
+    id: str = Field(..., description="Unique profile ID")
+    name: str = Field(..., description="Profile name")
+    description: Optional[str] = Field(None, description="Profile description")
+    url: str = Field(..., description="URL to crawl")
+    use_js: bool = Field(default=False, description="Use JavaScript rendering")
+    llm_provider: Optional[str] = Field(None, description="LLM provider for extraction")
+    model: Optional[str] = Field(None, description="Model name")
+    collection_name: Optional[str] = Field(None, description="RAG collection name")
+    collection_description: Optional[str] = Field(None, description="RAG collection description")
+    follow_links: bool = Field(default=False, description="Follow links recursively")
+    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum crawl depth")
+    max_pages: int = Field(default=50, ge=1, le=1000, description="Maximum pages to crawl")
+    same_domain_only: bool = Field(default=True, description="Only follow same domain links")
+    headers: Optional[Dict[str, str]] = Field(None, description="Custom HTTP headers")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+
+
+class CrawlerCreateRequest(BaseModel):
+    """Request to create a crawler profile"""
+    name: str = Field(..., description="Profile name")
+    description: Optional[str] = Field(None, description="Profile description")
+    url: str = Field(..., description="URL to crawl")
+    use_js: bool = Field(default=False, description="Use JavaScript rendering")
+    llm_provider: Optional[str] = Field(None, description="LLM provider for extraction")
+    model: Optional[str] = Field(None, description="Model name")
+    collection_name: Optional[str] = Field(None, description="RAG collection name")
+    collection_description: Optional[str] = Field(None, description="RAG collection description")
+    follow_links: bool = Field(default=False, description="Follow links recursively")
+    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum crawl depth")
+    max_pages: int = Field(default=50, ge=1, le=1000, description="Maximum pages to crawl")
+    same_domain_only: bool = Field(default=True, description="Only follow same domain links")
+    headers: Optional[Dict[str, str]] = Field(None, description="Custom HTTP headers")
+
+
+class CrawlerUpdateRequest(BaseModel):
+    """Request to update a crawler profile"""
+    name: Optional[str] = Field(None, description="Profile name")
+    description: Optional[str] = Field(None, description="Profile description")
+    url: Optional[str] = Field(None, description="URL to crawl")
+    use_js: Optional[bool] = Field(None, description="Use JavaScript rendering")
+    llm_provider: Optional[str] = Field(None, description="LLM provider for extraction")
+    model: Optional[str] = Field(None, description="Model name")
+    collection_name: Optional[str] = Field(None, description="RAG collection name")
+    collection_description: Optional[str] = Field(None, description="RAG collection description")
+    follow_links: Optional[bool] = Field(None, description="Follow links recursively")
+    max_depth: Optional[int] = Field(None, ge=1, le=10, description="Maximum crawl depth")
+    max_pages: Optional[int] = Field(None, ge=1, le=1000, description="Maximum pages to crawl")
+    same_domain_only: Optional[bool] = Field(None, description="Only follow same domain links")
+    headers: Optional[Dict[str, str]] = Field(None, description="Custom HTTP headers")
+
+
+class CrawlerResponse(BaseModel):
+    success: bool
+    url: str
+    collection_name: Optional[str] = None
+    collection_description: Optional[str] = None
+    raw_file: Optional[str] = None
+    extracted_file: Optional[str] = None
+    extracted_data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    pages_crawled: Optional[int] = None
+    total_links_found: Optional[int] = None
+
+
+class FlowStepType(str, Enum):
+    """Types of steps in a flow"""
+    CUSTOMIZATION = "customization"
+    AGENT = "agent"
+    DB_TOOL = "db_tool"
+    REQUEST = "request"
+    CRAWLER = "crawler"
+    DIALOGUE = "dialogue"
+
+
+class FlowStepConfig(BaseModel):
+    """Configuration for a single step in a flow"""
+    step_id: str = Field(..., description="Unique step identifier within the flow")
+    step_type: FlowStepType = Field(..., description="Type of step")
+    step_name: str = Field(..., description="Display name for this step")
+    resource_id: str = Field(..., description="ID of the resource to use (customization_id, agent_id, db_tool_id, request_id)")
+    input_query: Optional[str] = Field(None, description="Input query/prompt for this step (if not using previous step output)")
+    use_previous_output: bool = Field(default=False, description="Whether to use output from previous step as input")
+    output_mapping: Optional[Dict[str, str]] = Field(None, description="Mapping previous step output to this step's parameters")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional step metadata")
+
+
+class FlowConfig(BaseModel):
+    """Configuration for a complete flow"""
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = Field(None, description="Flow description")
+    steps: List[FlowStepConfig] = Field(..., description="Ordered list of flow steps")
+    is_active: bool = Field(default=True, description="Whether flow is active")
+
+
+class FlowProfile(BaseModel):
+    """Stored flow profile"""
+    id: str = Field(..., description="Unique flow ID")
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = Field(None, description="Flow description")
+    steps: List[FlowStepConfig] = Field(..., description="Ordered list of flow steps")
+    is_active: bool = Field(default=True, description="Whether flow is active")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class FlowCreateRequest(BaseModel):
+    """Request to create a new flow"""
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = None
+    steps: List[FlowStepConfig] = Field(..., description="Ordered list of flow steps")
+    is_active: bool = Field(default=True)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FlowUpdateRequest(BaseModel):
+    """Request to update an existing flow"""
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = None
+    steps: List[FlowStepConfig] = Field(..., description="Ordered list of flow steps")
+    is_active: bool = Field(default=True)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FlowExecuteRequest(BaseModel):
+    """Request to execute a flow"""
+    initial_input: Optional[str] = Field(None, description="Initial input for the first step (if needed)")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context for flow execution")
+    resume_from_step: Optional[int] = Field(None, description="Step index (1-based) to resume from (for paused flows)")
+    previous_step_results: Optional[List["FlowStepResult"]] = Field(None, description="Previous step results when resuming")
+
+
+class FlowStepResult(BaseModel):
+    """Result from executing a single flow step"""
+    step_id: str = Field(..., description="Step ID")
+    step_name: str = Field(..., description="Step name")
+    step_type: FlowStepType = Field(..., description="Step type")
+    success: bool = Field(..., description="Whether step executed successfully")
+    output: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Step output")
+    error: Optional[str] = Field(None, description="Error message if step failed")
+    execution_time: float = Field(..., description="Execution time in seconds")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class FlowExecuteResponse(BaseModel):
+    """Response from executing a flow"""
+    flow_id: str = Field(..., description="Flow ID")
+    flow_name: str = Field(..., description="Flow name")
+    success: bool = Field(..., description="Whether flow completed successfully")
+    step_results: List[FlowStepResult] = Field(..., description="Results from each step")
+    final_output: Optional[Union[str, Dict[str, Any]]] = Field(None, description="Final output from last step")
+    total_execution_time: float = Field(..., description="Total execution time in seconds")
+    error: Optional[str] = Field(None, description="Error message if flow failed")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+# Dialogue Models
+class DialogueMessage(BaseModel):
+    """A single message in a dialogue conversation"""
+    role: str = Field(..., description="Message role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+    timestamp: Optional[str] = Field(None, description="Message timestamp")
+
+
+class DialogueProfile(BaseModel):
+    """Stored dialogue profile: multi-turn conversation with system prompt"""
+    id: str = Field(..., description="Unique dialogue id")
+    name: str = Field(..., description="Display name")
+    description: Optional[str] = Field(None, description="Description / use case")
+    system_prompt: str = Field(..., description="System prompt / instruction for the dialogue")
+    rag_collection: Optional[str] = Field(
+        None,
+        description="Optional RAG collection name to use as context",
+    )
+    db_tools: List[str] = Field(
+        default_factory=list,
+        description="List of database tool IDs to use in this dialogue",
+    )
+    request_tools: List[str] = Field(
+        default_factory=list,
+        description="List of request tool IDs to use in this dialogue",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None,
+        description="Optional LLM provider override for this dialogue",
+    )
+    model_name: Optional[str] = Field(
+        None,
+        description="Optional model override for this dialogue",
+    )
+    max_turns: int = Field(default=30, ge=1, le=30, description="Maximum number of conversation turns (default: 30)")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this dialogue",
+    )
+
+
+class DialogueCreateRequest(BaseModel):
+    """Request to create a new dialogue"""
+    name: str
+    description: Optional[str] = None
+    system_prompt: str
+    rag_collection: Optional[str] = None
+    db_tools: List[str] = Field(default_factory=list, description="List of database tool IDs to use")
+    request_tools: List[str] = Field(default_factory=list, description="List of request tool IDs to use")
+    llm_provider: Optional[LLMProviderType] = None
+    model_name: Optional[str] = None
+    max_turns: int = Field(default=30, ge=1, le=30)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DialogueUpdateRequest(BaseModel):
+    """Request to update an existing dialogue"""
+    name: str
+    description: Optional[str] = None
+    system_prompt: str
+    rag_collection: Optional[str] = None
+    db_tools: List[str] = Field(default_factory=list, description="List of database tool IDs to use")
+    request_tools: List[str] = Field(default_factory=list, description="List of request tool IDs to use")
+    llm_provider: Optional[LLMProviderType] = None
+    model_name: Optional[str] = None
+    max_turns: int = Field(default=30, ge=1, le=30)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DialogueStartRequest(BaseModel):
+    """Request to start a new dialogue conversation"""
+    initial_message: str = Field(..., description="Initial user message to start the dialogue")
+    n_results: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Number of RAG documents to pull if rag_collection is set",
+    )
+    temperature: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=2.0,
+        description="Optional temperature override",
+    )
+    max_tokens: Optional[int] = Field(
+        None,
+        ge=1,
+        le=32768,
+        description="Optional max tokens override",
+    )
+
+
+class DialogueContinueRequest(BaseModel):
+    """Request to continue an existing dialogue conversation"""
+    user_message: str = Field(..., description="User's response to continue the dialogue")
+    conversation_id: str = Field(..., description="Conversation ID from previous turn")
+
+
+class DialogueResponse(BaseModel):
+    """Response from a dialogue turn"""
+    conversation_id: str = Field(..., description="Unique conversation ID for this dialogue session")
+    turn_number: int = Field(..., description="Current turn number (1-based)")
+    max_turns: int = Field(..., description="Maximum turns allowed")
+    response: str = Field(..., description="AI's response")
+    needs_more_info: bool = Field(..., description="Whether AI is asking for more information (conversation continues)")
+    is_complete: bool = Field(..., description="Whether the dialogue is complete (final response provided)")
+    profile_id: str = Field(..., description="Dialogue profile used")
+    profile_name: str = Field(..., description="Dialogue profile name")
+    model_used: str = Field(..., description="Model that was actually used")
+    rag_collection_used: Optional[str] = Field(
+        None, description="RAG collection used (if any)"
+    )
+    conversation_history: List[DialogueMessage] = Field(..., description="Full conversation history up to this point")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Response metadata")
+
+
+# Articles Module (multi-chapter generation with optional customization + RAG)
+class ArticleProfile(BaseModel):
+    """Saved article generator profile."""
+
+    id: str = Field(..., description="Unique article profile id")
+    name: str = Field(..., description="Display name")
+    description: Optional[str] = Field(None, description="Description / use case")
+    customization_id: str = Field(
+        ...,
+        description="Customization profile id whose system prompt is merged as the base style",
+    )
+    system_prompt: str = Field(
+        ...,
+        description="Article-specific system instructions (merged with the chosen customization)",
+    )
+    rag_collection: Optional[str] = Field(
+        None,
+        description="Optional RAG collection for retrieval context per chapter",
+    )
+    llm_provider: Optional[LLMProviderType] = Field(
+        None,
+        description="LLM provider for generation",
+    )
+    model_name: Optional[str] = Field(None, description="Model name for generation")
+    default_chapters: int = Field(
+        default=1,
+        ge=1,
+        description="Default chapter count in the UI (minimum 1)",
+    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class ArticleCreateRequest(BaseModel):
+    """Create a new article profile."""
+
+    name: str
+    description: Optional[str] = None
+    customization_id: str
+    system_prompt: str
+    rag_collection: Optional[str] = None
+    llm_provider: Optional[LLMProviderType] = None
+    model_name: Optional[str] = None
+    default_chapters: int = Field(default=1, ge=1)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ArticleUpdateRequest(BaseModel):
+    """Update an article profile."""
+
+    name: str
+    description: Optional[str] = None
+    customization_id: str
+    system_prompt: str
+    rag_collection: Optional[str] = None
+    llm_provider: Optional[LLMProviderType] = None
+    model_name: Optional[str] = None
+    default_chapters: int = Field(default=1, ge=1)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ArticleGenerateRequest(BaseModel):
+    """Run generation for an article profile (optional runtime source text)."""
+
+    source_text: Optional[str] = Field(
+        None,
+        description="Optional full text or pasted content (e.g. novel seed).",
+    )
+    chapters: int = Field(
+        default=1,
+        ge=1,
+        description="How many chapters to generate this run",
+    )
+    n_results: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="RAG hits per chapter when rag_collection is set",
+    )
+
+
+# Dialogue-Driven Flow Models
+class InitialDataSourceConfig(BaseModel):
+    """Configuration for initial data source"""
+    type: str = Field(..., description="Type: 'db_tool' or 'request_tool'")
+    resource_id: str = Field(..., description="ID of the DB tool or Request tool")
+    sql_input: Optional[str] = Field(None, description="Optional SQL input for DB tool")
+
+
+class DialogueConfig(BaseModel):
+    """Configuration for dialogue phase"""
+    system_prompt: str = Field(..., description="System prompt for the dialogue")
+    max_turns_phase1: int = Field(default=5, ge=1, le=20, description="Maximum turns before data fetch")
+    use_initial_data: bool = Field(default=True, description="Inject initial data into dialogue context")
+    llm_provider: Optional[LLMProviderType] = Field(None, description="LLM provider override")
+    model_name: Optional[str] = Field(None, description="Model name override")
+
+
+class DataFetchTrigger(BaseModel):
+    """Configuration for when to trigger mid-dialogue data fetch"""
+    type: str = Field(..., description="Trigger type: 'turn_count', 'keyword', 'user_trigger', 'ai_detected'")
+    value: Optional[Union[int, str]] = Field(None, description="Turn count (int) or keyword (str) depending on type")
+
+
+class MidDialogueRequestConfig(BaseModel):
+    """Configuration for mid-dialogue request"""
+    request_tool_id: str = Field(..., description="Request tool ID to use")
+    param_mapping: Optional[Union[str, Dict[str, str]]] = Field(
+        None,
+        description="Mapping of request params from dialogue context. Can be a template string like '{{dialogue.response}}' (if response is JSON, it will be parsed and merged), or a dict mapping param keys to template values. Use {{dialogue.user_input}}, {{dialogue.conversation_history}}, etc."
+    )
+
+
+class DialoguePhase2Config(BaseModel):
+    """Configuration for dialogue phase 2 (after data fetch)"""
+    continue_same_conversation: bool = Field(default=True, description="Continue same conversation or start new")
+    inject_fetched_data: bool = Field(default=True, description="Inject fetched data into dialogue context")
+    max_turns_phase2: int = Field(default=5, ge=1, le=20, description="Maximum turns in phase 2")
+
+
+class FinalProcessingConfig(BaseModel):
+    """Configuration for final processing step"""
+    system_prompt: str = Field(..., description="System prompt for final processing")
+    input_template: str = Field(
+        default="{{initial_data}}\n\nDialogue Summary:\n{{dialogue_summary}}\n\nFetched Data:\n{{fetched_data}}",
+        description="Template for combining all data. Use {{initial_data}}, {{dialogue_summary}}, {{fetched_data}}"
+    )
+    llm_provider: Optional[LLMProviderType] = Field(None, description="LLM provider override")
+    model_name: Optional[str] = Field(None, description="Model name override")
+
+
+class FinalAPICallConfig(BaseModel):
+    """Configuration for final API call"""
+    request_tool_id: str = Field(..., description="Request tool ID for final API call")
+    body_mapping: str = Field(
+        default="{{final_outcome}}",
+        description="How to format final outcome for API. Use {{final_outcome}} or JSON template"
+    )
+
+
+class SpecialFlow1Config(BaseModel):
+    """Configuration for Dialogue-Driven Flow"""
+    initial_data_source: InitialDataSourceConfig = Field(..., description="Initial data source configuration")
+    dialogue_config: DialogueConfig = Field(..., description="Dialogue configuration")
+    data_fetch_trigger: Optional[DataFetchTrigger] = Field(None, description="When to trigger data fetch (deprecated - not used in simplified flow)")
+    mid_dialogue_request: MidDialogueRequestConfig = Field(..., description="Request configuration for fetching data after dialogue")
+    dialogue_phase2: Optional[DialoguePhase2Config] = Field(None, description="Dialogue phase 2 configuration (deprecated - not used in simplified flow)")
+    final_processing: FinalProcessingConfig = Field(..., description="Final processing configuration")
+    final_api_call: FinalAPICallConfig = Field(..., description="Final API call configuration")
+
+
+class SpecialFlow1Profile(BaseModel):
+    """Stored Dialogue-Driven Flow profile"""
+    id: str = Field(..., description="Unique flow ID")
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = Field(None, description="Flow description")
+    config: SpecialFlow1Config = Field(..., description="Flow configuration")
+    is_active: bool = Field(default=True, description="Whether flow is active")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class SpecialFlow1CreateRequest(BaseModel):
+    """Request to create a new Dialogue-Driven Flow"""
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = None
+    config: SpecialFlow1Config = Field(..., description="Flow configuration")
+    is_active: bool = Field(default=True)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SpecialFlow1UpdateRequest(BaseModel):
+    """Request to update an existing Dialogue-Driven Flow"""
+    name: str = Field(..., description="Flow name")
+    description: Optional[str] = None
+    config: SpecialFlow1Config = Field(..., description="Flow configuration")
+    is_active: bool = Field(default=True)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SpecialFlow1ExecuteRequest(BaseModel):
+    """Request to execute a Dialogue-Driven Flow"""
+    initial_input: Optional[str] = Field(None, description="Optional initial input (for DB tool SQL or request params)")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+    resume_from_phase: Optional[str] = Field(None, description="Resume from specific phase: 'dialogue_phase1', 'dialogue_phase2'. If provided, dialogue_phase1_result must also be provided.")
+    dialogue_phase1_result: Optional[Dict[str, Any]] = Field(None, description="Dialogue phase 1 result to resume from (required if resume_from_phase is set)")
+    dialogue_phase2_result: Optional[Dict[str, Any]] = Field(None, description="Dialogue phase 2 result to resume from (required if resume_from_phase is 'dialogue_phase2')")
+    initial_data: Optional[Dict[str, Any]] = Field(None, description="Initial data from previous execution (required if resuming)")
+
+
+class SpecialFlow1ExecuteResponse(BaseModel):
+    """Response from executing a Dialogue-Driven Flow"""
+    flow_id: str = Field(..., description="Flow ID")
+    flow_name: str = Field(..., description="Flow name")
+    success: bool = Field(..., description="Whether flow completed successfully")
+    phase: str = Field(..., description="Current phase: 'initial_data', 'dialogue_phase1', 'data_fetch', 'dialogue_phase2', 'final_processing', 'api_call', 'complete'")
+    initial_data: Optional[Dict[str, Any]] = Field(None, description="Initial data fetched")
+    dialogue_phase1: Optional[Dict[str, Any]] = Field(None, description="Dialogue phase 1 result")
+    fetched_data: Optional[Dict[str, Any]] = Field(None, description="Mid-dialogue fetched data")
+    dialogue_phase2: Optional[Dict[str, Any]] = Field(None, description="Dialogue phase 2 result")
+    final_outcome: Optional[str] = Field(None, description="Final processing outcome")
+    api_call_result: Optional[Dict[str, Any]] = Field(None, description="Final API call result")
+    total_execution_time: float = Field(..., description="Total execution time in seconds")
+    error: Optional[str] = Field(None, description="Error message if flow failed")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+# Conversation Models (Multi-AI Conversation Module)
+class ModelConversationConfig(BaseModel):
+    """Configuration for a single AI model in the conversation"""
+    provider: LLMProviderType = Field(..., description="LLM provider for this model")
+    model_name: str = Field(..., description="Model name for this model")
+    system_prompt: str = Field(..., description="System prompt for this model")
+    rag_collection: Optional[str] = Field(None, description="Optional RAG collection to use for this model")
+
+
+class ConversationConfig(BaseModel):
+    """Configuration for a conversation between two AI models"""
+    model1_config: ModelConversationConfig = Field(..., description="Configuration for first AI model")
+    model2_config: ModelConversationConfig = Field(..., description="Configuration for second AI model")
+    max_turns: int = Field(default=10, ge=5, le=100, description="Maximum number of turns (must be between 5 and 100)")
+
+
+class ConversationCreateRequest(BaseModel):
+    """Request to create a conversation configuration"""
+    name: str = Field(..., description="Name for this conversation configuration")
+    description: Optional[str] = Field(None, description="Description of the conversation")
+    config: ConversationConfig = Field(..., description="Conversation configuration")
+
+
+class ConversationStartRequest(BaseModel):
+    """Request to start a new conversation session"""
+    config_id: str = Field(..., description="Conversation configuration ID")
+    topic: str = Field(..., description="Initial topic or prompt to start the conversation")
+
+
+class ConversationMessage(BaseModel):
+    """A single message in the conversation"""
+    role: str = Field(..., description="Role: 'user', 'model1', or 'model2'")
+    content: str = Field(..., description="Message content")
+    timestamp: str = Field(..., description="ISO timestamp of the message")
+    turn_number: int = Field(..., description="Turn number in the conversation")
+
+
+class ConversationTurnRequest(BaseModel):
+    """Request to continue a conversation turn"""
+    session_id: str = Field(..., description="Session ID from conversation start")
+    user_message: Optional[str] = Field(None, description="Optional user message to inject into conversation")
+
+
+class ConversationResponse(BaseModel):
+    """Response from a conversation turn"""
+    session_id: str = Field(..., description="Unique session ID")
+    turn_number: int = Field(..., description="Current turn number")
+    max_turns: int = Field(..., description="Maximum turns allowed")
+    is_complete: bool = Field(..., description="Whether conversation has reached max turns")
+    messages: List[ConversationMessage] = Field(..., description="Messages from this turn")
+    conversation_history: List[ConversationMessage] = Field(..., description="Full conversation history")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Response metadata")
+
+
+class ConversationHistoryResponse(BaseModel):
+    """Response for retrieving conversation history"""
+    session_id: str = Field(..., description="Session ID")
+    config_id: str = Field(..., description="Configuration ID used")
+    config_name: str = Field(..., description="Configuration name")
+    started_at: str = Field(..., description="ISO timestamp when conversation started")
+    ended_at: Optional[str] = Field(None, description="ISO timestamp when conversation ended")
+    total_turns: int = Field(..., description="Total number of turns")
+    conversation_history: List[ConversationMessage] = Field(..., description="Full conversation history")
+    saved_file_path: Optional[str] = Field(None, description="Path to saved conversation file")
+
+
+# MCP Host Models
+class MCPTransportType(str, Enum):
+    """Transport mechanism used to connect to the MCP server."""
+    STDIO = "stdio"
+    TCP = "tcp"
+    WEBSOCKET = "websocket"
+
+
+class MCPHostConfig(BaseModel):
+    """Configuration for hosting or connecting to an MCP server."""
+
+    name: str = Field(..., description="Display name for this MCP server")
+    description: Optional[str] = Field(None, description="Description / purpose of this MCP server")
+    transport: MCPTransportType = Field(
+        MCPTransportType.TCP,
+        description="Transport type: stdio (spawn process), tcp (host/port), or websocket (URL)",
+    )
+    command: Optional[str] = Field(
+        None,
+        description="Command or executable to start the MCP server (for stdio transport)",
+    )
+    args: List[str] = Field(
+        default_factory=list,
+        description="Command-line arguments for the MCP server process (for stdio transport)",
+    )
+    env: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment variables for the MCP server process (for stdio transport)",
+    )
+    working_dir: Optional[str] = Field(
+        None,
+        description="Working directory for the MCP server process (for stdio transport)",
+    )
+    host: Optional[str] = Field(
+        None,
+        description="Host for TCP-based MCP server (for tcp transport)",
+    )
+    port: Optional[int] = Field(
+        None,
+        description="Port for TCP-based MCP server (for tcp transport)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="WebSocket URL for MCP server (for websocket transport)",
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Whether this MCP host configuration is active/usable",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this MCP host configuration",
+    )
+
+
+class MCPHostProfile(BaseModel):
+    """Stored MCP host profile with resolved configuration."""
+
+    id: str = Field(..., description="Unique MCP host id")
+    name: str = Field(..., description="Display name")
+    description: Optional[str] = Field(None, description="Description / purpose")
+    config: MCPHostConfig = Field(..., description="MCP host configuration")
+    created_at: Optional[str] = Field(None, description="Creation timestamp (ISO)")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp (ISO)")
+
+
+class MCPHostCreateRequest(BaseModel):
+    """Request body for creating a new MCP host configuration."""
+
+    name: str = Field(..., description="Display name for this MCP server")
+    description: Optional[str] = Field(None, description="Description / purpose of this MCP server")
+    transport: MCPTransportType = Field(
+        MCPTransportType.TCP,
+        description="Transport type: stdio, tcp, or websocket",
+    )
+    command: Optional[str] = Field(
+        None,
+        description="Command or executable to start the MCP server (for stdio transport)",
+    )
+    args: List[str] = Field(
+        default_factory=list,
+        description="Command-line arguments for the MCP server process (for stdio transport)",
+    )
+    env: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment variables for the MCP server process (for stdio transport)",
+    )
+    working_dir: Optional[str] = Field(
+        None,
+        description="Working directory for the MCP server process (for stdio transport)",
+    )
+    host: Optional[str] = Field(
+        None,
+        description="Host for TCP-based MCP server (for tcp transport)",
+    )
+    port: Optional[int] = Field(
+        None,
+        description="Port for TCP-based MCP server (for tcp transport)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="WebSocket URL for MCP server (for websocket transport)",
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Whether this MCP host configuration is active/usable",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this MCP host configuration",
+    )
+
+
+class MCPHostUpdateRequest(BaseModel):
+    """Request body for updating an existing MCP host configuration."""
+
+    name: str = Field(..., description="Display name for this MCP server")
+    description: Optional[str] = Field(None, description="Description / purpose of this MCP server")
+    transport: MCPTransportType = Field(
+        MCPTransportType.TCP,
+        description="Transport type: stdio, tcp, or websocket",
+    )
+    command: Optional[str] = Field(
+        None,
+        description="Command or executable to start the MCP server (for stdio transport)",
+    )
+    args: List[str] = Field(
+        default_factory=list,
+        description="Command-line arguments for the MCP server process (for stdio transport)",
+    )
+    env: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment variables for the MCP server process (for stdio transport)",
+    )
+    working_dir: Optional[str] = Field(
+        None,
+        description="Working directory for the MCP server process (for stdio transport)",
+    )
+    host: Optional[str] = Field(
+        None,
+        description="Host for TCP-based MCP server (for tcp transport)",
+    )
+    port: Optional[int] = Field(
+        None,
+        description="Port for TCP-based MCP server (for tcp transport)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="WebSocket URL for MCP server (for websocket transport)",
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Whether this MCP host configuration is active/usable",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for this MCP host configuration",
+    )
+
+
+# ScholarForge — Academic Article & Thesis Composer
+class ScholarForgeDocumentType(str, Enum):
+    ARTICLE = "article"
+    THESIS = "thesis"
+    DISSERTATION = "dissertation"
+
+
+class ScholarForgeStatus(str, Enum):
+    DRAFT = "draft"
+    PREPARING = "preparing"
+    CLARIFYING = "clarifying"
+    STRUCTURING = "structuring"
+    PLANNING = "planning"
+    GENERATING = "generating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ScholarForgeMaterialInput(BaseModel):
+    filename: str
+    format: str = Field(..., description="txt, json, csv, or pdf_text")
+    content: str
+    description: Optional[str] = None
+
+
+class ScholarForgeImageAsset(BaseModel):
+    id: str
+    filename: str
+    stored_filename: Optional[str] = None
+    description: Optional[str] = None
+    placement_hint: Optional[str] = None
+    caption: Optional[str] = None
+
+
+class ScholarForgeFormField(BaseModel):
+    id: str
+    label: str
+    field_type: str = Field(default="text", description="text, textarea, select, number, checkbox")
+    required: bool = True
+    help_text: Optional[str] = None
+    options: List[str] = Field(default_factory=list)
+    placeholder: Optional[str] = None
+
+
+class ScholarForgeClarificationForm(BaseModel):
+    title: str = "Additional information needed"
+    intro: str = ""
+    fields: List[ScholarForgeFormField] = Field(default_factory=list)
+    html_preview: Optional[str] = None
+    sufficient: bool = False
+
+
+class ScholarForgeReviewReport(BaseModel):
+    """Structured feedback from the reviewer agent after a paragraph draft."""
+    approved: bool = False
+    quality_score: int = Field(default=0, ge=0, le=100)
+    issues: List[str] = Field(default_factory=list)
+    suggestions: List[str] = Field(default_factory=list)
+    summary: str = ""
+
+
+class ScholarForgeParagraphRecord(BaseModel):
+    """One paragraph within a section, with draft/review/revise history."""
+    index: int
+    draft: Optional[str] = None
+    content: Optional[str] = None
+    reviews: List[ScholarForgeReviewReport] = Field(default_factory=list)
+    revision_rounds: int = 0
+    status: str = Field(
+        default="pending",
+        description="pending, writing, reviewing, revising, approved",
+    )
+
+
+class ScholarForgePipelineStep(BaseModel):
+    """Flow-control step for UI visualization (write → review → revise)."""
+    step_id: str
+    step_type: str = Field(description="write, review, revise, summarize")
+    section_id: str
+    paragraph_index: Optional[int] = None
+    status: str = Field(default="pending", description="pending, running, done, failed")
+    label: str = ""
+    detail: Optional[str] = None
+
+
+class ScholarForgeSection(BaseModel):
+    id: str
+    title: str
+    description: str = ""
+    order: int = 0
+    status: str = Field(default="pending", description="pending, generating, done, reviewed")
+    content: Optional[str] = None
+    summary: Optional[str] = None
+    word_target: Optional[int] = None
+    paragraphs: List[ScholarForgeParagraphRecord] = Field(default_factory=list)
+    pipeline_steps: List[ScholarForgePipelineStep] = Field(default_factory=list)
+
+
+class ScholarForgeStructure(BaseModel):
+    document_title: str = ""
+    abstract_outline: str = ""
+    sections: List[ScholarForgeSection] = Field(default_factory=list)
+    notes: str = ""
+
+
+class ScholarForgeDocumentMeta(BaseModel):
+    """Author, institution, and formatting metadata for articles and theses."""
+    author_name: str = ""
+    author_email: Optional[str] = None
+    author_affiliation: str = ""
+    co_authors: List[str] = Field(default_factory=list)
+    university: str = ""
+    faculty: str = ""
+    department: str = ""
+    degree_program: str = ""
+    degree_awarded: str = ""
+    supervisor: str = ""
+    co_supervisor: Optional[str] = None
+    student_id: Optional[str] = None
+    submission_date: str = ""
+    location: str = ""
+    language: str = "English"
+    citation_style: str = "APA 7"
+    keywords: List[str] = Field(default_factory=list)
+    abstract_word_limit: Optional[int] = None
+    thesis_requirements_notes: str = ""
+
+
+class ScholarForgeProfile(BaseModel):
+    id: str
+    subject: str
+    title: str
+    short_intro: str
+    detailed_prompt: str
+    recommended_sites: List[str] = Field(default_factory=list)
+    document_type: ScholarForgeDocumentType = ScholarForgeDocumentType.ARTICLE
+    document_meta: ScholarForgeDocumentMeta = Field(default_factory=ScholarForgeDocumentMeta)
+    materials: List[ScholarForgeMaterialInput] = Field(default_factory=list)
+    images: List[ScholarForgeImageAsset] = Field(default_factory=list)
+    rag_collection: Optional[str] = None
+    status: ScholarForgeStatus = ScholarForgeStatus.DRAFT
+    clarification: Optional[ScholarForgeClarificationForm] = None
+    clarification_answers: Dict[str, Any] = Field(default_factory=dict)
+    structure: Optional[ScholarForgeStructure] = None
+    final_plan: Optional[str] = None
+    section_cache: Dict[str, str] = Field(default_factory=dict)
+    output_markdown_id: Optional[str] = None
+    output_pdf_id: Optional[str] = None
+    session_log: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class ScholarForgeCreateRequest(BaseModel):
+    subject: str
+    title: str
+    short_intro: str
+    detailed_prompt: str
+    recommended_sites: List[str] = Field(default_factory=list)
+    document_type: ScholarForgeDocumentType = ScholarForgeDocumentType.ARTICLE
+    document_meta: ScholarForgeDocumentMeta = Field(default_factory=ScholarForgeDocumentMeta)
+    materials: List[ScholarForgeMaterialInput] = Field(default_factory=list)
+
+
+class ScholarForgeUpdateRequest(BaseModel):
+    subject: str
+    title: str
+    short_intro: str
+    detailed_prompt: str
+    recommended_sites: List[str] = Field(default_factory=list)
+    document_type: ScholarForgeDocumentType = ScholarForgeDocumentType.ARTICLE
+    document_meta: ScholarForgeDocumentMeta = Field(default_factory=ScholarForgeDocumentMeta)
+    materials: List[ScholarForgeMaterialInput] = Field(default_factory=list)
+
+
+class ScholarForgeClarifySubmitRequest(BaseModel):
+    answers: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ScholarForgeStructureUpdateRequest(BaseModel):
+    structure: ScholarForgeStructure
+
+
+class ScholarForgeConfirmStructureRequest(BaseModel):
+    confirmed: bool = True
+    notes: Optional[str] = None
+
+
+# Video Story Generator — scene-by-scene storyboard to video pipeline
+class VideoStorySceneStatus(str, Enum):
+    DRAFT = "draft"
+    PROMPT_POLISHED = "prompt_polished"
+    IMAGES_READY = "images_ready"
+    VIDEO_READY = "video_ready"
+    FAILED = "failed"
+
+
+class VideoStoryImageAsset(BaseModel):
+    id: str
+    asset_type: str = Field(description="character, scenery, other")
+    prompt: str = ""
+    filename: Optional[str] = None
+    description: str = ""
+
+
+class VideoStoryCastMember(BaseModel):
+    id: str
+    name: str
+    canonical_description: str = ""
+    aliases: List[str] = Field(default_factory=list)
+    image: Optional[VideoStoryImageAsset] = None
+    is_primary: bool = False
+
+
+class VideoStoryWorld(BaseModel):
+    canonical_description: str = ""
+    image: Optional[VideoStoryImageAsset] = None
+
+
+class VideoStoryScene(BaseModel):
+    id: str
+    order: int = 0
+    title: str = ""
+    user_prompt: str = Field(
+        default="",
+        description="Short user query for the beat, e.g. 'he runs on the street'",
+    )
+    polished_prompt: Optional[str] = None
+    character_descriptions: List[str] = Field(default_factory=list)
+    scenery_description: Optional[str] = None
+    images: List[VideoStoryImageAsset] = Field(default_factory=list)
+    video_filename: Optional[str] = None
+    last_frame_filename: Optional[str] = Field(
+        default=None,
+        description="Cached last frame PNG from this scene's video (for I2V continuity into the next scene)",
+    )
+    status: VideoStorySceneStatus = VideoStorySceneStatus.DRAFT
+    notes: str = ""
+    error: Optional[str] = None
+    # Continuity / clip length for polishing short queries into video prompts
+    duration_seconds: float = Field(
+        default=5.0,
+        description="Target clip length in seconds; polish must fit action into this window",
+    )
+    continue_from_previous: bool = Field(
+        default=True,
+        description="If true, polish continues from the previous scene; if false, treat as a hard cut",
+    )
+    cut_note: str = Field(
+        default="",
+        description="Optional note when continue_from_previous is false (new location/time/character focus)",
+    )
+
+
+class VideoStoryStatus(str, Enum):
+    DRAFT = "draft"
+    POLISHING = "polishing"
+    GENERATING_IMAGES = "generating_images"
+    GENERATING_VIDEOS = "generating_videos"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class VideoStoryProfile(BaseModel):
+    id: str
+    title: str
+    description: str = ""
+    story_context: str = Field(default="", description="Overall story premise for prompt polishing")
+    scenes: List[VideoStoryScene] = Field(default_factory=list)
+    # Story-level locked identity — generated once, reused across all scenes
+    cast: List[VideoStoryCastMember] = Field(default_factory=list)
+    world: Optional[VideoStoryWorld] = None
+    style_bible: str = Field(
+        default="",
+        description="Locked visual style (medium, palette, camera language) for the whole series",
+    )
+    status: VideoStoryStatus = VideoStoryStatus.DRAFT
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class VideoStoryCreateRequest(BaseModel):
+    title: str
+    description: str = ""
+    story_context: str = ""
+    scenes: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Optional initial scenes with user_prompt and title",
+    )
+
+
+class VideoStoryUpdateRequest(BaseModel):
+    title: str
+    description: str = ""
+    story_context: str = ""
+    scenes: List[VideoStoryScene] = Field(default_factory=list)
+    # Optional story-level identity edits (cast / world / style)
+    cast: Optional[List[VideoStoryCastMember]] = None
+    world: Optional[VideoStoryWorld] = None
+    style_bible: Optional[str] = None
+
+
+class VideoStoryPolishSceneRequest(BaseModel):
+    scene_id: Optional[str] = None
+    polish_all: bool = False
+
+
+class VideoStoryPolishContentRequest(BaseModel):
+  """Optional AI rewrite for story-level or cast/world text (not scene clip prompts)."""
+  field: str = Field(
+      description="story_context | description | style_bible | cast_description | world_description",
+  )
+  cast_member_id: Optional[str] = None
+  source_text: Optional[str] = Field(
+      default=None,
+      description="If omitted, uses the current value on the project",
+  )
+
+
+class VideoStoryGenerateImagesRequest(BaseModel):
+    scene_id: Optional[str] = None
+    generate_all: bool = False
+    include_characters: bool = True
+    include_scenery: bool = True
+    # Shared cast/world controls
+    force_bible: bool = Field(default=False, description="Re-extract cast/world bible from scenes")
+    force_regenerate: bool = Field(
+        default=False,
+        description="Clear existing sheet filenames and regenerate selected assets",
+    )
+    cast_member_id: Optional[str] = Field(
+        default=None,
+        description="If set, only regenerate this cast member's sheet",
+    )
+    regen_world: bool = Field(default=False, description="If true, only regenerate the world sheet")
+
+
+class VideoStoryGenerateVideosRequest(BaseModel):
+    scene_id: Optional[str] = None
+    generate_all: bool = False
+    force_regenerate: bool = Field(
+        default=False,
+        description="Replace existing scene videos instead of skipping them",
+    )

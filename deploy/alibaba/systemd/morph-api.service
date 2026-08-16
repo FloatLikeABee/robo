@@ -1,0 +1,17 @@
+[Unit]
+Description=MorphData / Morph AI API
+After=network.target userspanel-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/robo
+EnvironmentFile=-/etc/robo/env.production
+Environment=PORT=9090
+Environment=DB_PATH=/var/lib/robo/morph-data/badger
+ExecStart=/opt/robo/bin/morph-server
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

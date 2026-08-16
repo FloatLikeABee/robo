@@ -1,0 +1,83 @@
+# Local / deploy secrets and artifacts
+deploy/.env.production
+.robo-dev/
+.DS_Store
+**/.DS_Store
+
+# Env / secrets (keep examples)
+**/.env
+**/.env.local
+**/.env.development
+**/.env.development.local
+**/.env.test.local
+**/.env.production
+**/.env.production.local
+!**/.env.example
+!deploy/env.production.example
+bk/env
+*.key
+*.pem
+**/gemini_key
+
+# Dependencies & build
+**/node_modules/
+**/target/
+dist/
+**/dist/
+**/build/
+**/.svelte-kit/
+
+# Local data / runtime
+**/data/
+**/chroma_db/
+results/
+sites/
+products/
+*.db
+*.sqlite
+*.sqlite3
+**/users.db*
+
+# Logs & debug
+*.log
+logs/
+__debug*
+__pycache__/
+*.pyc
+
+# IDE / OS
+.vscode/
+.idea/
+.fleet/
+.run/
+*.swp
+*.swo
+*~
+Thumbs.db
+
+# Coverage / test
+coverage.*
+*.coverprofile
+*.test
+*.out
+
+# Go binaries / cache
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+vendor/
+
+# Nested repo backups (monorepo migration)
+**/.git.nested-backup/
+
+# Large vendored binaries (exceed GitHub 100MB limit)
+**/metabase.jar
+SharpReport/backend/metabase/
+SharpReport/backend/plugins/
+
+# Local Claude / agent state
+.claude/settings.local.json
+.qwen/tmp/

@@ -1,0 +1,37 @@
+[server]
+host = "0.0.0.0"
+port = 3050
+
+[database]
+url = "sqlite://./data/datapulse.db"
+
+[jwt]
+secret = "change-me-in-production"
+expiry_hours = 24
+
+[users_panel]
+base_url = "http://127.0.0.1:9090"
+
+[metabase]
+# Set true to download the JAR if needed and run `java -jar` when the API starts.
+autostart = false
+jar_path = "./metabase/metabase.jar"
+download_url = "https://downloads.metabase.com/latest/metabase.jar"
+host = "127.0.0.1"
+port = 8001
+db_type = "h2"
+db_url = ""
+jvm_opts = "-Xmx2g -Xms512m"
+health_check_interval = 30
+restart_on_failure = true
+max_restarts = 5
+
+[cors]
+allowed_origins = [
+  "http://localhost:5173",
+  "http://localhost:5178",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5178",
+  "http://localhost:3050",
+  "http://127.0.0.1:3050",
+]

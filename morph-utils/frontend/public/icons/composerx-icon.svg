@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ComposerX">
+  <defs>
+    <linearGradient id="cx-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="55%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#cx-bg)"/>
+  <path
+    d="M112 176h288v160H112V176Zm32 32 112 80 112-80H144Zm224 96v-72l-112 80-112-80v72h224Z"
+    fill="#f8fbff"
+  />
+  <path d="M320 352h80v32H320z" fill="#dbeafe"/>
+  <circle cx="400" cy="144" r="40" fill="#bfdbfe"/>
+</svg>

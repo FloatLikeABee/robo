@@ -1,0 +1,12 @@
+[
+  {"last_name": "Anderson", "first_name": "Rachel", "staff_guid": "EMP-NVH-001", "email": "rachel.anderson@nvu.edu", "phone_number": "503-555-0101", "facility_id": "1", "employ_type": "full-time", "description": "Principal North Valley High"},
+  {"last_name": "Torres", "first_name": "Miguel", "middle_name": "A", "staff_guid": "EMP-ESE-002", "email": "miguel.torres@esc.edu", "phone_number": "541-555-0102", "facility_id": "2", "employ_type": "full-time", "description": "4th grade homeroom teacher"},
+  {"last_name": "Singh", "first_name": "Priya", "staff_guid": "EMP-HVM-003", "email": "priya.singh@hvs.edu", "phone_number": "541-555-0103", "facility_id": "3", "employ_type": "full-time", "description": "Middle school science lead"},
+  {"last_name": "Johnson", "first_name": "Mark", "middle_name": "E", "staff_guid": "EMP-SRP-004", "email": "mark.johnson@phu.edu", "phone_number": "541-555-0104", "facility_id": "4", "employ_type": "part-time", "description": "Reading specialist 0.6 FTE"},
+  {"last_name": "Williams", "first_name": "Alicia", "staff_guid": "EMP-LFA-005", "email": "alicia.williams@lps.edu", "phone_number": "503-555-0105", "facility_id": "5", "employ_type": "full-time", "description": "STEM lab coordinator"},
+  {"last_name": "Davis", "first_name": "Robert", "staff_guid": "EMP-CGH-006", "email": "robert.davis@cgi.edu", "phone_number": "503-555-0106", "facility_id": "6", "employ_type": "full-time", "description": "Athletic director"},
+  {"last_name": "Garcia", "first_name": "Maria", "middle_name": "Isabel", "staff_guid": "EMP-PHE-007", "email": "maria.garcia@phu.edu", "phone_number": "541-555-0107", "facility_id": "7", "employ_type": "full-time", "description": "Cafeteria and nutrition manager"},
+  {"last_name": "Lee", "first_name": "James", "staff_guid": "EMP-RAC-008", "email": "james.lee@rad.edu", "phone_number": "541-555-0108", "facility_id": "8", "employ_type": "full-time", "description": "Theater production manager"},
+  {"last_name": "Thompson", "first_name": "Karen", "middle_name": "L", "staff_guid": "EMP-PTH-009", "email": "karen.thompson@pmd.edu", "phone_number": "503-555-0109", "facility_id": "9", "employ_type": "full-time", "description": "Transportation dispatcher"},
+  {"last_name": "Brown", "first_name": "David", "staff_guid": "EMP-WCK-010", "email": "david.brown@wce.edu", "phone_number": "503-555-0110", "facility_id": "10", "employ_type": "full-time", "description": "K-8 assistant principal"}
+]

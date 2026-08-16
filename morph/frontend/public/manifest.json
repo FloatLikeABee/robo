@@ -1,0 +1,29 @@
+{
+  "short_name": "Morph AI",
+  "name": "Morph AI",
+  "icons": [
+    {
+      "src": "icons/morph-ai-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/morph-ai-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/morph-ai-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#020408",
+  "background_color": "#020408"
+}

@@ -1,0 +1,3 @@
+-- Migrated to SQLite. Canonical schema is applied from
+-- internal/database/schema.sql on Connect (BOOKI_SQLITE_PATH).
+-- Historical MySQL dump removed; see git history if needed.

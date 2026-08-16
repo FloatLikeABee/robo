@@ -1,0 +1,52 @@
+I wanna start this new project called Serpico (an AI Agent assistant helper APP for police forces on patrol or in office use; for civilians it's an app for checking nearby safety status with AI)
+* This is version 0.1 - a demo and basic framework for the final product
+* frontend ui in reactjs (mobile compatible)
+* create docs and Readme in the root
+* backend use Golang for faster API builds, goroutine uses and embedded DBs (should have key-value cache DB)
+
+* first create a good design based on the "granddesign.PNG" rough graph, put the design into doc file.
+* then start developement. frontend UI need to have light/dark mode, backend apis must have swaggerUI for access.
+
+* user login page should only be a mock, having email and password, or sign in with google/apple. but everything is a mock so user can just hit login button and login.
+* Modules:
+	
+	for cops:
+		- In pursue (ongoing cases or pursues on a map canvas, sided with real time AI chat suggestions on nearby perps, prompts should be organized in the backend. AI provides recommendation pursue routes from history data)
+		- Perps (AI chat with a base of perps from cases in recent 3 years, the year range is configurable.)
+		- Case library (chat with AI for historical cases in the area, AI agents with search and wiki. including unsolved. focus on armed/unarmed assults, sexual assults, murders and robberies.)
+		- emergency notification / 911 dispatch (AI categoried and suggestions by category by the rank/ability set of the officer, and real-time location)
+		- Leisure (AI chat for after hour workouts, training info, healthcare advices specifically for police forces, bars and clubs, social activities. AI agent with search tool should be used.)
+		
+	for civilians:
+		- Nearby officers/police vehicles, and possible danger like a pursue or discovered criminal activity (AI chat display on a map canvas, sided by a drawer button when opened it's the AI chat, listing officer names/ranks/vehicle plate/number)
+		- Nearby perps/criminals/convicts in recent history (not the actual faces or names because it could be a violation, but recent events with covered names, unless the perp is on the public list from the police dept.)
+		- Recommendations on safe routes to a destination.
+		- crime notification for nearby civilians.
+		
+* App default home to be a map canvas, for police it should be "In pursue", for civilians it's Nearby officers/police vehicles and possible danger like a pursue or discovered criminal activity. The map canvas should be accompanied by AI chat from a drawer button.
+* Settings module is common for both, to set user data and the theme of the APP.
+
+* logo design: Serpico should be a shield, like the shield of Captain America. the color of the App should be red and blue as well, but not really sharp, make it eye friendly.
+
+
+
+https://serpicoproject.onrender.com/api/v1
+
+
+
+
+
+
+I have this sample file, it's a json data scripting an entity of a form, which is specific for a web app system. the system can transcript this form into a web page which is a form for users to fill up and commit.  now you need to consume this sample data file, which is in json, and here's some instructions and explanations for you, so you can use as a baseline guide, to generate new form scripts according to commands: this sample is a Student Form sample, if user want to collect data from parents or students. the fields in this json file is fixed, not to be varied at all. your generation must only change the "section" name according to the command, the "question" title/name according to request, the name and description of the form, and other properties in command, like if user would say "I want a survey" then it's a public form (the "Public" field).         after this being said, now I want to have a form to collect students' basic infos for a school year 2026.
+
+
+
+
+
+
+
+YOUR_GEMINI_API_KEY
+
+
+
+alpha vantage: ED2OR4DHOZH8Z56J

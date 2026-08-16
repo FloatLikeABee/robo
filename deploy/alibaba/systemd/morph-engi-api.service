@@ -1,0 +1,15 @@
+[Unit]
+Description=Morph Engi API
+After=network.target userspanel-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/robo
+EnvironmentFile=-/etc/robo/env.production
+Environment=APP_PORT=9096
+ExecStart=/opt/robo/bin/morph-engi-api
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

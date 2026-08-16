@@ -1,0 +1,870 @@
+basePath: /
+definitions:
+  handler.PublicFormResponse:
+    properties:
+      form:
+        $ref: '#/definitions/models.Form'
+      questions:
+        items:
+          $ref: '#/definitions/models.Question'
+        type: array
+      rules:
+        items:
+          $ref: '#/definitions/models.QuestionRule'
+        type: array
+    type: object
+  models.AnswerEntry:
+    properties:
+      filename:
+        type: string
+      question_id:
+        type: integer
+      size:
+        type: integer
+      type:
+        type: string
+      value: {}
+    type: object
+  models.AnswerInput:
+    properties:
+      question_id:
+        type: integer
+      value: {}
+    required:
+    - question_id
+    type: object
+  models.CreateFormRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      single_response_only:
+        type: boolean
+      slug:
+        type: string
+    required:
+    - name
+    - slug
+    type: object
+  models.CreateQuestionRequest:
+    properties:
+      config:
+        $ref: '#/definitions/models.QuestionConfig'
+      required:
+        type: boolean
+      sort_order:
+        type: integer
+      title:
+        type: string
+      type:
+        type: string
+    required:
+    - title
+    - type
+    type: object
+  models.CreateRuleRequest:
+    properties:
+      condition:
+        type: string
+      depends_on_question_id:
+        type: integer
+    required:
+    - condition
+    - depends_on_question_id
+    type: object
+  models.Form:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/models.Question'
+        type: array
+      single_response_only:
+        type: boolean
+      slug:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.FormListResponse:
+    properties:
+      forms:
+        items:
+          $ref: '#/definitions/models.Form'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.FormResponse:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/models.AnswerEntry'
+        type: array
+      form_id:
+        type: integer
+      id:
+        type: string
+      respondent_id:
+        type: string
+      slug:
+        type: string
+      submitted_at:
+        type: string
+    type: object
+  models.OptionItem:
+    properties:
+      label:
+        type: string
+      value:
+        type: integer
+    type: object
+  models.Question:
+    properties:
+      config:
+        $ref: '#/definitions/models.QuestionConfig'
+      created_at:
+        type: string
+      form_id:
+        type: integer
+      id:
+        type: integer
+      required:
+        type: boolean
+      sort_order:
+        type: integer
+      title:
+        type: string
+      type:
+        description: text, integer, select, multiselect, float, boolean, date, datetime,
+          image, document, qrcode
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.QuestionConfig:
+    properties:
+      allowed_extensions:
+        items:
+          type: string
+        type: array
+      allowed_mime:
+        type: string
+      max:
+        type: number
+      max_selections:
+        type: integer
+      max_size:
+        type: integer
+      min:
+        type: number
+      multiline:
+        type: boolean
+      options:
+        items:
+          $ref: '#/definitions/models.OptionItem'
+        type: array
+      validation_pattern:
+        type: string
+    type: object
+  models.QuestionRule:
+    properties:
+      condition:
+        description: '"answered" | "not_answered"'
+        type: string
+      created_at:
+        type: string
+      depends_on_question_id:
+        type: integer
+      id:
+        type: integer
+      question_id:
+        description: question this rule applies to
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.ResponseListResult:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      responses:
+        items:
+          $ref: '#/definitions/models.FormResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  models.SubmitRequest:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/models.AnswerInput'
+        type: array
+      respondent_id:
+        type: string
+    required:
+    - answers
+    type: object
+  models.UpdateFormRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      single_response_only:
+        type: boolean
+      slug:
+        type: string
+    type: object
+  models.UpdateQuestionRequest:
+    properties:
+      config:
+        $ref: '#/definitions/models.QuestionConfig'
+      required:
+        type: boolean
+      sort_order:
+        type: integer
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+host: localhost:29909
+info:
+  contact: {}
+  description: Form builder and response collection API
+  title: FormsX API
+  version: "1.0"
+paths:
+  /api/v1/forms:
+    get:
+      parameters:
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Search
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FormListResponse'
+      summary: List forms
+      tags:
+      - forms
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateFormRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Form'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create form
+      tags:
+      - forms
+  /api/v1/forms/{formId}/questions:
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Question'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List questions
+      tags:
+      - questions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateQuestionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Question'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create question
+      tags:
+      - questions
+  /api/v1/forms/{formId}/questions/{id}:
+    delete:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question ID
+        in: path
+        name: questionId
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete question
+      tags:
+      - questions
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question ID
+        in: path
+        name: questionId
+        required: true
+        type: integer
+      - description: Updates
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateQuestionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Question'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update question
+      tags:
+      - questions
+  /api/v1/forms/{formId}/responses:
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Since (unix ms)
+        in: query
+        name: since
+        type: integer
+      - description: Until (unix ms)
+        in: query
+        name: until
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResponseListResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List form responses
+      tags:
+      - responses
+  /api/v1/forms/{formId}/responses/export:
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Export responses as CSV
+      tags:
+      - responses
+  /api/v1/forms/{id}:
+    delete:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete form
+      tags:
+      - forms
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Form'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get form by ID
+      tags:
+      - forms
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updates
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateFormRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Form'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update form
+      tags:
+      - forms
+  /api/v1/forms/{id}/questions/{questionId}/rules:
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question ID
+        in: path
+        name: questionId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.QuestionRule'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List rules for a question
+      tags:
+      - rules
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question ID
+        in: path
+        name: questionId
+        required: true
+        type: integer
+      - description: Rule data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.QuestionRule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create rule for a question
+      tags:
+      - rules
+  /api/v1/forms/{id}/questions/{questionId}/rules/{ruleId}:
+    delete:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Question ID
+        in: path
+        name: questionId
+        required: true
+        type: integer
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete rule
+      tags:
+      - rules
+  /api/v1/forms/{id}/rules:
+    get:
+      parameters:
+      - description: Form ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.QuestionRule'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all rules for a form
+      tags:
+      - rules
+  /api/v1/forms/by-slug/{slug}:
+    get:
+      parameters:
+      - description: Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Form'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get form by slug
+      tags:
+      - forms
+  /api/v1/public/forms/{slug}:
+    get:
+      parameters:
+      - description: Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PublicFormResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get public form by slug
+      tags:
+      - public
+  /api/v1/public/forms/{slug}/submit:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Response data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SubmitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.FormResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Submit form response
+      tags:
+      - public
+swagger: "2.0"

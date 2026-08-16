@@ -1,0 +1,1319 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Form builder and response collection API",
+        "title": "FormsX API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:29909",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/forms": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "forms"
+                ],
+                "summary": "List forms",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FormListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "forms"
+                ],
+                "summary": "Create form",
+                "parameters": [
+                    {
+                        "description": "Form data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateFormRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Form"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/by-slug/{slug}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "forms"
+                ],
+                "summary": "Get form by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Form"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{formId}/questions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "questions"
+                ],
+                "summary": "List questions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Question"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "questions"
+                ],
+                "summary": "Create question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Question data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Question"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{formId}/questions/{id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "questions"
+                ],
+                "summary": "Update question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updates",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateQuestionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Question"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "questions"
+                ],
+                "summary": "Delete question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{formId}/responses": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "responses"
+                ],
+                "summary": "List form responses",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Since (unix ms)",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Until (unix ms)",
+                        "name": "until",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseListResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{formId}/responses/export": {
+            "get": {
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "responses"
+                ],
+                "summary": "Export responses as CSV",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "forms"
+                ],
+                "summary": "Get form by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Form"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "forms"
+                ],
+                "summary": "Update form",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updates",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateFormRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Form"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "forms"
+                ],
+                "summary": "Delete form",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{id}/questions/{questionId}/rules": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rules"
+                ],
+                "summary": "List rules for a question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.QuestionRule"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rules"
+                ],
+                "summary": "Create rule for a question",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rule data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.QuestionRule"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{id}/questions/{questionId}/rules/{ruleId}": {
+            "delete": {
+                "tags": [
+                    "rules"
+                ],
+                "summary": "Delete rule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Question ID",
+                        "name": "questionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Rule ID",
+                        "name": "ruleId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/forms/{id}/rules": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rules"
+                ],
+                "summary": "List all rules for a form",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Form ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.QuestionRule"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/forms/{slug}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Get public form by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PublicFormResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/forms/{slug}/submit": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Submit form response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Response data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SubmitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.FormResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.PublicFormResponse": {
+            "type": "object",
+            "properties": {
+                "form": {
+                    "$ref": "#/definitions/models.Form"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Question"
+                    }
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.QuestionRule"
+                    }
+                }
+            }
+        },
+        "models.AnswerEntry": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string"
+                },
+                "question_id": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {}
+            }
+        },
+        "models.AnswerInput": {
+            "type": "object",
+            "required": [
+                "question_id"
+            ],
+            "properties": {
+                "question_id": {
+                    "type": "integer"
+                },
+                "value": {}
+            }
+        },
+        "models.CreateFormRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "single_response_only": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateQuestionRequest": {
+            "type": "object",
+            "required": [
+                "title",
+                "type"
+            ],
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/models.QuestionConfig"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateRuleRequest": {
+            "type": "object",
+            "required": [
+                "condition",
+                "depends_on_question_id"
+            ],
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "depends_on_question_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Form": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Question"
+                    }
+                },
+                "single_response_only": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FormListResponse": {
+            "type": "object",
+            "properties": {
+                "forms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Form"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FormResponse": {
+            "type": "object",
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AnswerEntry"
+                    }
+                },
+                "form_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "respondent_id": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "submitted_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.OptionItem": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Question": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/models.QuestionConfig"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "form_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "text, integer, select, multiselect, float, boolean, date, datetime, image, document, qrcode",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.QuestionConfig": {
+            "type": "object",
+            "properties": {
+                "allowed_extensions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowed_mime": {
+                    "type": "string"
+                },
+                "max": {
+                    "type": "number"
+                },
+                "max_selections": {
+                    "type": "integer"
+                },
+                "max_size": {
+                    "type": "integer"
+                },
+                "min": {
+                    "type": "number"
+                },
+                "multiline": {
+                    "type": "boolean"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OptionItem"
+                    }
+                },
+                "validation_pattern": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.QuestionRule": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "description": "\"answered\" | \"not_answered\"",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "depends_on_question_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "question_id": {
+                    "description": "question this rule applies to",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ResponseListResult": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "responses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FormResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.SubmitRequest": {
+            "type": "object",
+            "required": [
+                "answers"
+            ],
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AnswerInput"
+                    }
+                },
+                "respondent_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UpdateFormRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "single_response_only": {
+                    "type": "boolean"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UpdateQuestionRequest": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/models.QuestionConfig"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "sort_order": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

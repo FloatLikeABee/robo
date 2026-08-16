@@ -1,0 +1,22 @@
+[server]
+port = 3050
+
+[database]
+url = "postgresql://datapulse:secret@localhost:5432/datapulse"
+
+[jwt]
+secret = "production-secret-key-change-me"
+expiry_hours = 24
+
+[metabase]
+autostart = false
+jar_path = "/app/metabase/metabase.jar"
+download_url = "https://downloads.metabase.com/latest/metabase.jar"
+host = "127.0.0.1"
+port = 8001
+db_type = "postgres"
+db_url = "postgresql://metabase:metabase-secret@localhost:5432/metabase"
+jvm_opts = "-Xmx4g -Xms2g"
+
+[cors]
+allowed_origins = ["https://datapulse.example.com"]

@@ -1,0 +1,12 @@
+[
+  {"asset_tag": "BUS-NVU-12", "description": "2019 Thomas C2 72-passenger route bus", "AssetType": "bus", "ContractorID": "CTR-501"},
+  {"asset_tag": "BUS-NVU-14", "description": "2021 Blue Bird Vision spare route bus", "AssetType": "bus", "ContractorID": "CTR-501"},
+  {"asset_tag": "VAN-HVS-03", "description": "Wheelchair-accessible transit van 8 passenger", "AssetType": "van", "ContractorID": "CTR-502"},
+  {"asset_tag": "BUS-ESC-07", "description": "2018 IC CE elementary loop bus", "AssetType": "bus", "ContractorID": "CTR-503"},
+  {"asset_tag": "GEN-SRR-01", "description": "40kW backup generator for campus power", "AssetType": "generator"},
+  {"asset_tag": "SWP-LFA-02", "description": "Commercial floor scrubber custodial equipment", "AssetType": "equipment"},
+  {"asset_tag": "RADIO-PTH-15", "description": "Two-way radio pack fleet dispatch set", "AssetType": "equipment"},
+  {"asset_tag": "LIFT-CGH-04", "description": "Wheelchair lift retrofit unit shop inventory", "AssetType": "equipment", "ContractorID": "CTR-504"},
+  {"asset_tag": "GPS-FLEET-01", "description": "Telematics GPS bundle 24 vehicles", "AssetType": "technology", "ContractorID": "CTR-501"},
+  {"asset_tag": "TRAIL-HVM-02", "description": "Equipment trailer for field athletics", "AssetType": "trailer"}
+]

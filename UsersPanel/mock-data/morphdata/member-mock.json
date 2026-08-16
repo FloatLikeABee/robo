@@ -1,0 +1,12 @@
+[
+  {"last_name": "Chen", "first_name": "Olivia", "dob": "2014-08-12", "entry_date": "2024-09-03", "facility": "North Valley High", "gender": "2", "email": "olivia.chen@student.nvu.edu", "participant_type": "student", "description": "Grade 10 honors biology track"},
+  {"last_name": "Martinez", "first_name": "Diego", "middle_name": "A", "dob": "2015-03-22", "entry_date": "2024-09-03", "facility": "Eastside Elementary", "gender": "1", "participant_type": "student", "description": "Grade 4 ESL support plan active"},
+  {"last_name": "Nguyen", "first_name": "Emma", "middle_name": "Lynn", "dob": "2013-11-05", "entry_date": "2023-09-05", "facility": "Harbor View Middle", "gender": "2", "email": "emma.nguyen@student.hvs.edu", "participant_type": "student", "description": "Grade 7 band and robotics"},
+  {"last_name": "O'Brien", "first_name": "Liam", "dob": "2016-01-18", "entry_date": "2024-09-03", "facility": "Summit Ridge Primary", "gender": "1", "participant_type": "student", "description": "Grade 3 IEP review scheduled Q2"},
+  {"last_name": "Patel", "first_name": "Aarav", "middle_name": "K", "dob": "2012-07-30", "entry_date": "2022-09-06", "facility": "Lakefront Academy", "gender": "1", "email": "aarav.patel@student.lps.edu", "participant_type": "student", "description": "Grade 8 accelerated math"},
+  {"last_name": "Reed", "first_name": "Sophia", "middle_name": "M", "dob": "2014-04-09", "entry_date": "2024-09-03", "facility": "Cedar Grove High", "gender": "2", "participant_type": "student", "description": "Grade 10 volleyball JV"},
+  {"last_name": "Washington", "first_name": "Jordan", "dob": "2015-09-14", "entry_date": "2024-09-03", "facility": "Prairie Hills Elementary", "gender": "1", "participant_type": "student", "description": "Grade 4 reading intervention"},
+  {"last_name": "Kim", "first_name": "Hana", "dob": "2011-12-02", "entry_date": "2021-09-07", "facility": "Riverside Arts Center", "gender": "2", "email": "hana.kim@student.rad.edu", "participant_type": "student", "description": "Grade 12 dance conservatory"},
+  {"last_name": "Brooks", "first_name": "Noah", "middle_name": "J", "dob": "2013-06-25", "entry_date": "2023-09-05", "facility": "Willow Creek K-8", "gender": "1", "participant_type": "student", "description": "Grade 8 leadership council"},
+  {"last_name": "Foster", "first_name": "Zara", "dob": "2014-10-31", "entry_date": "2024-09-03", "facility": "North Valley High", "gender": "2", "participant_type": "student", "description": "Grade 9 newcomer orientation complete"}
+]

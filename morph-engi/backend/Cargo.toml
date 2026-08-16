@@ -1,0 +1,26 @@
+[package]
+name = "morph-engi-api"
+version = "0.1.0"
+edition = "2021"
+description = "Morph Engi civil engineering project platform API"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros", "multipart"] }
+tokio = { version = "1", features = ["full", "macros", "rt-multi-thread"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "sqlite", "chrono", "json"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+dotenvy = "0.15"
+chrono = { version = "0.4", features = ["serde"] }
+jsonwebtoken = "9.0"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+thiserror = "1.0"
+tower-http = { version = "0.5", features = ["cors"] }
+morphai = { path = "../../pkg/morphai-rs" }
+pdf-extract = "0.12.0"
+pulldown-cmark = "0.12"
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }

@@ -1,0 +1,11 @@
+name,facility_code,district_id,facility_type,description,location
+North Valley High,NVH-101,1,high,Grades 9-12 flagship campus,"{""city"":""Springfield"",""state"":""OR"",""zip"":""97477""}"
+Eastside Elementary,ESE-102,2,elementary,K-5 neighborhood school,"{""city"":""Eugene"",""state"":""OR"",""zip"":""97401""}"
+Harbor View Middle,HVM-103,3,middle,Grades 6-8 waterfront campus,"{""city"":""Coos Bay"",""state"":""OR"",""zip"":""97420""}"
+Summit Ridge Primary,SRP-104,4,elementary,Rural K-5 with onsite clinic,"{""city"":""Bend"",""state"":""OR"",""zip"":""97701""}"
+Lakefront Academy,LFA-105,5,magnet,STEM magnet grades 4-8,"{""city"":""Portland"",""state"":""OR"",""zip"":""97201""}"
+Cedar Grove High,CGH-106,6,high,Historic brick campus downtown,"{""city"":""Salem"",""state"":""OR"",""zip"":""97301""}"
+Prairie Hills Elementary,PHE-107,7,elementary,K-6 with farm-to-table program,"{""city"":""Corvallis"",""state"":""OR"",""zip"":""97330""}"
+Riverside Arts Center,RAC-108,8,secondary,Performing arts focused 7-12,"{""city"":""Medford"",""state"":""OR"",""zip"":""97501""}"
+Pinewood Transport Hub,PTH-109,9,admin,Central fleet and dispatch office,"{""city"":""Beaverton"",""state"":""OR"",""zip"":""97005""}"
+Willow Creek K-8,WCK-110,10,k8,Combined elementary and middle wing,"{""city"":""Hillsboro"",""state"":""OR"",""zip"":""97123""}"

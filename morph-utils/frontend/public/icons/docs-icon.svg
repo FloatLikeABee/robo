@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Academi">
+  <defs>
+    <linearGradient id="ac-bg" x1="8%" y1="0%" x2="92%" y2="100%">
+      <stop offset="0%" stop-color="#5B8CFF"/>
+      <stop offset="50%" stop-color="#9B6DFF"/>
+      <stop offset="100%" stop-color="#0A0F1C"/>
+    </linearGradient>
+    <linearGradient id="ac-cap" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8EEFF"/>
+      <stop offset="100%" stop-color="#00D4FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#ac-bg)"/>
+  <path d="M256 118 L420 198 L256 278 L92 198 Z" fill="url(#ac-cap)" opacity="0.95"/>
+  <path d="M148 230 V318 C148 352 196 378 256 378 C316 378 364 352 364 318 V230" fill="none" stroke="#00D4FF" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="400" cy="214" r="14" fill="#FACC15"/>
+  <line x1="400" y1="228" x2="400" y2="300" stroke="#FACC15" stroke-width="10" stroke-linecap="round"/>
+</svg>

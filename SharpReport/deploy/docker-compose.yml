@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "3050:3050"
+    volumes:
+      - ../metabase:/app/metabase
+      - app-data:/app/data
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=sqlite:///app/data/datapulse.db
+      - METABASE_JAR_PATH=/app/metabase/metabase.jar
+      - METABASE_PORT=8001
+      - JWT_SECRET=change-me-in-production
+    depends_on:
+      - metabase-db
+    restart: unless-stopped
+
+  metabase-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=metabase
+      - POSTGRES_USER=metabase
+      - POSTGRES_PASSWORD=metabase-secret
+    volumes:
+      - metabase-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  metabase-data:

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Morph Data">
+  <defs>
+    <linearGradient id="md-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1220"/>
+      <stop offset="40%" stop-color="#060a12"/>
+      <stop offset="100%" stop-color="#081018"/>
+    </linearGradient>
+    <linearGradient id="md-neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="md-m" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <filter id="md-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="md-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#md-bg)"/>
+  <!-- outer ring -->
+  <circle cx="256" cy="256" r="188" fill="none" stroke="url(#md-neon)" stroke-width="3" opacity="0.35" filter="url(#md-soft)"/>
+  <!-- data grid -->
+  <g filter="url(#md-glow)" stroke="url(#md-neon)" stroke-width="14" stroke-linecap="round" fill="none">
+    <rect x="136" y="136" width="240" height="240" rx="28" opacity="0.9"/>
+    <line x1="136" y1="216" x2="376" y2="216"/>
+    <line x1="136" y1="296" x2="376" y2="296"/>
+    <line x1="216" y1="136" x2="216" y2="376"/>
+    <line x1="296" y1="136" x2="296" y2="376"/>
+  </g>
+  <!-- neon M -->
+  <path
+    d="M196 360V196l60 108 60-108v164"
+    fill="none"
+    stroke="url(#md-m)"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#md-glow)"
+  />
+  <!-- corner accents -->
+  <circle cx="136" cy="136" r="10" fill="#22d3ee" opacity="0.9"/>
+  <circle cx="376" cy="376" r="10" fill="#2563eb" opacity="0.9"/>
+</svg>

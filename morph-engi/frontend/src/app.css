@@ -1,0 +1,236 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #1e1e24;
+  --color-surface: #2b2b33;
+  --color-card: #32323d;
+  --color-violet: #5b3fd6;
+  --color-teal: #2dd4bf;
+  --color-yellow: #f5c542;
+  --color-text: #ffffff;
+  --color-muted: #b8b8c7;
+}
+
+html {
+  font-family: var(--font-sans);
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+#app {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-frame {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.app-sidebar {
+  height: 100%;
+  min-height: 0;
+}
+
+.app-pane {
+  min-height: 0;
+}
+
+.app-footer {
+  backdrop-filter: blur(12px);
+}
+
+.glass {
+  background: rgba(50, 50, 61, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.card {
+  border-radius: 20px;
+  background: rgba(50, 50, 61, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(21, 21, 26, 0.9);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.input::placeholder {
+  color: var(--color-muted);
+}
+
+.btn-primary {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-violet) 85%, white);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+}
+
+.btn-ghost {
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+}
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+table.data-table th {
+  position: sticky;
+  top: 0;
+  background: rgba(30, 30, 36, 0.95);
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  color: var(--color-muted);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+table.data-table td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+table.data-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.module-shell {
+  height: 100%;
+  min-height: 0;
+}
+
+.module-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.data-grid-panel {
+  min-height: 0;
+}
+
+.data-grid-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+.form-compact .input {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8125rem;
+}
+
+.form-field-sm {
+  max-width: 12rem;
+}
+
+.form-field-md {
+  max-width: 18rem;
+}
+
+.verdict-pill {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.verdict-verified {
+  background: rgba(45, 212, 191, 0.2);
+  color: #5eead4;
+}
+
+.verdict-partial {
+  background: rgba(245, 197, 66, 0.2);
+  color: #f5c542;
+}
+
+.verdict-not_verified {
+  background: rgba(251, 113, 133, 0.2);
+  color: #fda4af;
+}
+
+.verdict-inconclusive {
+  background: rgba(184, 184, 199, 0.15);
+  color: var(--color-muted);
+}
+
+.verification-report-host :global(.verification-report h2) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.verification-report-host :global(.verification-report h3) {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--color-muted);
+}
+
+.verification-report-host :global(.verification-report p),
+.verification-report-host :global(.verification-report li) {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.verification-report-host :global(.verification-report ul) {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.verification-report-host :global(.verification-report table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  margin: 0.75rem 0;
+}
+
+.verification-report-host :global(.verification-report th),
+.verification-report-host :global(.verification-report td) {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}

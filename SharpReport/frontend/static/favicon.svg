@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="SharpReport">
+  <defs>
+    <linearGradient id="sr-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#sr-bg)"/>
+  <rect x="6" y="20" width="4" height="8" rx="1" fill="#f0f9ff"/>
+  <rect x="12" y="16" width="4" height="12" rx="1" fill="#f0f9ff"/>
+  <rect x="18" y="12" width="4" height="16" rx="1" fill="#f0f9ff"/>
+  <rect x="24" y="8" width="4" height="20" rx="1" fill="#f0f9ff"/>
+  <polyline points="6,10 16,7 22,11 27,8" fill="none" stroke="#f0f9ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

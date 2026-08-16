@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Morph Engi">
+  <defs>
+    <linearGradient id="engi-bg" x1="6%" y1="4%" x2="94%" y2="96%">
+      <stop offset="0%" stop-color="#5b3fd6"/>
+      <stop offset="55%" stop-color="#2d4a6f"/>
+      <stop offset="100%" stop-color="#1a1238"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#engi-bg)"/>
+  <path d="M128 368V144l128-64 128 64v224l-128 64-128-64z" fill="rgba(45,212,191,0.15)" stroke="#2dd4bf" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M256 80v352M128 368l128-64 128 64M128 144l128 64 128-64" stroke="#5b3fd6" stroke-width="14" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="44" fill="#f5c542"/>
+  <path d="M236 256h40M256 236v40" stroke="#1a1238" stroke-width="10" stroke-linecap="round"/>
+</svg>

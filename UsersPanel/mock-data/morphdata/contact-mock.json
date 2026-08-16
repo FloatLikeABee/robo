@@ -1,0 +1,12 @@
+[
+  {"LastName": "Chen", "FirstName": "Wei", "Email": "wei.chen@email.com", "Phone": "503-555-2010", "Mobile": "503-555-8010", "description": "Parent contact for Olivia Chen emergency pickup"},
+  {"LastName": "Rivera", "FirstName": "Ana", "Email": "ana.rivera@email.com", "Phone": "541-555-2011", "Mobile": "541-555-8011", "description": "Billing contact Eastside Cooperative"},
+  {"LastName": "Northwest Fleet Services", "Email": "dispatch@nwfleet.example", "Phone": "503-555-3000", "description": "Vendor for route bus maintenance contract"},
+  {"LastName": "Nguyen", "FirstName": "Lan", "Email": "lan.nguyen@email.com", "Phone": "541-555-2012", "description": "Primary guardian Harbor View Middle"},
+  {"LastName": "State DOT Compliance", "Email": "odot-schoolbus@example.gov", "Phone": "503-555-4000", "description": "Annual inspection liaison ODOT pupil transportation"},
+  {"LastName": "Patel", "FirstName": "Raj", "Email": "raj.patel@email.com", "Phone": "503-555-2013", "Mobile": "503-555-8013", "description": "PTA treasurer Lakefront Academy"},
+  {"LastName": "Allied Insurance Group", "Email": "claims@alliedins.example", "Phone": "800-555-9000", "description": "District liability claims adjuster"},
+  {"LastName": "Kim", "FirstName": "Soo-Jin", "Email": "sskim@email.com", "Phone": "541-555-2014", "Mobile": "541-555-8014", "description": "Arts booster club Riverside contact"},
+  {"LastName": "SafeRide Dispatch", "Email": "saferide@example.com", "Phone": "503-555-3010", "description": "After-hours activity transport coordinator"},
+  {"LastName": "Brown", "FirstName": "Elena", "Email": "elena.brown@email.com", "Phone": "503-555-2015", "description": "Volunteer field trip chaperone coordinator"}
+]

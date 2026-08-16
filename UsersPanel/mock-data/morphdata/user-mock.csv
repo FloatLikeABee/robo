@@ -1,0 +1,11 @@
+login_id,first_name,last_name,email,phone,administrator
+nvu.admin,Nora,Vega,nora.vega@nvu.edu,503-555-6100,true
+mtorres.staff,Miguel,Torres,mtorres@esc.edu,541-555-6101,false
+data.clerk,Dana,Clark,dana.clark@nvu.edu,503-555-6102,false
+fleet.ops,Fleet,Ops,transport@nvu.edu,503-555-6103,false
+hvs.registrar,Henry,Voss,henry.voss@hvs.edu,541-555-6104,false
+readonly.audit,Alex,Morgan,audit@nvu.edu,503-555-6105,false
+phu.nurse,Paula,Hughes,phu.nurse@phu.edu,541-555-6106,false
+rad.coach,Rina,Adebayo,rad.coach@rad.edu,541-555-6107,false
+wce.secretary,Wendy,Ellis,wce.secretary@wce.edu,503-555-6108,false
+import.test,Import,Tester,import.test@example.com,503-555-6199,false

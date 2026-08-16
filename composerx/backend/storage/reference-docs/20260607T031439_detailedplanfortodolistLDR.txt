@@ -1,0 +1,189 @@
+
+—
+
+✅ OVERALL GOAL:
+Build a personal daily reflection + social accountability app where users log their “pulse,” get AI summaries, connect with up to 3 supervisors, and absorb inspiration from others — all while preserving privacy and simplicity.
+
+—
+
+📌 PHASE 0: FOUNDATION & AUTHENTICATION
+
+🎯 Objective: Enable secure user onboarding via multiple providers and store minimal profile locally.
+
+🔧 Tasks:
+
+Implement Google Sign-In (Firebase Auth or native SDK).
+Implement Apple Sign-In (iOS native, requires App Store Connect setup).
+Implement WeChat Login (requires WeChat Open Platform app registration + SDK integration).
+Add fallback: Email/Phone registration with OTP verification.
+On first login, prompt user for:
+Username (unique handle)
+Date of Birth (for age-based features later)
+Save profile locally (using Secure Storage / Keychain / SharedPreferences) so it’s auto-filled next time.
+Create backend user model (if not already done): user_id, username, dob, auth_provider, created_at.
+🛠️ Tech Notes:
+
+Use Firebase Auth for unified backend if possible.
+For WeChat, ensure you have the correct redirect URIs and app keys configured.
+Store DOB as ISO date string; validate format.
+📱 UI Alignment:
+
+First screen = Login/Signup with 3 buttons + “Register with Email/Phone” link.
+After auth → Redirect to Profile Setup (username + DOB) → Then to Daily Pulse.
+—
+
+📌 PHASE 1: DAILY PULSE LOGGING & AI SUMMARIZATION
+
+🎯 Objective: Allow users to log daily reflections, attach media, select mood, and generate AI summaries — with single-day update logic.
+
+🔧 Tasks:
+
+Design “Daily Pulse” screen (as shown in your mockup):
+Text input field (max 1000 chars)
+Microphone button (optional voice-to-text)
+Camera button → capture one photo only (remove video recording entirely)
+Mood selector (6 moods: Electric, Low-fi, Vibrant, Calm, Creative, Focused)
+When user taps “Pulse”:
+Check if a log exists for today → UPDATE if yes, CREATE if no.
+Send text + selected mood + photo (if any) to backend.
+Trigger AI Summary generation:
+Input: User’s text + selected mood.
+Output: Short creative abstract (e.g., “Your Calm mood will generate a reflective summary…”)
+Store AI summary alongside the log record.
+Display AI summary below the mood selector after submission.
+🛠️ Tech Notes:
+
+Use local DB (SQLite / Realm / Core Data) to cache today’s log before sync.
+Backend API endpoint: POST /api/pulse → returns updated log + AI summary.
+AI service can be local LLM (if lightweight) or cloud (OpenAI/Gemini) — start with placeholder if needed.
+📱 UI Alignment:
+
+Keep current layout but remove video icon.
+After tapping “Pulse”, show loading spinner → then display AI summary card.
+Show character count (8/1000).
+—
+
+📌 PHASE 2: SUPERVISOR SYSTEM & ALERT MECHANISM
+
+🎯 Objective: Let users add up to 3 supervisors who receive notifications when logs are submitted — with emergency alert system.
+
+🔧 Tasks:
+
+Add “Supervisor” tab in Settings (already visible in your mockup).
+Generate unique Guardian Key QR code per user (format: LDR-GUARDIAN-{timestamp}).
+Supervisor adds user by scanning QR or entering key manually.
+Link supervisor relationship in DB: user_id, supervisor_id, linked_at.
+Max 3 supervisors per user — enforce limit.
+When user submits a pulse log:
+Send push notification to all linked supervisors.
+Mark log as “approved” automatically after 24h OR when supervisor opens it.
+Implement “Alert Button”:
+In pulse log view, show supervisor’s username as tappable button.
+If tapped 5 times within 5 seconds → trigger “Emergency Alert”.
+Send 3 rapid push notifications to that supervisor (with sound/vibration).
+Log alert event in DB for audit.
+🛠️ Tech Notes:
+
+Use Firebase Cloud Messaging (FCM) or APNs for push notifications.
+Track tap count with debounce/timer: reset counter if >1s between taps.
+Store alert history per user-supervisor pair.
+📱 UI Alignment:
+
+In pulse log detail view, show supervisor names as clickable chips/buttons.
+Add subtle animation or haptic feedback on each tap.
+On 5th tap → show “ALERT SENT!” toast + vibrate.
+—
+
+📌 PHASE 3: DISCOVERY & INSPIRATION VAULT
+
+🎯 Objective: Let users browse random public logs, “absorb” them, and build an AI-curated personal inspiration vault (max 20 entries).
+
+🔧 Tasks:
+
+Add “Discovery” tab (bottom nav, already shown).
+Fetch random public logs (backend must support anonymous/public flag).
+Each log shows:
+Abstracted content (AI-generated short version)
+Mood icon
+Star button (“Absorb”)
+When user taps star:
+Save log ID + timestamp to local “Inspiration Vault” list.
+If vault has 20+ items → remove oldest.
+Periodically (or on demand), run AI summary over all 20 stored logs:
+Generate “My Inspiration Summary” (e.g., “You’ve been drawn to calm and creative moments lately…”)
+Store this summary in user’s profile.
+Show “Inspiration Vault” in Settings → displays saved logs + AI summary.
+🛠️ Tech Notes:
+
+Use local storage (Realm/SQLite) to manage vault.
+AI summarization can be batched — trigger on vault update or manual refresh.
+Public logs should NOT include user identity — anonymize or use pseudonyms.
+📱 UI Alignment:
+
+Discovery feed = scrollable cards with mood + abstract + star.
+Tap star → fills star icon + shows “Added to Vault”.
+In Settings → “Inspiration Vault” → shows list + “AI Summary” section at top.
+—
+
+📌 PHASE 4: POLISH, TESTING & RELEASE PREP
+
+🎯 Objective: Fix bugs, optimize UX, prepare for beta/testflight.
+
+🔧 Tasks:
+
+Write unit/integration tests for auth, pulse logging, supervisor alerts.
+Test edge cases:
+Multiple log submissions in same day
+No internet → queue logs locally
+5-tap alert during offline mode
+Vault full → auto-delete oldest
+Add loading states, error handling, retry buttons.
+Polish animations, typography, spacing.
+Prepare App Store / Google Play assets.
+Release internal beta (TestFlight / Play Console) to 5–10 testers.
+—
+
+📅 SPRINT SUMMARY
+
+Phase
+Weeks
+Focus
+0
+1–2
+Auth + Profile Setup
+1
+3–4
+Daily Pulse + AI Summary
+2
+5–6
+Supervisor System + Alerts
+3
+7–8
+Discovery + Inspiration Vault
+4
+9–10
+QA, Polish, Beta Release
+—
+
+💡 RECOMMENDATIONS
+
+Start with MVP: Launch with Google/Apple login, basic pulse logging, and 1 supervisor.
+Delay WeChat until later if SDK complexity delays launch.
+Use placeholder AI summaries initially (static text like “Your mood reflects peace today.”) — swap in real AI later.
+Consider GDPR/CCPA compliance if storing user data outside region.
+Add “Delete Account” option in Settings for legal compliance.
+—
+
+✅ FINAL DELIVERABLES
+
+By end of Week 10, you’ll have:
+
+✔️ Fully functional auth flow (Google/Apple/Email)
+✔️ Daily pulse logging with AI summary + mood + photo
+✔️ Supervisor system with alerts
+✔️ Discovery feed + Inspiration Vault with AI curation
+✔️ Clean, dark-themed UI consistent with your mocks
+✔️ Beta-ready app for internal testing
+
+—
+

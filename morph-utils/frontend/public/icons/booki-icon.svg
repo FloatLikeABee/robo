@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Morph Booki">
+  <defs>
+    <linearGradient id="bk-bg" x1="6%" y1="4%" x2="94%" y2="96%">
+      <stop offset="0%" stop-color="#5b3fd6"/>
+      <stop offset="55%" stop-color="#3d2a8f"/>
+      <stop offset="100%" stop-color="#1a1238"/>
+    </linearGradient>
+    <linearGradient id="bk-page" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#faf5ff"/>
+      <stop offset="100%" stop-color="#e9d5ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bk-bg)"/>
+  <path d="M148 128h88c48 0 88 40 88 88v168c0-30-26-54-58-54H148V128z" fill="rgba(255,255,255,0.1)" stroke="url(#bk-page)" stroke-width="16" stroke-linejoin="round"/>
+  <path d="M364 128h-88c-48 0-88 40-88 88v168c0 30 26 54 58 54h118V128z" fill="rgba(255,255,255,0.06)" stroke="url(#bk-page)" stroke-width="16" stroke-linejoin="round"/>
+  <line x1="256" y1="128" x2="256" y2="384" stroke="#facc15" stroke-width="14"/>
+  <line x1="184" y1="212" x2="232" y2="212" stroke="#facc15" stroke-width="12" stroke-linecap="round"/>
+  <line x1="184" y1="268" x2="232" y2="268" stroke="#facc15" stroke-width="12" stroke-linecap="round"/>
+  <line x1="280" y1="212" x2="328" y2="212" stroke="#facc15" stroke-width="12" stroke-linecap="round"/>
+  <line x1="280" y1="268" x2="328" y2="268" stroke="#facc15" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="392" cy="120" r="36" fill="#facc15"/>
+  <text x="392" y="132" text-anchor="middle" font-family="system-ui,sans-serif" font-size="40" font-weight="700" fill="#1a1238">$</text>
+</svg>

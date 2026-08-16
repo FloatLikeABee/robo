@@ -1,0 +1,13 @@
+Task List:
+
+
+1. format texts for chatting and posting
+(1.5 save chats into files.)
+(UI chat keep sessions)
+2. build prompts generator
+3. build time controller
+4. build auth system and hub gate
+5. build asks pool
+6. complete chatting sim
+7. complete posts generator
+8. build ai agents and adapt them into the generators

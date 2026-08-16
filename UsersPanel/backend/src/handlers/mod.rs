@@ -1,0 +1,9 @@
+pub mod admin;
+pub mod data_collector;
+pub mod assistant;
+pub mod assistant_llm;
+pub mod auth;
+pub mod integration;
+pub mod messages;
+pub mod permissions_admin;
+pub mod roles_admin;

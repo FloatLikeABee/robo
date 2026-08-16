@@ -1,0 +1,12 @@
+[
+  {"Name": "Oregon Museum of Science Field Trip", "ActivityType": "excursion", "start_date": "2026-04-15", "end_date": "2026-04-15", "location": "OMSI Portland", "GUID": "ACT-2026-001", "description": "Grade 7 science curriculum visit with lab workshop"},
+  {"Name": "Regional Choir Festival", "ActivityType": "performance", "start_date": "2026-03-08", "end_date": "2026-03-09", "location": "Eugene Hult Center", "GUID": "ACT-2026-002", "description": "Advanced choir overnight trip with adjudication"},
+  {"Name": "Spring Athletics Track Meet", "ActivityType": "athletics", "start_date": "2026-05-02", "end_date": "2026-05-02", "location": "Summit Ridge Stadium", "GUID": "ACT-2026-003", "description": "Middle school track and field invitational"},
+  {"Name": "Harbor Marine Biology Day", "ActivityType": "trip", "start_date": "2026-06-12", "end_date": "2026-06-12", "location": "Charleston Marine Lab", "GUID": "ACT-2026-004", "description": "8th grade tide pool and lab rotation"},
+  {"Name": "Community Food Drive Route", "ActivityType": "service", "start_date": "2026-02-20", "end_date": "2026-02-20", "location": "Local food bank", "GUID": "ACT-2026-005", "description": "Student council neighborhood collection run"},
+  {"Name": "College Campus Tour SF", "ActivityType": "college_visit", "start_date": "2026-10-14", "end_date": "2026-10-16", "location": "San Francisco Bay Area", "GUID": "ACT-2026-006", "description": "Junior class overnight university tours"},
+  {"Name": "Robotics State Championship", "ActivityType": "competition", "start_date": "2026-05-18", "end_date": "2026-05-19", "location": "Oregon Convention Center", "GUID": "ACT-2026-007", "description": "FTC team regional finals Portland"},
+  {"Name": "Wildfire Preparedness Drill", "ActivityType": "training", "start_date": "2026-09-25", "end_date": "2026-09-25", "location": "District transport hub", "GUID": "ACT-2026-008", "description": "Staff and driver evacuation tabletop exercise"},
+  {"Name": "Winter Band Concert", "ActivityType": "performance", "start_date": "2026-12-11", "end_date": "2026-12-11", "location": "Riverside Arts Center", "GUID": "ACT-2026-009", "description": "Winter concert open to community"},
+  {"Name": "Bus Safety Inspection Week", "ActivityType": "maintenance", "start_date": "2026-08-04", "end_date": "2026-08-08", "location": "Fleet maintenance yard", "GUID": "ACT-2026-010", "description": "Annual pre-term vehicle inspection cycle"}
+]

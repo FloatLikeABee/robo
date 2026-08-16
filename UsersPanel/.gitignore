@@ -1,0 +1,6 @@
+/backend/target/
+/backend/users.db*
+/admin/node_modules/
+/admin/dist/
+.env
+.env.local
