@@ -42,6 +42,9 @@ fn is_public(path: &str, method: &str) -> bool {
     if path == "/auth/dev-login" && method == "POST" {
         return true;
     }
+    if path == "/auth/preview-login" && method == "POST" {
+        return true;
+    }
     false
 }
 

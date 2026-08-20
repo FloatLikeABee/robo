@@ -6,15 +6,11 @@
 
   let {
     page = $bindable('projects' as PageId),
-    activeProjectId = $bindable(null as number | null),
-    projects = [] as Array<{ id: number; code: string; name: string }>,
     getStateExtra,
     onSignOut,
     children,
   } = $props<{
     page?: PageId
-    activeProjectId?: number | null
-    projects?: Array<{ id: number; code: string; name: string }>
     getStateExtra?: () => AssistantState
     onSignOut?: () => void
     children?: import('svelte').Snippet
@@ -24,14 +20,6 @@
 
   const pageLabel = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
   const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
-  const activeProjectLabel = $derived(
-    activeProjectId
-      ? (() => {
-          const p = projects.find((proj: { id: number; code: string; name: string }) => proj.id === activeProjectId)
-          return p ? `${p.code} — ${p.name}` : `Project #${activeProjectId}`
-        })()
-      : 'All projects',
-  )
 </script>
 
 <div class="app-frame flex flex-col h-dvh w-full overflow-hidden bg-bg text-text">
@@ -44,22 +32,6 @@
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <label class="text-xs text-muted flex items-center gap-2">
-          Project
-          <select
-            class="input !w-auto min-w-[10rem] py-1.5"
-            value={activeProjectId ?? ''}
-            onchange={(e) => {
-              const v = (e.currentTarget as HTMLSelectElement).value
-              activeProjectId = v === '' ? null : Number(v)
-            }}
-          >
-            <option value="">All projects</option>
-            {#each projects as p}
-              <option value={p.id}>{p.code} — {p.name}</option>
-            {/each}
-          </select>
-        </label>
         <button type="button" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-violet/30 hover:bg-violet/40" onclick={() => (assistantOpen = true)}>
           AI Assistant
         </button>
@@ -94,7 +66,6 @@
     <footer class="app-footer shrink-0 border-t border-white/5 bg-surface/40 hidden md:block">
       <div class="flex items-center justify-between gap-3 px-6 py-2.5 text-xs text-muted">
         <span class="truncate"><span class="text-text font-medium">{pageLabel}</span>{#if pageHint}<span class="mx-2 opacity-40">·</span>{pageHint}{/if}</span>
-        <span class="truncate text-right">Project: <span class="text-text">{activeProjectLabel}</span></span>
         <span class="shrink-0 opacity-60">Project</span>
       </div>
     </footer>

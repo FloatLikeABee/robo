@@ -176,6 +176,31 @@ pub async fn dev_login(
     .await
 }
 
+pub async fn preview_login(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    if !state.settings.preview_demo {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error":"not found"})),
+        ));
+    }
+    let id = ensure_platform_identity(
+        &state.pool,
+        "preview@local",
+        "Preview",
+        &["owner".to_string()],
+    )
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+    })?;
+    token_response(&state, id.user_id, id.org_id, &id.role)
+}
+
 pub async fn me(AuthUser(auth): AuthUser) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "user_id": auth.user_id,

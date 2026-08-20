@@ -274,13 +274,6 @@ pub async fn generate_document(
         return Err(bad_request("paste content too long"));
     }
 
-    let Some(ai) = state.ai.as_ref().as_ref() else {
-        return Err((
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({"error": "AI not configured — set MORPH_AI_API_KEY"})),
-        ));
-    };
-
     let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir)
         .await
@@ -342,61 +335,78 @@ pub async fn generate_document(
     ));
     user_prompt.push_str(&doc_text::combine_sections(&readable));
 
-    let messages = vec![
-        Message {
-            role: "system".to_string(),
-            content: DOC_SYSTEM.to_string(),
-        },
-        Message {
-            role: "user".to_string(),
-            content: user_prompt,
-        },
-    ];
-
-    let raw = ai
-        .chat_completion(&messages)
-        .await
-        .map_err(|e| (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("AI failed: {e}")}))))?;
-
-    let obj = extract_json_object(&raw)
-        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .ok_or_else(|| {
+    let (title, code_raw, markdown) = if let Some(ai) = state.ai.as_ref().as_ref() {
+        let messages = vec![
+            Message {
+                role: "system".to_string(),
+                content: DOC_SYSTEM.to_string(),
+            },
+            Message {
+                role: "user".to_string(),
+                content: user_prompt,
+            },
+        ];
+        let raw = ai.chat_completion(&messages).await.map_err(|e| {
             (
                 StatusCode::BAD_GATEWAY,
-                Json(json!({"error": "AI did not return JSON for the project document", "raw": raw})),
+                Json(json!({"error": format!("AI failed: {e}")})),
             )
         })?;
+        let obj = extract_json_object(&raw)
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .ok_or_else(|| {
+                (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({"error": "AI did not return JSON for the project document", "raw": raw})),
+                )
+            })?;
+        let mut title = obj
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if !title_hint.is_empty() {
+            title = title_hint.clone();
+        }
+        if title.is_empty() {
+            title = "Untitled project".into();
+        }
+        let markdown = obj
+            .get("markdown")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if markdown.is_empty() {
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": "AI returned empty markdown"})),
+            ));
+        }
+        let code_raw = obj
+            .get("code")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        (title, code_raw, markdown)
+    } else {
+        let title = if title_hint.is_empty() {
+            readable
+                .first()
+                .map(|(n, _)| n.clone())
+                .unwrap_or_else(|| "Untitled project".into())
+        } else {
+            title_hint.clone()
+        };
+        let mut markdown = format!("# {title}\n\n## Overview\n\nOrganized from source material (preview mode — AI not configured).\n\n");
+        for (name, text) in &readable {
+            markdown.push_str(&format!("## {name}\n\n{text}\n\n"));
+        }
+        (title, String::new(), markdown)
+    };
 
-    let mut title = obj
-        .get("title")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if !title_hint.is_empty() {
-        title = title_hint.clone();
-    }
-    if title.is_empty() {
-        title = "Untitled project".into();
-    }
-    let markdown = obj
-        .get("markdown")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if markdown.is_empty() {
-        return Err((
-            StatusCode::BAD_GATEWAY,
-            Json(json!({"error": "AI returned empty markdown"})),
-        ));
-    }
-    let code_raw = obj
-        .get("code")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_string();
     let name = require_project_name(&title).map_err(|e| bad_request(e))?;
     let code = project_code_or_generated(&code_raw, &name);
     let html_out = build_project_html(&name, &markdown);

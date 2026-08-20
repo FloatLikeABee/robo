@@ -20,9 +20,7 @@ Morph Utils is a **frontend-only** React shell that embeds all platform apps in 
 │  │  │ SurveyX  │──▶ iframe: localhost:19909/survey-bot       │   │
 │  │  │ ComposerX│──▶ iframe: localhost:8044                   │   │
 │  │  │ DataX    │──▶ iframe: localhost:5178                   │   │
-│  │  │ Booki    │──▶ iframe: localhost:5174                   │   │
-│  │  │ Projects │──▶ iframe: localhost:5179                   │   │
-│  │  │ Academi  │──▶ iframe: localhost:8765                   │   │
+│  │  │ Project  │──▶ iframe: localhost:5179                   │   │
 │  │  │ More     │──▶ Links to Morph AI, Morph Data            │   │
 │  │  │ Settings │──▶ Shell-level settings page                │   │
 │  │  └──────────┘                                             │   │
@@ -48,12 +46,10 @@ Morph Utils is a **frontend-only** React shell that embeds all platform apps in 
 
 ```typescript
 const modules = [
-  { id: 'sheetx',    label: 'SurveyX',   url: 'http://localhost:19909/survey-bot' },
-  { id: 'composerx', label: 'ComposerX', url: 'http://localhost:8044' },
-  { id: 'datax',     label: 'DataX',     url: 'http://localhost:5178' },
-  { id: 'booki',     label: 'Booki',     url: 'http://localhost:5174' },
-  { id: 'projects',  label: 'Projects',  url: 'http://localhost:5179' },
-  { id: 'academi',   label: 'Academi',   url: 'http://localhost:8765' },
+  { id: 'sheetx',    label: 'Survey Maker', url: 'http://localhost:19909/survey-bot' },
+  { id: 'composerx', label: 'Content Maker', url: 'http://localhost:8044' },
+  { id: 'datax',     label: 'Data Access', url: 'http://localhost:5178' },
+  { id: 'projects',  label: 'Project',  url: 'http://localhost:5179' },
 ];
 ```
 
@@ -91,10 +87,8 @@ Module URLs can be overridden via env vars: `VITE_SHEETX_URL`, `VITE_COMPOSERX_U
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `VITE_SHEETX_URL` | `http://localhost:19909/survey-bot` | SurveyX iframe URL |
-| `VITE_COMPOSERX_URL` | `http://localhost:8044` | ComposerX iframe URL |
-| `VITE_DATAX_URL` | `http://localhost:5178` | DataX iframe URL |
-| `VITE_BOOKI_URL` | `http://localhost:5174` | Booki iframe URL |
-| `VITE_PROJECTS_URL` | `http://localhost:5179` | Projects iframe URL |
-| `VITE_ACADEMI_URL` | `http://localhost:8765` | Academi iframe URL |
+| `VITE_SHEETX_URL` | `http://localhost:19909/survey-bot` | Survey Maker iframe URL |
+| `VITE_COMPOSERX_URL` | `http://localhost:8044` | Content Maker iframe URL |
+| `VITE_DATAX_URL` | `http://localhost:5178` | Data Access iframe URL |
+| `VITE_PROJECTS_URL` | `http://localhost:5179` | Project iframe URL |
 | `VITE_USERS_PANEL_URL` | `http://127.0.0.1:5001` | UsersPanel API URL |

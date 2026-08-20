@@ -1,7 +1,7 @@
 <script lang="ts">
   import PlatformChatDrawer from '@robo/platform-chat/svelte'
   import '@robo/platform-chat/chat-drawer.css'
-  import { API_BASE, authHeaders } from '../lib/api'
+  import { api, authHeaders } from '../lib/api'
   import type { AssistantState } from '@robo/platform-chat/usePlatformChat'
 
   let {
@@ -13,23 +13,27 @@
   }>()
 
   const suggestions = [
-    'Summarize the active project',
-    'List site logs for this project',
-    'Who are the people on this project?',
-    'Create a contractor for the active project',
-    'What files are attached to this project?',
+    'List my project documents',
+    'Summarize the selected project',
+    'What files are in the library?',
+    'Which projects are published?',
   ]
 
-  const chatEndpoint = `${API_BASE.replace(/\/$/, '')}/api/v1/assistant/chat`
+  async function sendChat(payload: { messages: { role: string; content: string }[]; state: unknown }) {
+    return api<{ assistant_message?: string; error?: string }>('/api/v1/assistant/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
 </script>
 
 <PlatformChatDrawer
   {open}
   title="Projects AI"
-  {chatEndpoint}
+  {sendChat}
   getHeaders={authHeaders}
   {getStateExtra}
-  welcomeMessage="Hi! I'm **Projects AI**. I can help with projects, site logs, files, people, and flow log using your live app data."
+  welcomeMessage="Hi! I'm **Projects AI**. I can help with project documents and the files library using your live app data."
   progressContext={{ app: 'morph-engi' }}
   {suggestions}
   on:close={() => (open = false)}

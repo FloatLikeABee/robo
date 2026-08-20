@@ -1,7 +1,18 @@
 /**
  * API client — same pattern as Booki: same-origin + Vite proxy in dev,
  * platform session from shared UsersPanel cookie.
+ * On Vercel, requests stay in the browser (localStorage) so a static deploy works.
  */
+import {
+  handleApi as localApi,
+  handleGenerateDocument,
+  handleUploadFile,
+  isBrowserStore,
+  previewToken,
+} from './browserStore'
+
+export { isBrowserStore } from './browserStore'
+
 const SHARED_SESSION_COOKIE_KEY = 'userspanel_session_token'
 const SESSION_COOKIE_MAX_AGE_SECONDS = 48 * 3600
 
@@ -25,6 +36,7 @@ const AUTH_REFRESH_SKIP = [
   '/api/v1/auth/login',
   '/api/v1/auth/platform-session',
   '/api/v1/auth/dev-login',
+  '/api/v1/auth/preview-login',
 ]
 
 function shouldRefreshOn401(path: string): boolean {
@@ -62,6 +74,7 @@ async function performRefresh(): Promise<boolean> {
 async function validateStoredToken(): Promise<boolean> {
   const t = getToken()
   if (!t) return false
+  if (isBrowserStore()) return t === previewToken()
   try {
     await fetch(apiUrl('/api/v1/auth/me'), {
       cache: noStore,
@@ -141,6 +154,9 @@ export function authHeaders(): Record<string, string> {
 const noStore: RequestCache = 'no-store'
 
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  if (isBrowserStore()) {
+    return localApi<T>(path, init)
+  }
   const url = apiUrl(path)
   let attempt = 0
 
@@ -239,7 +255,22 @@ export async function loginWithCredentials(email: string, password: string): Pro
   return true
 }
 
-/** Dev fallback when cookie exchange fails but UsersPanel session exists server-side. */
+export async function previewLogin(): Promise<boolean> {
+  if (isBrowserStore()) {
+    setToken(previewToken())
+    return true
+  }
+  try {
+    const out = await api<{ access_token: string }>('/api/v1/auth/preview-login', {
+      method: 'POST',
+      body: '{}',
+    })
+    setToken(out.access_token)
+    return true
+  } catch {
+    return false
+  }
+}
 export async function devLogin(): Promise<boolean> {
   try {
     const out = await api<{ access_token: string }>('/api/v1/auth/dev-login', {
@@ -260,6 +291,10 @@ export type EnsureSessionResult =
 
 /** Try platform cookie/URL token first, then dev-login (same-origin cookie). */
 export async function ensureSession(): Promise<EnsureSessionResult> {
+  if (isBrowserStore()) {
+    setToken(previewToken())
+    return { ok: true }
+  }
   if (await validateStoredToken()) return { ok: true }
 
   const platform = resolvePlatformToken()
@@ -287,6 +322,9 @@ export async function ensureSession(): Promise<EnsureSessionResult> {
     if (devOk) return { ok: true }
   }
 
+  const previewOk = await previewLogin()
+  if (previewOk) return { ok: true }
+
   if (!platform) {
     return {
       ok: false,
@@ -301,6 +339,9 @@ export async function ensureSession(): Promise<EnsureSessionResult> {
 export const API_BASE = apiOrigin() || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5179')
 
 export async function uploadFile(path: string, file: File): Promise<{ file_url: string; file_name: string; source_type: string }> {
+  if (isBrowserStore()) {
+    return handleUploadFile(file)
+  }
   const form = new FormData()
   form.append('file', file)
   const t = getToken()
@@ -322,6 +363,9 @@ export async function uploadFiles<T = unknown>(
   files: File[],
   fields: Record<string, string> = {}
 ): Promise<T> {
+  if (isBrowserStore() && path.includes('generate-document')) {
+    return handleGenerateDocument(files, fields) as Promise<T>
+  }
   const form = new FormData()
   for (const f of files) form.append('files', f)
   for (const [k, v] of Object.entries(fields)) {

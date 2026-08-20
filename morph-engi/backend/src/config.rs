@@ -9,6 +9,8 @@ pub struct Settings {
     pub app_port: u16,
     pub cors_origin: String,
     pub users_panel_base_url: String,
+    pub static_dir: String,
+    pub preview_demo: bool,
 }
 
 impl Settings {
@@ -37,6 +39,7 @@ impl Settings {
             app_env: env::var("APP_ENV").unwrap_or_else(|_| "development".into()),
             app_port: env::var("APP_PORT")
                 .ok()
+                .or_else(|| env::var("PORT").ok())
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(9096),
             cors_origin: env::var("CORS_ORIGIN")
@@ -44,6 +47,13 @@ impl Settings {
             users_panel_base_url: env::var("USERS_PANEL_BASE_URL")
                 .or_else(|_| env::var("MORPH_AUTH_BASE_URL"))
                 .unwrap_or_else(|_| "http://127.0.0.1:9090".into()),
+            static_dir: env::var("STATIC_DIR").unwrap_or_default(),
+            preview_demo: env::var("PREVIEW_DEMO")
+                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                .unwrap_or(false)
+                || env::var("APP_ENV")
+                    .map(|v| v.eq_ignore_ascii_case("preview"))
+                    .unwrap_or(false),
         })
     }
 

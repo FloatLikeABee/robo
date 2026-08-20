@@ -1,4 +1,4 @@
-export type PageId = 'projects' | 'files' | 'settings'
+export type PageId = 'projects' | 'files'
 
 export const NAV: { id: PageId; label: string; hint: string }[] = [
   { id: 'projects', label: 'Projects', hint: 'AI docs from files or paste' },

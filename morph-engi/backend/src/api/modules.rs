@@ -690,6 +690,23 @@ pub async fn update_resource_file(
     Ok(Json(json!({"updated": true})))
 }
 
+pub async fn delete_resource_file(
+    State(state): State<Arc<AppState>>,
+    AuthUser(auth): AuthUser,
+    Path(id): Path<i64>,
+) -> ApiResult {
+    let n = sqlx::query("DELETE FROM resource_files WHERE id = ? AND organization_id = ?")
+        .bind(id)
+        .bind(auth.org_id)
+        .execute(&state.pool)
+        .await
+        .map_err(db_err)?;
+    if n.rows_affected() == 0 {
+        return Err(json_err("file not found"));
+    }
+    Ok(Json(json!({"deleted": true})))
+}
+
 fn row_to_resource_file(r: &sqlx::sqlite::SqliteRow) -> Value {
     json!({
         "id": r.get::<i64, _>("id"),
@@ -698,6 +715,7 @@ fn row_to_resource_file(r: &sqlx::sqlite::SqliteRow) -> Value {
         "file_url": r.get::<String, _>("file_url"),
         "file_name": r.get::<String, _>("file_name"),
         "description": r.get::<String, _>("description"),
+        "created_at": r.try_get::<String, _>("created_at").unwrap_or_default(),
     })
 }
 

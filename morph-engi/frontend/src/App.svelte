@@ -3,7 +3,7 @@
   import AppLayout from './components/AppLayout.svelte'
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
-  import { api, ensureSession, loginWithCredentials, setToken, uploadFile } from './lib/api'
+  import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, setToken, uploadFile } from './lib/api'
   import { buildAiStateExtra } from './lib/aiContext'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
@@ -13,13 +13,9 @@
   let loading = $state(true)
   let error = $state('')
   let page = $state<PageId>('projects')
-  let activeProjectId = $state<number | null>(null)
 
   let projects = $state<any[]>([])
-  let tasks = $state<any[]>([])
-  let siteLogs = $state<any[]>([])
   let resourceFiles = $state<any[]>([])
-  let contractors = $state<any[]>([])
   let org = $state<any>(null)
   let actionError = $state('')
 
@@ -60,7 +56,22 @@
       await refreshAll()
       authed = true
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Login failed'
+      error = e instanceof Error ? e.message : 'Sign in failed'
+    } finally {
+      loginBusy = false
+    }
+  }
+
+  async function submitPreview() {
+    loginBusy = true
+    error = ''
+    try {
+      const ok = await previewLogin()
+      if (!ok) throw new Error('Preview login is not enabled on this server')
+      await refreshAll()
+      authed = true
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Preview login failed'
     } finally {
       loginBusy = false
     }
@@ -78,7 +89,6 @@
 
   async function refreshPageData() {
     if (page === 'files') {
-      // Files library lists all retained uploads/pastes for the org (not scoped to header project).
       resourceFiles = (await api<{ resource_files: any[] }>('/api/v1/resource-files')).resource_files ?? []
     }
   }
@@ -86,7 +96,6 @@
   $effect(() => {
     if (authed) {
       page
-      activeProjectId
       void refreshPageData()
     }
   })
@@ -99,24 +108,6 @@
     setToken(null)
     authed = false
   }
-
-  function linkedProjectIds(): number[] {
-    return activeProjectId ? [activeProjectId] : []
-  }
-
-  function slugCode(name: string): string {
-    const base = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '')
-    return base || `PRJ-${Date.now().toString().slice(-6)}`
-  }
-
-
-  function requireProject(): number {
-    if (!activeProjectId) throw new Error('Select a project in the header first')
-    return activeProjectId
-  }
-
-
-
 
   async function addResourceFile() {
     actionError = ''
@@ -140,7 +131,6 @@
           file_url,
           file_name,
           description: newResourceFile.description,
-          project_ids: linkedProjectIds(),
         }),
       })
       newResourceFile = { name: '', source_type: 'url', file_url: '', description: '' }
@@ -152,25 +142,26 @@
     }
   }
 
+  async function deleteResourceFile(id: number, name: string) {
+    if (!confirm(`Delete file “${name}”?`)) return
+    actionError = ''
+    try {
+      await api(`/api/v1/resource-files/${id}`, { method: 'DELETE' })
+      await refreshPageData()
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : 'Failed to delete file'
+    }
+  }
 
   const pageTitle = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
   const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
 
-  function projectLabel(id: unknown) {
-    const p = projects.find((x) => x.id === id)
-    return p ? `${p.code} — ${p.name}` : String(id ?? '—')
-  }
-
   function getAiStateExtra() {
     return buildAiStateExtra({
       page,
-      activeProjectId,
       organization: org,
       projects,
-      tasks,
-      siteLogs,
       resourceFiles,
-      contractors,
     })
   }
 </script>
@@ -182,23 +173,42 @@
     <img src="/morph-engi-icon.svg" alt="" width="72" height="72" class="rounded-2xl" />
     <h1 class="text-2xl font-semibold">Project</h1>
     <p class="text-muted max-w-md text-sm">
-      Simple project documents from files or paste. Sign in with your Morph account.
+      {isBrowserStore()
+        ? 'This Vercel preview keeps projects and files in your browser. Continue as guest — no Morph server is attached.'
+        : 'Simple project documents from files or paste. Sign in with your Morph account.'}
     </p>
     {#if error}<p class="text-rose-400 text-sm max-w-md">{error}</p>{/if}
+    {#if isBrowserStore()}
+      <div class="w-full max-w-sm space-y-3 card p-5">
+        <button type="button" class="btn-primary w-full" disabled={loginBusy} onclick={() => void submitPreview()}>
+          {loginBusy ? 'Opening…' : 'Open preview'}
+        </button>
+      </div>
+    {:else}
     <form class="w-full max-w-sm space-y-3 text-left card p-5" onsubmit={(e) => { e.preventDefault(); void submitLogin() }}>
       <h2 class="font-semibold text-sm">Sign in</h2>
       <input class="input" type="email" placeholder="Email" bind:value={loginEmail} required autocomplete="email" />
       <input class="input" type="password" placeholder="Password" bind:value={loginPassword} required autocomplete="current-password" />
       <button type="submit" class="btn-primary w-full" disabled={loginBusy}>{loginBusy ? 'Signing in…' : 'Sign in'}</button>
+      <button type="button" class="btn-ghost border border-white/10 w-full px-4 py-2 rounded-xl" disabled={loginBusy} onclick={() => void submitPreview()}>
+        Continue as guest
+      </button>
     </form>
     <div class="flex gap-3 flex-wrap justify-center">
       <button type="button" class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" onclick={() => bootstrap()}>Retry SSO</button>
       <a class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" href="http://localhost:3031" target="_blank" rel="noopener">Open Morph AI</a>
     </div>
+    {/if}
   </div>
 {:else}
-  <div class="h-full min-h-0 max-h-dvh overflow-hidden">
-  <AppLayout bind:page bind:activeProjectId {projects} getStateExtra={getAiStateExtra} onSignOut={signOut}>
+  <div class="h-full min-h-0 max-h-dvh overflow-hidden flex flex-col">
+  {#if isBrowserStore()}
+    <p class="shrink-0 text-center text-[11px] px-3 py-1.5 bg-violet/20 text-muted">
+      Vercel preview — projects and files stay in this browser (localStorage). Sources are concatenated; Morph AI is not connected.
+    </p>
+  {/if}
+  <div class="flex-1 min-h-0">
+  <AppLayout bind:page getStateExtra={getAiStateExtra} onSignOut={signOut}>
     <div class="h-full min-h-0">
       {#if page === 'projects'}
         <div class="h-full min-h-0">
@@ -248,7 +258,7 @@
             {:else}
               <DataGrid title="Files">
                 <table class="data-table">
-                  <thead><tr><th>Name</th><th>Type</th><th>Link</th><th>Notes</th></tr></thead>
+                  <thead><tr><th>Name</th><th>Type</th><th>Link</th><th>Notes</th><th>Added</th><th></th></tr></thead>
                   <tbody>
                     {#each resourceFiles as d}
                       <tr>
@@ -256,6 +266,12 @@
                         <td>{d.source_type}</td>
                         <td class="max-w-[12rem] truncate"><a class="text-teal underline" href={d.file_url} target="_blank" rel="noopener">{d.file_name || d.file_url}</a></td>
                         <td class="max-w-[18rem] whitespace-pre-wrap text-muted">{d.description || '—'}</td>
+                        <td class="text-xs text-muted whitespace-nowrap">{d.created_at || '—'}</td>
+                        <td>
+                          <button type="button" class="text-xs text-rose-300 hover:underline" onclick={() => deleteResourceFile(d.id, d.name)}>
+                            Delete
+                          </button>
+                        </td>
                       </tr>
                     {/each}
                   </tbody>
@@ -264,24 +280,10 @@
             {/if}
           {/snippet}
         </ModuleShell>
-
-      {:else if page === 'settings'}
-        <ModuleShell title="Settings moved" hint="Use Morph Utils Settings" tabs={[]} {actionError}>
-          {#snippet children()}
-            <div class="card p-5 space-y-2 max-w-lg">
-              <h2 class="font-semibold">Shared Settings</h2>
-              <p class="text-sm text-muted">
-                Module settings now live in Morph Utils → Settings (same level as the apps).
-              </p>
-              <button type="button" class="btn btn-secondary mt-2" onclick={() => (page = 'projects')}>
-                Back to Projects
-              </button>
-            </div>
-          {/snippet}
-        </ModuleShell>
       {/if}
     </div>
   </AppLayout>
+  </div>
   </div>
 
 {/if}

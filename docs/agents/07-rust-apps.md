@@ -133,7 +133,7 @@ SharpReport embeds a Metabase JAR as a managed subprocess:
 | `main.rs` | Entry point |
 | `config.rs` | `DATABASE_URL`, `JWT_SECRET`, `APP_PORT`, `USERS_PANEL_BASE_URL` |
 | `api/auth.rs` | Login, platform-session, dev-login, me |
-| `api/assistant.rs` | MorphAI contract assistant with full CRUD tool suite |
+| `api/assistant.rs` | MorphAI assistant for project documents and the files library |
 | `api/modules.rs` | Projects, tasks, site-logs, materials, resource-files, finance, budget-lines, resources, contractors, contracts, relations, communications |
 | `api/verification.rs` | Verification sessions |
 | `api/extract.rs` | Data extraction |
@@ -149,7 +149,7 @@ SharpReport embeds a Metabase JAR as a managed subprocess:
 | Tasks | `GET/POST /tasks` |
 | Site Logs | `GET/POST /site-logs` |
 | Materials | `GET/POST /materials`, `PATCH /materials/:id`, `GET/POST /material-usages` |
-| Files | `GET/POST /resource-files`, `PATCH /resource-files/:id`, `POST /resource-files/upload` |
+| Files | `GET/POST /resource-files`, `PATCH/DELETE /resource-files/:id`, `POST /resource-files/upload` |
 | Finance | `GET/POST /finance`, `GET/POST /budget-lines`, `PATCH /budget-lines/:id` |
 | Resources | `GET/POST /resources`, `GET/POST /resource-allocations` |
 | Contractors | `GET/POST /contractors`, `GET/POST /contracts` |
@@ -159,7 +159,7 @@ SharpReport embeds a Metabase JAR as a managed subprocess:
 ### Frontend (`morph-engi/frontend/`)
 - Svelte 5 + Vite 7 + TypeScript 5.9 + TailwindCSS 4
 - Port: 5179
-- Pages: Projects, Files, People, Settings
+- Pages: Projects, Files
 - Uses `@robo/platform-chat`
 
 ---
