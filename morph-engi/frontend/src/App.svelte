@@ -3,7 +3,7 @@
   import AppLayout from './components/AppLayout.svelte'
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
-  import { api, ensureSession, loginWithCredentials, setToken, uploadFile } from './lib/api'
+  import { api, ensureSession, loginWithCredentials, previewLogin, setToken, uploadFile } from './lib/api'
   import { buildAiStateExtra } from './lib/aiContext'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
@@ -48,15 +48,16 @@
   let loginPassword = $state('')
   let loginBusy = $state(false)
 
-  async function submitLogin() {
+  async function submitPreview() {
     loginBusy = true
     error = ''
     try {
-      await loginWithCredentials(loginEmail, loginPassword)
+      const ok = await previewLogin()
+      if (!ok) throw new Error('Preview login is not enabled on this server')
       await refreshAll()
       authed = true
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Login failed'
+      error = e instanceof Error ? e.message : 'Preview login failed'
     } finally {
       loginBusy = false
     }
@@ -166,6 +167,9 @@
       <input class="input" type="email" placeholder="Email" bind:value={loginEmail} required autocomplete="email" />
       <input class="input" type="password" placeholder="Password" bind:value={loginPassword} required autocomplete="current-password" />
       <button type="submit" class="btn-primary w-full" disabled={loginBusy}>{loginBusy ? 'Signing in…' : 'Sign in'}</button>
+      <button type="button" class="btn-ghost border border-white/10 w-full px-4 py-2 rounded-xl" disabled={loginBusy} onclick={() => void submitPreview()}>
+        Continue as guest
+      </button>
     </form>
     <div class="flex gap-3 flex-wrap justify-center">
       <button type="button" class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" onclick={() => bootstrap()}>Retry SSO</button>

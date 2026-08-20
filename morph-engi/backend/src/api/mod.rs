@@ -15,6 +15,7 @@ use axum::{
 };
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::{ServeDir, ServeFile};
 
 use crate::middleware::auth::auth_layer;
 use crate::services::AppState;
@@ -33,6 +34,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/auth/login", post(auth::login))
         .route("/auth/platform-session", post(auth::platform_session))
         .route("/auth/dev-login", post(auth::dev_login))
+        .route("/auth/preview-login", post(auth::preview_login))
         .route("/auth/me", get(auth::me))
         .route("/organization", get(auth::get_organization))
         .route("/organization", patch(auth::patch_organization))
@@ -88,12 +90,21 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/flow-log/summary", get(flow_log::summary))
         .layer(middleware::from_fn_with_state(state.clone(), auth_layer));
 
-    Router::new()
+    let app = Router::new()
         .route("/health", get(|| async { axum::Json(serde_json::json!({"status":"ok","service":"morph-engi-api"})) }))
         .route("/api/v1/health", get(|| async { axum::Json(serde_json::json!({"status":"ok"})) }))
         .route("/api/v1/uploads/:org_id/:filename", get(modules::serve_upload))
         .route("/api/v1/public/projects/:slug", get(project_docs::serve_public_project))
         .nest("/api/v1", api)
-        .layer(cors)
-        .with_state(state)
+        .with_state(state.clone());
+
+    let app = if !state.settings.static_dir.is_empty() {
+        let dir = state.settings.static_dir.clone();
+        let index = std::path::PathBuf::from(&dir).join("index.html");
+        app.fallback_service(ServeDir::new(dir).fallback(ServeFile::new(index)))
+    } else {
+        app
+    };
+
+    app.layer(cors)
 }

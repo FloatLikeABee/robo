@@ -25,6 +25,7 @@ const AUTH_REFRESH_SKIP = [
   '/api/v1/auth/login',
   '/api/v1/auth/platform-session',
   '/api/v1/auth/dev-login',
+  '/api/v1/auth/preview-login',
 ]
 
 function shouldRefreshOn401(path: string): boolean {
@@ -239,7 +240,18 @@ export async function loginWithCredentials(email: string, password: string): Pro
   return true
 }
 
-/** Dev fallback when cookie exchange fails but UsersPanel session exists server-side. */
+export async function previewLogin(): Promise<boolean> {
+  try {
+    const out = await api<{ access_token: string }>('/api/v1/auth/preview-login', {
+      method: 'POST',
+      body: '{}',
+    })
+    setToken(out.access_token)
+    return true
+  } catch {
+    return false
+  }
+}
 export async function devLogin(): Promise<boolean> {
   try {
     const out = await api<{ access_token: string }>('/api/v1/auth/dev-login', {
@@ -286,6 +298,9 @@ export async function ensureSession(): Promise<EnsureSessionResult> {
     const devOk = await devLogin()
     if (devOk) return { ok: true }
   }
+
+  const previewOk = await previewLogin()
+  if (previewOk) return { ok: true }
 
   if (!platform) {
     return {

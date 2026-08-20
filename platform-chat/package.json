@@ -1,0 +1,11 @@
+{
+  "name": "@robo/platform-chat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./svelte": "./PlatformChatDrawer.svelte",
+    "./chat-drawer.css": "./chat-drawer.css",
+    "./usePlatformChat": "./usePlatformChat.ts"
+  }
+}
