@@ -6,6 +6,8 @@ For architecture and per-app deep docs, see [`DEVELOPER_BASELINE.md`](./DEVELOPE
 
 **Production / staging (Render or Alibaba Cloud):** see [`DEPLOY-README.md`](./DEPLOY-README.md) and run [`scripts/deploy.sh`](./scripts/deploy.sh).
 
+**Vercel static preview (Projects UI only):** import this repo on Vercel with Framework **Other**, root `./`, then set Build Command to `npm run vercel-build` and Output Directory to `morph-engi/frontend/dist`. Details: [`morph-engi/README.md`](./morph-engi/README.md#vercel-static-preview).
+
 ---
 
 ## Project folders

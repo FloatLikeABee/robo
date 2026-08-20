@@ -106,8 +106,12 @@
         body: JSON.stringify({}),
       })
       selected = { ...selected, ...out }
-      const path = out.published_path || out.published_url || ''
-      info = path ? `Published: ${path.startsWith('http') ? path : apiUrl(path)}` : 'Published.'
+      const path = String(out.published_path || out.published_url || '')
+      if (path.startsWith('blob:')) {
+        info = 'Published in this browser. Use Open published to view the HTML.'
+      } else {
+        info = path ? `Published: ${path.startsWith('http') ? path : apiUrl(path)}` : 'Published.'
+      }
       await loadProjects()
     } catch (e) {
       warning = e instanceof Error ? e.message : 'Publish failed'
@@ -145,6 +149,9 @@
   function publicHref(p: any) {
     const path = String(p?.published_path || '').trim()
     if (!path) return ''
+    if (path.startsWith('blob:') && p?.html_content) {
+      return URL.createObjectURL(new Blob([p.html_content], { type: 'text/html' }))
+    }
     return path.startsWith('http') ? path : apiUrl(path)
   }
 

@@ -1,0 +1,21 @@
+# Vercel only builds morph-engi/frontend (+ platform-chat). Skip the rest of the monorepo.
+UsersPanel
+morph
+morph-utils
+morph-broadcast
+composerx
+booki
+formx
+academi
+SharpReport
+bk
+docs
+pkg
+deploy
+scripts
+**/.git.nested-backup
+**/target
+**/node_modules
+**/*.db
+**/*.sqlite
+**/*.sqlite3

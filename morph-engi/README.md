@@ -45,6 +45,28 @@ Primary navigation is Projects and Files only.
 
 Limits: up to **5 files** per generate, each up to 8 MB. Accepted types: **PDF, TXT, CSV, MD**. Paste-only and file-only both work; an empty request is rejected before any AI call. Paste content is also saved into Files. Without `MORPH_AI_API_KEY`, generate returns HTTP 503 with an "AI not configured" message.
 
+## Vercel (static preview)
+
+The repo root `vercel.json` builds the Projects UI as a static site. Data lives in **browser localStorage** (no Rust API, no Morph login, no Morph AI).
+
+On [vercel.com/new](https://vercel.com/new), import this GitHub repo and use:
+
+| Field | Value |
+|-------|--------|
+| Framework Preset | **Other** (leave as-is) |
+| Root Directory | `./` |
+| Build Command | **ON** → `npm run vercel-build` |
+| Output Directory | **ON** → `morph-engi/frontend/dist` |
+| Install Command | **OFF** (root `vercel.json` already runs `npm install`) |
+| Environment Variables | none |
+
+Deploy the branch that contains `vercel.json` (not `main` until this is merged). After import, Vercel will reuse these settings from `vercel.json` even if the dashboard toggles stay off.
+
+```bash
+# Same build Vercel runs
+npm run vercel-build
+```
+
 ## Environment
 
 | Variable | Default |

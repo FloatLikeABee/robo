@@ -3,7 +3,7 @@
   import AppLayout from './components/AppLayout.svelte'
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
-  import { api, ensureSession, loginWithCredentials, previewLogin, setToken, uploadFile } from './lib/api'
+  import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, setToken, uploadFile } from './lib/api'
   import { buildAiStateExtra } from './lib/aiContext'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
@@ -47,6 +47,20 @@
   let loginEmail = $state('')
   let loginPassword = $state('')
   let loginBusy = $state(false)
+
+  async function submitLogin() {
+    loginBusy = true
+    error = ''
+    try {
+      await loginWithCredentials(loginEmail, loginPassword)
+      await refreshAll()
+      authed = true
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Sign in failed'
+    } finally {
+      loginBusy = false
+    }
+  }
 
   async function submitPreview() {
     loginBusy = true
@@ -159,9 +173,18 @@
     <img src="/morph-engi-icon.svg" alt="" width="72" height="72" class="rounded-2xl" />
     <h1 class="text-2xl font-semibold">Project</h1>
     <p class="text-muted max-w-md text-sm">
-      Simple project documents from files or paste. Sign in with your Morph account.
+      {isBrowserStore()
+        ? 'This Vercel preview keeps projects and files in your browser. Continue as guest — no Morph server is attached.'
+        : 'Simple project documents from files or paste. Sign in with your Morph account.'}
     </p>
     {#if error}<p class="text-rose-400 text-sm max-w-md">{error}</p>{/if}
+    {#if isBrowserStore()}
+      <div class="w-full max-w-sm space-y-3 card p-5">
+        <button type="button" class="btn-primary w-full" disabled={loginBusy} onclick={() => void submitPreview()}>
+          {loginBusy ? 'Opening…' : 'Open preview'}
+        </button>
+      </div>
+    {:else}
     <form class="w-full max-w-sm space-y-3 text-left card p-5" onsubmit={(e) => { e.preventDefault(); void submitLogin() }}>
       <h2 class="font-semibold text-sm">Sign in</h2>
       <input class="input" type="email" placeholder="Email" bind:value={loginEmail} required autocomplete="email" />
@@ -175,9 +198,16 @@
       <button type="button" class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" onclick={() => bootstrap()}>Retry SSO</button>
       <a class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" href="http://localhost:3031" target="_blank" rel="noopener">Open Morph AI</a>
     </div>
+    {/if}
   </div>
 {:else}
-  <div class="h-full min-h-0 max-h-dvh overflow-hidden">
+  <div class="h-full min-h-0 max-h-dvh overflow-hidden flex flex-col">
+  {#if isBrowserStore()}
+    <p class="shrink-0 text-center text-[11px] px-3 py-1.5 bg-violet/20 text-muted">
+      Vercel preview — projects and files stay in this browser (localStorage). Sources are concatenated; Morph AI is not connected.
+    </p>
+  {/if}
+  <div class="flex-1 min-h-0">
   <AppLayout bind:page getStateExtra={getAiStateExtra} onSignOut={signOut}>
     <div class="h-full min-h-0">
       {#if page === 'projects'}
@@ -253,6 +283,7 @@
       {/if}
     </div>
   </AppLayout>
+  </div>
   </div>
 
 {/if}

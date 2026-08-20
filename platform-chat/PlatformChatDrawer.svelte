@@ -9,6 +9,7 @@
     chatEndpoint = '',
     getHeaders,
     getStateExtra,
+    sendChat,
     welcomeMessage = '',
     suggestions = [],
   } = $props<{
@@ -17,6 +18,7 @@
     chatEndpoint?: string
     getHeaders?: () => Record<string, string>
     getStateExtra?: () => AssistantState | { fields?: unknown }
+    sendChat?: (payload: { messages: ChatMsg[]; state: unknown }) => Promise<{ assistant_message?: string; error?: string }>
     welcomeMessage?: string
     progressContext?: unknown
     suggestions?: string[]
@@ -37,20 +39,26 @@
     input = ''
     try {
       const extra = getStateExtra?.() ?? {}
-      const res = await fetch(chatEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getHeaders?.() ?? {}),
-        },
-        body: JSON.stringify({
-          messages: next.map((m) => ({ role: m.role, content: m.content })),
-          state: extra,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
-      const reply = String((data as { assistant_message?: string }).assistant_message || '').trim()
+      const payload = {
+        messages: next.map((m) => ({ role: m.role, content: m.content })),
+        state: extra,
+      }
+      let data: { assistant_message?: string; error?: string }
+      if (sendChat) {
+        data = await sendChat(payload)
+      } else {
+        const res = await fetch(chatEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(getHeaders?.() ?? {}),
+          },
+          body: JSON.stringify(payload),
+        })
+        data = (await res.json().catch(() => ({}))) as { assistant_message?: string; error?: string }
+        if (!res.ok) throw new Error(data.error || res.statusText)
+      }
+      const reply = String(data.assistant_message || '').trim()
       if (reply) messages = [...next, { role: 'assistant', content: reply }]
     } catch (e) {
       error = e instanceof Error ? e.message : 'Chat failed'
