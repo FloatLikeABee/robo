@@ -11,6 +11,7 @@
   let warning = $state('')
   let generating = $state(false)
   let publishing = $state(false)
+  let deleting = $state(false)
   let previewTab = $state<'md' | 'html'>('md')
   let selected = $state<any | null>(null)
   let projects = $state<any[]>([])
@@ -115,6 +116,25 @@
     }
   }
 
+  async function removeProject() {
+    if (!selected?.id || deleting) return
+    if (!confirm(`Delete project “${selected.name}”?`)) return
+    deleting = true
+    warning = ''
+    info = ''
+    try {
+      await api(`/api/v1/projects/${selected.id}`, { method: 'DELETE' })
+      selected = null
+      info = 'Project deleted.'
+      await loadProjects()
+      await onCreated?.()
+    } catch (e) {
+      warning = e instanceof Error ? e.message : 'Delete failed'
+    } finally {
+      deleting = false
+    }
+  }
+
   function openProject(p: any) {
     selected = p
     previewTab = 'md'
@@ -141,6 +161,9 @@
 
     {#if info}
       <p class="text-sm text-teal px-1">{info}</p>
+    {/if}
+    {#if warning && !createOpen}
+      <p class="text-sm text-amber-300 px-1">{warning}</p>
     {/if}
 
     <div class="card p-3 flex-1 min-h-0 overflow-auto">
@@ -189,8 +212,16 @@
               Open published
             </a>
           {/if}
-          <button type="button" class="btn-primary text-xs px-3 py-1.5" onclick={publish} disabled={publishing}>
+          <button type="button" class="btn-primary text-xs px-3 py-1.5" onclick={publish} disabled={publishing || deleting}>
             {publishing ? 'Publishing…' : 'Publish'}
+          </button>
+          <button
+            type="button"
+            class="btn-ghost border border-white/10 px-3 py-1.5 rounded-xl text-xs text-rose-300"
+            onclick={removeProject}
+            disabled={publishing || deleting}
+          >
+            {deleting ? 'Deleting…' : 'Delete'}
           </button>
         </div>
       </div>

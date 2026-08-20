@@ -11,13 +11,11 @@ use crate::api::extract::{arg_f64, arg_i64, arg_str, AuthUser};
 use crate::middleware::auth::AuthContext;
 use crate::services::AppState;
 
-const ENGI_INSTRUCTIONS: &str = r#"You are Morph Engi AI, a concise assistant for project management (civil / construction / field teams).
+const ENGI_INSTRUCTIONS: &str = r#"You are Projects AI, a concise assistant for AI project documents and a files library.
 
 You help with:
-- Projects (jobs, status, descriptions)
-- Site logs
-- Project files (links and uploads)
-- People (contractors and contacts)
+- Project documents (markdown + HTML generated from files or paste, publish status)
+- Files library (uploaded and paste-saved content)
 
 The UI sends JSON `app_context` with live records — prefer that before calling tools.
 
@@ -27,20 +25,15 @@ When you need live data or must create/update records, respond with ONLY one JSO
 Primary read tools:
 - list_projects — optional status
 - get_project — args: id
-- list_tasks — optional project_id
-- list_site_logs — optional project_id
-- list_resource_files — optional project_id
-- list_contractors — optional project_id
+- list_resource_files
 
 Primary write tools:
-- create_project — args: code, name; optional client, location, status, description
-- update_project — args: id, plus fields to change
-- create_task — args: project_id, title; optional assignee, status, priority, due_date
-- create_site_log — args: project_id, log_date, summary; optional weather, crew_count, issues
-- create_resource_file — args: name; optional source_type (url|upload), file_url, file_name, description, project_ids[]
-- create_contractor — args: name; optional trade, contact_name, phone, email, description, project_ids[]
+- update_project — args: id, plus fields to change (name, status, description)
+- create_resource_file — args: name; optional source_type (url|upload), file_url, file_name, description
+- delete_project — args: id (only after the user confirmed in markdown)
+- delete_resource_file — args: id (only after the user confirmed in markdown)
 
-Use active_project_id from assistant state when the user says "this project".
+Do not create site logs, people, contractors, tasks, or flow-log entries. Direct users to generate a project document from files or paste in the Projects UI.
 After TOOL_RESULT, summarize in markdown.
 For destructive actions, ask for confirmation in markdown only.
 If no tool needed, reply in markdown only."#;
@@ -196,7 +189,7 @@ pub async fn assistant_chat(
 }
 
 fn help_text() -> &'static str {
-    "I can help with **projects**, **site logs**, **files**, and **people**.\n\nTry:\n- `List active projects`\n- `Create project code: BRG-01 name: Riverside Bridge`\n- `Add a site log for this project`\n- `Who are the contractors on this project?`"
+    "I can help with **project documents** and the **files library**.\n\nTry:\n- `List my projects`\n- `Summarize project id 3`\n- `What files are in the library?`\n- `Which projects are published?`"
 }
 
 fn format_history(messages: &[ChatMessage]) -> Option<String> {
@@ -235,6 +228,40 @@ async fn exec_tool(state: &AppState, auth: &AuthContext, call: &ToolCall) -> (St
         "get_project" => {
             let id = arg_i64(args, "id", 0);
             get_project_tool(&state.pool, org, id).await
+        }
+        "delete_project" => {
+            let id = arg_i64(args, "id", 0);
+            if id == 0 {
+                "error: id required".into()
+            } else {
+                match sqlx::query("DELETE FROM projects WHERE id = ? AND organization_id = ?")
+                    .bind(id)
+                    .bind(org)
+                    .execute(&state.pool)
+                    .await
+                {
+                    Ok(r) if r.rows_affected() > 0 => format!("deleted project {id}"),
+                    Ok(_) => "not found".into(),
+                    Err(e) => format!("error: {e}"),
+                }
+            }
+        }
+        "delete_resource_file" => {
+            let id = arg_i64(args, "id", 0);
+            if id == 0 {
+                "error: id required".into()
+            } else {
+                match sqlx::query("DELETE FROM resource_files WHERE id = ? AND organization_id = ?")
+                    .bind(id)
+                    .bind(org)
+                    .execute(&state.pool)
+                    .await
+                {
+                    Ok(r) if r.rows_affected() > 0 => format!("deleted file {id}"),
+                    Ok(_) => "not found".into(),
+                    Err(e) => format!("error: {e}"),
+                }
+            }
         }
         "list_tasks" => list_simple(&state.pool, "project_tasks", org, arg_i64(args, "project_id", 0)).await,
         "list_site_logs" => list_simple(&state.pool, "site_logs", org, arg_i64(args, "project_id", 0)).await,
@@ -657,10 +684,10 @@ async fn exec_tool(state: &AppState, auth: &AuthContext, call: &ToolCall) -> (St
 
 async fn list_projects_tool(pool: &sqlx::SqlitePool, org: i64, status: String) -> String {
     let rows = if status.is_empty() {
-        sqlx::query("SELECT id, code, name, status, progress_pct, budget_total FROM projects WHERE organization_id = ? ORDER BY id DESC")
+        sqlx::query("SELECT id, code, name, status, description, source_summary, published_path, updated_at FROM projects WHERE organization_id = ? ORDER BY id DESC")
             .bind(org).fetch_all(pool).await
     } else {
-        sqlx::query("SELECT id, code, name, status, progress_pct, budget_total FROM projects WHERE organization_id = ? AND status = ? ORDER BY id DESC")
+        sqlx::query("SELECT id, code, name, status, description, source_summary, published_path, updated_at FROM projects WHERE organization_id = ? AND status = ? ORDER BY id DESC")
             .bind(org).bind(status).fetch_all(pool).await
     };
     match rows {
@@ -669,8 +696,10 @@ async fn list_projects_tool(pool: &sqlx::SqlitePool, org: i64, status: String) -
             "code": r.get::<String,_>("code"),
             "name": r.get::<String,_>("name"),
             "status": r.get::<String,_>("status"),
-            "progress_pct": r.get::<f64,_>("progress_pct"),
-            "budget_total": r.get::<f64,_>("budget_total"),
+            "description": r.try_get::<String,_>("description").unwrap_or_default(),
+            "source_summary": r.try_get::<String,_>("source_summary").unwrap_or_default(),
+            "published_path": r.try_get::<Option<String>,_>("published_path").ok().flatten(),
+            "updated_at": r.try_get::<String,_>("updated_at").unwrap_or_default(),
         })).collect::<Vec<_>>()}).to_string(),
         Err(e) => format!("error: {e}"),
     }
@@ -687,12 +716,12 @@ async fn get_project_tool(pool: &sqlx::SqlitePool, org: i64, id: i64) -> String 
             "id": r.get::<i64,_>("id"),
             "code": r.get::<String,_>("code"),
             "name": r.get::<String,_>("name"),
-            "client": r.get::<String,_>("client"),
-            "location": r.get::<String,_>("location"),
             "status": r.get::<String,_>("status"),
-            "budget_total": r.get::<f64,_>("budget_total"),
-            "progress_pct": r.get::<f64,_>("progress_pct"),
-            "description": r.get::<String,_>("description"),
+            "description": r.try_get::<String,_>("description").unwrap_or_default(),
+            "source_summary": r.try_get::<String,_>("source_summary").unwrap_or_default(),
+            "markdown_content": r.try_get::<String,_>("markdown_content").unwrap_or_default(),
+            "published_path": r.try_get::<Option<String>,_>("published_path").ok().flatten(),
+            "updated_at": r.try_get::<String,_>("updated_at").unwrap_or_default(),
         })
         .to_string(),
         Ok(None) => "not found".into(),

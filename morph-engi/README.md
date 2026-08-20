@@ -1,6 +1,6 @@
-# Morph Engi
+# Morph Engi — Projects
 
-Simple **project management** for civil / construction / field teams — **Rust** API + **Svelte** UI.
+AI **project documents** from files or paste, plus a simple **files library**. Rust API + Svelte UI. Embedded as **Project** in Morph Utils.
 
 ## Quick start
 
@@ -22,41 +22,28 @@ cd frontend && npm install && npm run dev
 
 ## What it covers
 
-- **Projects** — create jobs, track status, daily site logs, or let AI draft them from description files
-- **Files** — drawings/docs via URL or upload, per project
-- **People** — contractors and contacts linked to a project
-- **Settings** — organization basics
+- **Projects** — upload requirements/specs and/or paste content; AI organizes into markdown + HTML you can publish
+- **Files** — retained uploads and paste-origin content (list, open, delete)
+
+Primary navigation is Projects and Files only.
 
 ## AI assistant
 
-`POST /api/v1/assistant/chat` — MorphAI tool loop for projects, site logs, files, and people. Set `MORPH_AI_API_KEY` in `.env`.
+`POST /api/v1/assistant/chat` — MorphAI tool loop for project documents and the files library. Set `MORPH_AI_API_KEY` in `.env`.
 
-## AI project import
-
-Upload description files and let AI propose projects, then review before anything is
-created. Available as the **AI import** tab in the Projects module.
+## AI project documents
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/v1/project-imports/analyze` | Multipart: up to 3 `files` parts plus optional `instruction`. Stores a draft plan; creates no records |
-| `GET /api/v1/project-imports` | List import sessions for the organization |
-| `GET /api/v1/project-imports/:id` | One session with its draft plan and per-file read results |
-| `POST /api/v1/project-imports/:id/confirm` | Create the projects and nested records from an edited draft |
+| `POST /api/v1/projects/generate-document` | Multipart: `files` and/or `paste`; optional `title`. Requires at least one source |
+| `POST /api/v1/projects/:id/publish` | Publish HTML to a public path |
+| `GET /api/v1/public/projects/:slug` | Unauthenticated published HTML |
+| `DELETE /api/v1/projects/:id` | Delete a project document |
+| `GET/POST /api/v1/resource-files` | Files library |
+| `POST /api/v1/resource-files/upload` | Store an uploaded file |
+| `DELETE /api/v1/resource-files/:id` | Remove a files-library entry |
 
-Limits and behavior:
-- At most **3 files** per import, each up to 8 MB. Accepted types: **PDF, TXT, CSV, MD**.
-  A fourth file or an unsupported type is rejected before any AI call.
-- A draft can propose **several projects**, each with nested site logs, people, and
-  flow-log entries. Confirm accepts an edited plan and can exclude any project or
-  individual nested record.
-- Confirm creates each project and its children in one transaction per project.
-  Records that fail validation are reported and skipped while their valid siblings
-  are still created. A session already completed refuses a second confirm, so no
-  duplicates are created.
-- Flow-log entries have no project column, so a created entry carries the project
-  code as a tag.
-- Sessions are scoped by organization; another org's session reads as not found.
-- Without `MORPH_AI_API_KEY`, analyze returns HTTP 503 with an "AI not configured" message.
+Limits: up to **5 files** per generate, each up to 8 MB. Accepted types: **PDF, TXT, CSV, MD**. Paste-only and file-only both work; an empty request is rejected before any AI call. Paste content is also saved into Files. Without `MORPH_AI_API_KEY`, generate returns HTTP 503 with an "AI not configured" message.
 
 ## Environment
 

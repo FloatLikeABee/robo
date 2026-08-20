@@ -55,6 +55,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/resource-files", get(modules::list_resource_files))
         .route("/resource-files", post(modules::create_resource_file))
         .route("/resource-files/:id", patch(modules::update_resource_file))
+        .route("/resource-files/:id", delete(modules::delete_resource_file))
         .route("/resource-files/upload", post(modules::upload_resource_file))
         .route("/finance", get(modules::get_project_finance))
         .route("/finance", post(modules::upsert_project_finance))

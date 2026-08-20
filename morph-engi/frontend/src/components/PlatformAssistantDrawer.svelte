@@ -13,11 +13,10 @@
   }>()
 
   const suggestions = [
-    'Summarize the active project',
-    'List site logs for this project',
-    'Who are the people on this project?',
-    'Create a contractor for the active project',
-    'What files are attached to this project?',
+    'List my project documents',
+    'Summarize the selected project',
+    'What files are in the library?',
+    'Which projects are published?',
   ]
 
   const chatEndpoint = `${API_BASE.replace(/\/$/, '')}/api/v1/assistant/chat`
@@ -29,7 +28,7 @@
   {chatEndpoint}
   getHeaders={authHeaders}
   {getStateExtra}
-  welcomeMessage="Hi! I'm **Projects AI**. I can help with projects, site logs, files, people, and flow log using your live app data."
+  welcomeMessage="Hi! I'm **Projects AI**. I can help with project documents and the files library using your live app data."
   progressContext={{ app: 'morph-engi' }}
   {suggestions}
   on:close={() => (open = false)}

@@ -13,13 +13,9 @@
   let loading = $state(true)
   let error = $state('')
   let page = $state<PageId>('projects')
-  let activeProjectId = $state<number | null>(null)
 
   let projects = $state<any[]>([])
-  let tasks = $state<any[]>([])
-  let siteLogs = $state<any[]>([])
   let resourceFiles = $state<any[]>([])
-  let contractors = $state<any[]>([])
   let org = $state<any>(null)
   let actionError = $state('')
 
@@ -78,7 +74,6 @@
 
   async function refreshPageData() {
     if (page === 'files') {
-      // Files library lists all retained uploads/pastes for the org (not scoped to header project).
       resourceFiles = (await api<{ resource_files: any[] }>('/api/v1/resource-files')).resource_files ?? []
     }
   }
@@ -86,7 +81,6 @@
   $effect(() => {
     if (authed) {
       page
-      activeProjectId
       void refreshPageData()
     }
   })
@@ -99,24 +93,6 @@
     setToken(null)
     authed = false
   }
-
-  function linkedProjectIds(): number[] {
-    return activeProjectId ? [activeProjectId] : []
-  }
-
-  function slugCode(name: string): string {
-    const base = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '')
-    return base || `PRJ-${Date.now().toString().slice(-6)}`
-  }
-
-
-  function requireProject(): number {
-    if (!activeProjectId) throw new Error('Select a project in the header first')
-    return activeProjectId
-  }
-
-
-
 
   async function addResourceFile() {
     actionError = ''
@@ -140,7 +116,6 @@
           file_url,
           file_name,
           description: newResourceFile.description,
-          project_ids: linkedProjectIds(),
         }),
       })
       newResourceFile = { name: '', source_type: 'url', file_url: '', description: '' }
@@ -152,25 +127,26 @@
     }
   }
 
+  async function deleteResourceFile(id: number, name: string) {
+    if (!confirm(`Delete file “${name}”?`)) return
+    actionError = ''
+    try {
+      await api(`/api/v1/resource-files/${id}`, { method: 'DELETE' })
+      await refreshPageData()
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : 'Failed to delete file'
+    }
+  }
 
   const pageTitle = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
   const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
 
-  function projectLabel(id: unknown) {
-    const p = projects.find((x) => x.id === id)
-    return p ? `${p.code} — ${p.name}` : String(id ?? '—')
-  }
-
   function getAiStateExtra() {
     return buildAiStateExtra({
       page,
-      activeProjectId,
       organization: org,
       projects,
-      tasks,
-      siteLogs,
       resourceFiles,
-      contractors,
     })
   }
 </script>
@@ -198,7 +174,7 @@
   </div>
 {:else}
   <div class="h-full min-h-0 max-h-dvh overflow-hidden">
-  <AppLayout bind:page bind:activeProjectId {projects} getStateExtra={getAiStateExtra} onSignOut={signOut}>
+  <AppLayout bind:page getStateExtra={getAiStateExtra} onSignOut={signOut}>
     <div class="h-full min-h-0">
       {#if page === 'projects'}
         <div class="h-full min-h-0">
@@ -248,7 +224,7 @@
             {:else}
               <DataGrid title="Files">
                 <table class="data-table">
-                  <thead><tr><th>Name</th><th>Type</th><th>Link</th><th>Notes</th></tr></thead>
+                  <thead><tr><th>Name</th><th>Type</th><th>Link</th><th>Notes</th><th>Added</th><th></th></tr></thead>
                   <tbody>
                     {#each resourceFiles as d}
                       <tr>
@@ -256,27 +232,18 @@
                         <td>{d.source_type}</td>
                         <td class="max-w-[12rem] truncate"><a class="text-teal underline" href={d.file_url} target="_blank" rel="noopener">{d.file_name || d.file_url}</a></td>
                         <td class="max-w-[18rem] whitespace-pre-wrap text-muted">{d.description || '—'}</td>
+                        <td class="text-xs text-muted whitespace-nowrap">{d.created_at || '—'}</td>
+                        <td>
+                          <button type="button" class="text-xs text-rose-300 hover:underline" onclick={() => deleteResourceFile(d.id, d.name)}>
+                            Delete
+                          </button>
+                        </td>
                       </tr>
                     {/each}
                   </tbody>
                 </table>
               </DataGrid>
             {/if}
-          {/snippet}
-        </ModuleShell>
-
-      {:else if page === 'settings'}
-        <ModuleShell title="Settings moved" hint="Use Morph Utils Settings" tabs={[]} {actionError}>
-          {#snippet children()}
-            <div class="card p-5 space-y-2 max-w-lg">
-              <h2 class="font-semibold">Shared Settings</h2>
-              <p class="text-sm text-muted">
-                Module settings now live in Morph Utils → Settings (same level as the apps).
-              </p>
-              <button type="button" class="btn btn-secondary mt-2" onclick={() => (page = 'projects')}>
-                Back to Projects
-              </button>
-            </div>
           {/snippet}
         </ModuleShell>
       {/if}
