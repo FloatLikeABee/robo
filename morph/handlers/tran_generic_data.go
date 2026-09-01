@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"idongivaflyinfa/ai"
+	"idongivaflyinfa/importcol"
 
 	"github.com/gin-gonic/gin"
+	"github.com/robo/morphai"
 )
 
 const (
@@ -146,7 +148,11 @@ func (h *Handlers) CreateGenericData(c *gin.Context) {
 	}
 	id64, _ := res.LastInsertId()
 	if hasDetail {
-		_ = h.savePoppedDetail(c, entityKeyGenericData, int(id64), detailStr)
+		if err := h.savePoppedDetail(c, entityKeyGenericData, int(id64), detailStr); err != nil {
+			_, _ = h.TranMySQL.DB.Exec("DELETE FROM generic_data WHERE id = ?", id64)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save content: " + err.Error()})
+			return
+		}
 	}
 	m, _, _ := querySingleRowMap(h.TranMySQL.DB, "SELECT "+genericDataFullSelectCols+" FROM generic_data WHERE id = ?", id64)
 	if m != nil {
@@ -242,12 +248,8 @@ func (h *Handlers) DeleteGenericData(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// ImportGenericData accepts CSV, JSON, or PDF and stores parsed content in Mongo.
-func (h *Handlers) ImportGenericData(c *gin.Context) {
-	if h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
-		return
-	}
+// ExtractGenericDataFile parses a file and returns JSON + Markdown drafts. It never inserts a row.
+func (h *Handlers) ExtractGenericDataFile(c *gin.Context) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil || fileHeader == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
@@ -274,7 +276,24 @@ func (h *Handlers) ImportGenericData(c *gin.Context) {
 	ext := strings.ToLower(path.Ext(filename))
 	sourceType, ok := genericDataExtToType(ext)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported file type; use .csv, .json, .pdf, or .md"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported file type; use .csv, .xlsx, .json, .pdf, or .md"})
+		return
+	}
+
+	detailObj, _, err := h.parseGenericDataImport(c.Request.Context(), sourceType, filename, raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	jsonDraft, markdown := seedGenericDataDrafts(sourceType, detailObj)
+	if genericDataDraftEmpty(jsonDraft, markdown) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "extract is unavailable for this file"})
+		return
+	}
+	jsonDraft, markdown = h.refineGenericDataExtract(c.Request.Context(), sourceType, filename, jsonDraft, markdown)
+	if genericDataDraftEmpty(jsonDraft, markdown) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "extract is unavailable for this file"})
 		return
 	}
 
@@ -283,46 +302,20 @@ func (h *Handlers) ImportGenericData(c *gin.Context) {
 		title = strings.TrimSuffix(filename, path.Ext(filename))
 	}
 	if title == "" {
-		title = "Imported data"
-	}
-	desc := strings.TrimSpace(c.PostForm("description"))
-	var descPtr *string
-	if desc != "" {
-		descPtr = &desc
-	}
-
-	detailObj, recordCount, err := h.parseGenericDataImport(c.Request.Context(), sourceType, filename, raw)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	detailBytes, err := json.Marshal(detailObj)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		if h1 := extractMarkdownH1(markdown); h1 != "" {
+			title = h1
+		} else {
+			title = "Imported data"
+		}
 	}
 
-	res, err := h.TranMySQL.DB.Exec(
-		`INSERT INTO generic_data (title, source_type, source_filename, record_count, description)
-		 VALUES (?, ?, ?, ?, ?)`,
-		title, sourceType, filename, recordCount, descPtr,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	id64, _ := res.LastInsertId()
-	id := int(id64)
-	if err := h.savePoppedDetail(c, entityKeyGenericData, id, string(detailBytes)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "saved row but failed to store detail: " + err.Error()})
-		return
-	}
-
-	m, _, _ := querySingleRowMap(h.TranMySQL.DB, "SELECT "+genericDataFullSelectCols+" FROM generic_data WHERE id = ?", id)
-	if m != nil {
-		h.attachEntityDetail(c, entityKeyGenericData, id, m)
-	}
-	c.JSON(http.StatusOK, m)
+	c.JSON(http.StatusOK, gin.H{
+		"json":        jsonDraft,
+		"markdown":    markdown,
+		"title":       title,
+		"source_type": sourceType,
+		"filename":    filename,
+	})
 }
 
 // AnalyzeGenericData runs Morph AI analysis on imported material.
@@ -379,16 +372,12 @@ func (h *Handlers) AnalyzeGenericData(c *gin.Context) {
 }
 
 func querySingleRowMapFromRows(rows interface {
-	Next() bool
 	Columns() ([]string, error)
 	Scan(dest ...interface{}) error
 }) (map[string]interface{}, bool, error) {
 	cols, err := rows.Columns()
 	if err != nil {
 		return nil, false, err
-	}
-	if !rows.Next() {
-		return nil, false, nil
 	}
 	vals := make([]interface{}, len(cols))
 	ptrs := make([]interface{}, len(cols))
@@ -417,7 +406,7 @@ func querySingleRowMapFromRows(rows interface {
 
 func genericDataExtToType(ext string) (string, bool) {
 	switch ext {
-	case ".csv":
+	case ".csv", ".xlsx":
 		return "csv", true
 	case ".json":
 		return "json", true
@@ -454,14 +443,30 @@ func nullableStringFromMap(in map[string]interface{}, key string) *string {
 func (h *Handlers) parseGenericDataImport(ctx context.Context, sourceType, filename string, raw []byte) (map[string]interface{}, int, error) {
 	meta := map[string]interface{}{
 		"source_type": sourceType,
-		"filename":      filename,
-		"imported_at":   time.Now().UTC().Format(time.RFC3339),
-		"size_bytes":    len(raw),
+		"filename":    filename,
+		"imported_at": time.Now().UTC().Format(time.RFC3339),
+		"size_bytes":  len(raw),
 	}
 	out := map[string]interface{}{"import_meta": meta}
 
 	switch sourceType {
 	case "csv":
+		if strings.EqualFold(path.Ext(filename), ".xlsx") {
+			parsed, err := importcol.ParseUpload(filename, raw)
+			if err != nil {
+				return nil, 0, err
+			}
+			rows := parsed.Rows
+			if len(rows) > genericDataMaxCSVRows {
+				rows = rows[:genericDataMaxCSVRows]
+				meta["truncated"] = true
+				meta["max_rows"] = genericDataMaxCSVRows
+			}
+			meta["format"] = "xlsx"
+			out["columns"] = parsed.Headers
+			out["rows"] = rows
+			return out, len(rows), nil
+		}
 		rows, columns, err := parseCSVBytes(raw)
 		if err != nil {
 			return nil, 0, err
@@ -559,6 +564,177 @@ func extractMarkdownH1(md string) string {
 	return ""
 }
 
+func seedGenericDataDrafts(sourceType string, parsed map[string]interface{}) (interface{}, string) {
+	if parsed == nil {
+		return map[string]interface{}{}, ""
+	}
+	if md, ok := parsed["content_markdown"].(string); ok && strings.TrimSpace(md) != "" {
+		return parsed, md
+	}
+	if sourceType == "csv" {
+		return parsed, csvDetailToMarkdown(parsed)
+	}
+	payload := parsed["payload"]
+	if payload == nil {
+		payload = parsed
+	}
+	b, _ := json.MarshalIndent(payload, "", "  ")
+	md := "```json\n" + string(b) + "\n```"
+	return parsed, md
+}
+
+func genericDataDraftEmpty(jsonDraft interface{}, markdown string) bool {
+	if strings.TrimSpace(markdown) != "" {
+		return false
+	}
+	m, ok := jsonDraft.(map[string]interface{})
+	if !ok || m == nil {
+		return jsonDraft == nil
+	}
+	if _, ok := m["columns"]; ok {
+		return false
+	}
+	if _, ok := m["rows"]; ok {
+		return false
+	}
+	if _, ok := m["payload"]; ok {
+		return false
+	}
+	if md, ok := m["content_markdown"].(string); ok && strings.TrimSpace(md) != "" {
+		return false
+	}
+	for k := range m {
+		if k != "import_meta" {
+			return false
+		}
+	}
+	return true
+}
+
+func csvDetailToMarkdown(detail map[string]interface{}) string {
+	columns := stringSliceFromAny(detail["columns"])
+	rows := genericDataRowsFromAny(detail["rows"])
+	if len(columns) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("|")
+	for _, c := range columns {
+		b.WriteString(" ")
+		b.WriteString(escapeMarkdownTableCell(c))
+		b.WriteString(" |")
+	}
+	b.WriteString("\n|")
+	for range columns {
+		b.WriteString(" --- |")
+	}
+	b.WriteString("\n")
+	for _, row := range rows {
+		b.WriteString("|")
+		for _, c := range columns {
+			b.WriteString(" ")
+			b.WriteString(escapeMarkdownTableCell(row[c]))
+			b.WriteString(" |")
+		}
+		b.WriteString("\n")
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func stringSliceFromAny(v interface{}) []string {
+	switch x := v.(type) {
+	case []string:
+		return x
+	case []interface{}:
+		out := make([]string, len(x))
+		for i, c := range x {
+			out[i] = fmt.Sprint(c)
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func genericDataRowsFromAny(v interface{}) []map[string]string {
+	switch x := v.(type) {
+	case []map[string]string:
+		return x
+	case []interface{}:
+		var rows []map[string]string
+		for _, item := range x {
+			switch row := item.(type) {
+			case map[string]string:
+				rows = append(rows, row)
+			case map[string]interface{}:
+				out := make(map[string]string, len(row))
+				for k, val := range row {
+					out[k] = fmt.Sprint(val)
+				}
+				rows = append(rows, out)
+			}
+		}
+		return rows
+	default:
+		return nil
+	}
+}
+
+func escapeMarkdownTableCell(s string) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return strings.TrimSpace(s)
+}
+
+func (h *Handlers) refineGenericDataExtract(ctx context.Context, sourceType, filename string, seedJSON interface{}, seedMD string) (interface{}, string) {
+	if h == nil || h.aiService == nil {
+		return seedJSON, seedMD
+	}
+	seedBytes, err := json.Marshal(seedJSON)
+	if err != nil {
+		return seedJSON, seedMD
+	}
+	prompt := `Refine this imported file into structured JSON and a Markdown document.
+Reply with ONLY a JSON object with keys "json" (object) and "markdown" (string). No markdown fences, no commentary.
+Preserve facts from the seed. Improve headings and structure. Do not invent records.
+
+Source type: ` + sourceType + `
+Filename: ` + filename + `
+
+JSON seed:
+` + truncateRunes(string(seedBytes), 8000) + `
+
+Markdown seed:
+` + truncateRunes(seedMD, 8000)
+	out, err := h.aiService.ChatCompletionLong(ctx, []ai.DashScopeMessage{{Role: "user", Content: prompt}})
+	if err != nil {
+		return seedJSON, seedMD
+	}
+	obj, ok := morphai.ExtractJSONObject(out)
+	if !ok {
+		return seedJSON, seedMD
+	}
+	var parsed struct {
+		JSON     json.RawMessage `json:"json"`
+		Markdown string          `json:"markdown"`
+	}
+	if err := json.Unmarshal([]byte(obj), &parsed); err != nil {
+		return seedJSON, seedMD
+	}
+	jsonVal := seedJSON
+	if len(parsed.JSON) > 0 {
+		var decoded interface{}
+		if err := json.Unmarshal(parsed.JSON, &decoded); err == nil && decoded != nil {
+			jsonVal = decoded
+		}
+	}
+	md := strings.TrimSpace(parsed.Markdown)
+	if md == "" {
+		md = seedMD
+	}
+	return jsonVal, md
+}
+
 func genericDataExcerptForAnalysis(m map[string]interface{}) string {
 	detailRaw, ok := m["detail"]
 	if !ok || detailRaw == nil {
@@ -577,22 +753,19 @@ func genericDataExcerptForAnalysis(m map[string]interface{}) string {
 		return truncateRunes(string(b), genericDataAnalyzeMaxRunes)
 	}
 
+	var parts []string
+	if md, ok := detail["content_markdown"].(string); ok && strings.TrimSpace(md) != "" {
+		parts = append(parts, truncateRunes(md, genericDataAnalyzeMaxRunes/2))
+	}
+
 	sourceType := fmt.Sprint(m["source_type"])
 	switch sourceType {
-	case "pdf":
-		if md, ok := detail["content_markdown"].(string); ok {
-			return truncateRunes(md, genericDataAnalyzeMaxRunes)
-		}
 	case "csv":
 		var b strings.Builder
-		if cols, ok := detail["columns"].([]interface{}); ok {
+		cols := stringSliceFromAny(detail["columns"])
+		if len(cols) > 0 {
 			b.WriteString("Columns: ")
-			for i, c := range cols {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				b.WriteString(fmt.Sprint(c))
-			}
+			b.WriteString(strings.Join(cols, ", "))
 			b.WriteString("\n\nSample rows:\n")
 		}
 		if rows, ok := detail["rows"].([]interface{}); ok {
@@ -604,16 +777,28 @@ func genericDataExcerptForAnalysis(m map[string]interface{}) string {
 				sample, _ := json.MarshalIndent(rows[:limit], "", "  ")
 				b.Write(sample)
 			}
+		} else if rows := genericDataRowsFromAny(detail["rows"]); len(rows) > 0 {
+			limit := 25
+			if len(rows) < limit {
+				limit = len(rows)
+			}
+			sample, _ := json.MarshalIndent(rows[:limit], "", "  ")
+			b.Write(sample)
 		}
-		return truncateRunes(b.String(), genericDataAnalyzeMaxRunes)
+		if s := strings.TrimSpace(b.String()); s != "" {
+			parts = append(parts, s)
+		}
 	case "json":
 		if payload, ok := detail["payload"]; ok {
 			b, _ := json.MarshalIndent(payload, "", "  ")
-			return truncateRunes(string(b), genericDataAnalyzeMaxRunes)
+			parts = append(parts, string(b))
 		}
 	}
-	b, _ := json.MarshalIndent(detail, "", "  ")
-	return truncateRunes(string(b), genericDataAnalyzeMaxRunes)
+	if len(parts) == 0 {
+		b, _ := json.MarshalIndent(detail, "", "  ")
+		return truncateRunes(string(b), genericDataAnalyzeMaxRunes)
+	}
+	return truncateRunes(strings.Join(parts, "\n\n"), genericDataAnalyzeMaxRunes)
 }
 
 func genericDataAnalysisPrompt(title, sourceType, filename, excerpt string) string {

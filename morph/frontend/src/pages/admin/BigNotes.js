@@ -38,6 +38,7 @@ import AnalyticsOutlinedIcon from '@mui/icons-material/AnalyticsOutlined';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { usePlatformUi } from '../../PlatformUiContext';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 
 function publicNoteHref(note) {
   const path = String(note?.published_path || '').trim();
@@ -515,33 +516,34 @@ export default function BigNotes() {
                 {isQuestionnaire ? <Tab label="Fill & analyze" sx={{ minHeight: 40, textTransform: 'none' }} /> : null}
               </Tabs>
 
-              <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2 }}>
+              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {previewTab === 0 ? (
                   selected.html_content ? (
-                    <Box
-                      component="iframe"
-                      title="Big note preview"
-                      sandbox="allow-same-origin"
-                      srcDoc={selected.html_content}
-                      sx={{
-                        width: '100%',
-                        minHeight: 360,
-                        border: 0,
-                        borderRadius: 1,
-                        bgcolor: '#0b1220',
-                      }}
-                    />
+                    <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: '#0b1220' }}>
+                      <Box
+                        component="iframe"
+                        title="Big note preview"
+                        sandbox="allow-same-origin"
+                        srcDoc={withDarkPreviewSrcDoc(selected.html_content)}
+                        sx={darkPreviewIframeSx}
+                      />
+                    </Box>
                   ) : (
-                    <Typography color="text.secondary">No HTML content.</Typography>
+                    <Typography color="text.secondary" sx={{ p: 2 }}>
+                      No HTML content.
+                    </Typography>
                   )
                 ) : null}
                 {previewTab === 1 ? (
                   <Box
                     component="pre"
+                    className="themed-preview-scroll"
                     sx={{
                       m: 0,
-                      p: 1.5,
-                      borderRadius: 1,
+                      p: 2,
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'auto',
                       bgcolor: 'action.hover',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
@@ -554,10 +556,13 @@ export default function BigNotes() {
                 {previewTab === 2 ? (
                   <Box
                     component="pre"
+                    className="themed-preview-scroll"
                     sx={{
                       m: 0,
-                      p: 1.5,
-                      borderRadius: 1,
+                      p: 2,
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'auto',
                       bgcolor: 'action.hover',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
@@ -568,7 +573,7 @@ export default function BigNotes() {
                   </Box>
                 ) : null}
                 {previewTab === 3 && isQuestionnaire ? (
-                  <Stack spacing={2}>
+                  <Stack spacing={2} className="themed-preview-scroll" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                       Fill questionnaire
                     </Typography>

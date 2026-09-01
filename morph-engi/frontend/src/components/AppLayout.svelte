@@ -7,12 +7,10 @@
   let {
     page = $bindable('projects' as PageId),
     getStateExtra,
-    onSignOut,
     children,
   } = $props<{
     page?: PageId
     getStateExtra?: () => AssistantState
-    onSignOut?: () => void
     children?: import('svelte').Snippet
   }>()
 
@@ -34,9 +32,6 @@
       <div class="flex items-center gap-2 flex-wrap">
         <button type="button" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-violet/30 hover:bg-violet/40" onclick={() => (assistantOpen = true)}>
           AI Assistant
-        </button>
-        <button type="button" class="px-3 py-1.5 rounded-xl text-xs font-medium text-muted hover:bg-white/5" onclick={onSignOut}>
-          Sign out
         </button>
       </div>
     </div>

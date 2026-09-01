@@ -371,9 +371,9 @@ func (h *Handlers) replaceCaseTaskAssignees(ctx context.Context, caseTaskID int,
 			return err
 		}
 	}
-	// Sync legacy columns to first assignee (optional compatibility).
-	var lt interface{} = nil
-	var lid interface{} = nil
+	// Sync legacy columns to first assignee (empty string / 0 when unassigned — never SQL NULL).
+	lt := ""
+	lid := 0
 	if len(keys) > 0 {
 		lt = keys[0].Kind
 		lid = keys[0].ID
@@ -534,7 +534,35 @@ func (h *Handlers) GetCaseTaskFull(c *gin.Context) {
 
 	h.attachEntityDetail(c, entityKeyCaseTask, id, m)
 	h.attachEntityAttachmentsToRow(c.Request.Context(), "case-tasks", entityAttachmentCaseTask, id, m)
+	attachCaseTaskViewDocuments(m)
 	c.JSON(http.StatusOK, m)
+}
+
+func requiredCaseTaskDateField(in map[string]interface{}, key string) (string, error) {
+	raw, ok := in[key]
+	if !ok || raw == nil {
+		return "", fmt.Errorf("%s is required", key)
+	}
+	s := strings.TrimSpace(fmt.Sprint(raw))
+	if s == "" || strings.EqualFold(s, "<nil>") {
+		return "", fmt.Errorf("%s is required", key)
+	}
+	if !parseFlexibleNullTime(s).Valid {
+		return "", fmt.Errorf("%s is invalid", key)
+	}
+	return s, nil
+}
+
+func requireCaseTaskStartEnd(in map[string]interface{}) (startAt, endAt string, err error) {
+	startAt, err = requiredCaseTaskDateField(in, "start_at")
+	if err != nil {
+		return "", "", err
+	}
+	endAt, err = requiredCaseTaskDateField(in, "end_at")
+	if err != nil {
+		return "", "", err
+	}
+	return startAt, endAt, nil
 }
 
 func (h *Handlers) CreateCaseTask(c *gin.Context) {
@@ -558,6 +586,13 @@ func (h *Handlers) CreateCaseTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
 		return
 	}
+	startAt, endAt, err := requireCaseTaskStartEnd(in)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	in["start_at"] = startAt
+	in["end_at"] = endAt
 
 	assigneeKeys, hadAssignees, perr := parseAssigneesFromInput(in)
 	if perr != nil {
@@ -622,8 +657,14 @@ func (h *Handlers) CreateCaseTask(c *gin.Context) {
 		args = append(args, val)
 	}
 
-	cols = append(cols, "title")
-	args = append(args, strings.TrimSpace(title))
+	legacyType := ""
+	legacyID := 0
+	if len(assigneeKeys) > 0 {
+		legacyType = assigneeKeys[0].Kind
+		legacyID = assigneeKeys[0].ID
+	}
+	cols = append(cols, "assignee_type", "assignee_id", "title")
+	args = append(args, legacyType, legacyID, strings.TrimSpace(title))
 
 	stmt := "INSERT INTO CaseTask (" + strings.Join(cols, ",") + ") VALUES (" + strings.TrimRight(strings.Repeat("?,", len(cols)), ",") + ")"
 	res, err := h.TranMySQL.DB.Exec(stmt, args...)
@@ -684,6 +725,14 @@ func (h *Handlers) UpdateCaseTask(c *gin.Context) {
 		return
 	}
 	nextTitle := curTitle
+
+	startAt, endAt, err := requireCaseTaskStartEnd(in)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	in["start_at"] = startAt
+	in["end_at"] = endAt
 
 	var newAssigneeKeys []caseTaskAssigneeKey
 	var replaceAssignees bool

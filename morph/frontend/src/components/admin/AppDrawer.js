@@ -27,10 +27,9 @@ import {
   ExpandMore,
   NotesOutlined as BigNotesIcon,
   DatasetOutlined as GenericDataIcon,
-  Inventory2Outlined as AssetsIcon,
 } from '@mui/icons-material';
 
-/** Fixed desktop width — sized for longest labels (Generic data / Configuration / File import). */
+/** Fixed desktop width — sized for longest labels (Generic data / Settings). */
 export const DRAWER_WIDTH = 200;
 const MORPH_DATA_LOGO = `${process.env.PUBLIC_URL || ''}/icons/morph-data-icon.svg`;
 const SS_CONFIGURATION = 'morphdata.drawer.configurationOpen';
@@ -218,28 +217,12 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           </ListItemIcon>
           <ListItemText primary="Generic data" sx={textPrimarySx} />
         </ListItemButton>
-        <ListItemButton
-          selected={
-            isSelected(base + '/assets') ||
-            isSelected(base + '/resources') ||
-            isSelected(base + '/people') ||
-            isSelected(base + '/members') ||
-            isSelected(base + '/employees')
-          }
-          onClick={() => go(`${base}/assets`)}
-          sx={navButtonSx}
-        >
-          <ListItemIcon sx={iconSx}>
-            <AssetsIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
-          </ListItemIcon>
-          <ListItemText primary="Assets" sx={textPrimarySx} />
-        </ListItemButton>
         <Divider sx={{ borderColor: 'grey.700', my: 0.75 }} />
         <ListItemButton onClick={toggleConfiguration} sx={navButtonSx}>
           <ListItemIcon sx={iconSx}>
             <SettingsIcon sx={{ color: 'grey.500', fontSize: 20 }} />
           </ListItemIcon>
-          <ListItemText primary="Configuration" sx={textPrimarySx} />
+          <ListItemText primary="Settings" sx={textPrimarySx} />
           {configurationOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
         </ListItemButton>
         <Collapse in={configurationOpen} timeout="auto">
@@ -252,16 +235,6 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
                   sx={{ ...navButtonSx, pl: 5.5 }}
                 >
                   <ListItemText primary="Users" sx={textPrimarySx} />
-                </ListItemButton>
-                <ListItemButton
-                  selected={
-                    isSelected(base + '/configuration/file-import') ||
-                    isSelected(base + '/configuration/data-import')
-                  }
-                  onClick={() => go(`${base}/configuration/file-import`)}
-                  sx={{ ...navButtonSx, pl: 5.5 }}
-                >
-                  <ListItemText primary="File import" sx={textPrimarySx} />
                 </ListItemButton>
               </>
             )}

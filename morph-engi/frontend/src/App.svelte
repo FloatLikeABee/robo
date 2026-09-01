@@ -3,7 +3,7 @@
   import AppLayout from './components/AppLayout.svelte'
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
-  import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, setToken, uploadFile } from './lib/api'
+  import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, uploadFile } from './lib/api'
   import { buildAiStateExtra } from './lib/aiContext'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
@@ -104,11 +104,6 @@
     void bootstrap()
   })
 
-  function signOut() {
-    setToken(null)
-    authed = false
-  }
-
   async function addResourceFile() {
     actionError = ''
     try {
@@ -208,7 +203,7 @@
     </p>
   {/if}
   <div class="flex-1 min-h-0">
-  <AppLayout bind:page getStateExtra={getAiStateExtra} onSignOut={signOut}>
+  <AppLayout bind:page getStateExtra={getAiStateExtra}>
     <div class="h-full min-h-0">
       {#if page === 'projects'}
         <div class="h-full min-h-0">

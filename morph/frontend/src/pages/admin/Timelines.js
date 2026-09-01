@@ -26,6 +26,7 @@ import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -420,12 +421,17 @@ export default function Timelines() {
                 <Tab label="HTML" sx={{ minHeight: 40 }} />
               </Tabs>
 
-              <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2 }}>
+              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {previewTab === 0 ? (
                   <Typography
                     component="pre"
+                    className="themed-preview-scroll"
                     sx={{
                       m: 0,
+                      p: 2,
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
@@ -437,19 +443,18 @@ export default function Timelines() {
                 ) : (
                   <Box
                     sx={{
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 1,
+                      flex: 1,
+                      minHeight: 0,
                       overflow: 'hidden',
                       bgcolor: '#0b1220',
-                      minHeight: 280,
                     }}
                   >
-                    <iframe
+                    <Box
+                      component="iframe"
                       title="Timeline HTML preview"
-                      srcDoc={selected.html_content || '<p>No HTML</p>'}
+                      srcDoc={withDarkPreviewSrcDoc(selected.html_content || '<p>No HTML</p>')}
                       sandbox=""
-                      style={{ width: '100%', height: 480, border: 0, background: 'transparent' }}
+                      sx={darkPreviewIframeSx}
                     />
                   </Box>
                 )}

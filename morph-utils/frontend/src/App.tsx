@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import {
-  clearSharedToken,
   consumeUrlSessionToken,
   ensureSharedSession,
   getSharedToken,
@@ -73,19 +72,13 @@ export default function App() {
     setMoreOpen(false);
   }, [location.pathname]);
 
-  const onLogout = () => {
-    clearSharedToken();
-    setAuthed(false);
-    setMoreOpen(false);
-  };
-
   const morphAiHref = MORPH_AI_URL || '/';
 
   return (
     <div className={`morph-utils-shell${moreOpen ? ' is-more-open' : ''}`}>
-      <aside className="morph-utils-sidebar" aria-label="Morph Utils navigation">
-        <div className="morph-utils-brand" title="Morph Utils">
-          <img src="/morph-utils-icon.svg" alt="Morph Utils" />
+      <aside className="morph-utils-sidebar" aria-label="MorphUtils navigation">
+        <div className="morph-utils-brand" title="MorphUtils">
+          <img src="/morph-utils-icon.svg" alt="MorphUtils" />
           <span className="morph-utils-brand-tag">Utils</span>
         </div>
 
@@ -121,20 +114,7 @@ export default function App() {
         </nav>
 
         <div className="morph-utils-sidebar-footer">
-          {authed ? (
-            <button
-              type="button"
-              className="morph-utils-external-link"
-              onClick={onLogout}
-              aria-label="Sign out"
-            >
-              <span aria-hidden>⎋</span>
-              <span className="morph-utils-nav-tooltip" role="tooltip">
-                <strong>Sign out</strong>
-                <span>Clear Morph AI shared session</span>
-              </span>
-            </button>
-          ) : (
+          {!authed ? (
             <a
               className="morph-utils-external-link"
               href={morphAiHref}
@@ -146,7 +126,7 @@ export default function App() {
                 <span>Sign in once for all Morph apps</span>
               </span>
             </a>
-          )}
+          ) : null}
         </div>
       </aside>
 
@@ -184,17 +164,12 @@ export default function App() {
           />
           <div className="morph-utils-more-panel">
             <div className="morph-utils-more-head">
-              <strong>Morph Utils</strong>
+              <strong>MorphUtils</strong>
               <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close">
                 ✕
               </button>
             </div>
-            {authed ? (
-              <button type="button" className="morph-utils-more-danger" onClick={onLogout}>
-                Sign out
-                <span>Clear Morph AI shared session on this device</span>
-              </button>
-            ) : (
+            {authed ? null : (
               <a className="morph-utils-more-danger" href={morphAiHref}>
                 Sign in on Morph AI
                 <span>One login covers Data, Utils, and AI</span>

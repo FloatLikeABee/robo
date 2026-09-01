@@ -3,6 +3,35 @@
 
   const ACCEPT = '.pdf,.txt,.csv,.md,.markdown,application/pdf,text/plain,text/csv,text/markdown'
 
+  const DARK_SCROLL_STYLE = `<style>
+:root {
+  color-scheme: dark;
+  --scrollbar-thumb: #8b8b9a;
+  --scrollbar-track: #1e1e24;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+html, body { margin: 0; min-height: 100%; }
+@supports not (scrollbar-color: auto) {
+  *::-webkit-scrollbar { width: 12px; height: 12px; }
+  *::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
+  *::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+}
+</style>`
+
+  function withDarkPreviewSrcDoc(html: string) {
+    const src = String(html || '')
+    const inject = `<meta name="color-scheme" content="dark">${DARK_SCROLL_STYLE}`
+    if (!src.trim()) {
+      return `<!DOCTYPE html><html><head>${inject}</head><body></body></html>`
+    }
+    if (/scrollbar-color/i.test(src) && /color-scheme/i.test(src)) return src
+    if (/<head[\s>]/i.test(src)) {
+      return src.replace(/<head([^>]*)>/i, `<head$1>${inject}`)
+    }
+    return `<!DOCTYPE html><html><head>${inject}</head><body>${src}</body></html>`
+  }
+
   let { onCreated }: { onCreated?: () => Promise<void> | void } = $props()
 
   let files = $state<File[]>([])
@@ -244,14 +273,15 @@
           onclick={() => (previewTab = 'html')}>HTML</button
         >
       </div>
-      <div class="flex-1 min-h-0 overflow-auto p-4">
+      <div class="flex-1 min-h-0 overflow-hidden">
         {#if previewTab === 'md'}
-          <pre class="whitespace-pre-wrap text-sm font-mono">{selected.markdown_content || '(no markdown)'}</pre>
+          <pre class="preview-scroll h-full min-h-0 overflow-auto p-4 whitespace-pre-wrap text-sm font-mono">{selected.markdown_content || '(no markdown)'}</pre>
         {:else}
           <iframe
             title="Project HTML"
-            class="w-full min-h-[28rem] rounded-xl border border-white/10 bg-[#0b1220]"
-            srcdoc={selected.html_content || '<p>No HTML</p>'}
+            class="preview-scroll w-full h-full min-h-0 border-0 bg-[#0b1220]"
+            style="color-scheme: dark"
+            srcdoc={withDarkPreviewSrcDoc(selected.html_content || '<p>No HTML</p>')}
             sandbox=""
           ></iframe>
         {/if}

@@ -22,7 +22,8 @@ GET/POST /api/tran/members ; GET /api/tran/members/:id ; GET /api/tran/members/:
 GET/POST /api/tran/employees ; GET /api/tran/employees/:id ; GET /api/tran/employees/:id/full ; PUT/DELETE /api/tran/employees/:id
 GET/POST /api/tran/assets ; GET /api/tran/assets/:id ; GET /api/tran/assets/:id/full ; PUT/DELETE /api/tran/assets/:id
 GET/POST /api/tran/activities ; GET /api/tran/activities/:id ; GET /api/tran/activities/:id/full ; PUT/DELETE /api/tran/activities/:id
-GET/POST /api/tran/generic-data ; GET /api/tran/generic-data/:id ; GET /api/tran/generic-data/:id/full ; POST /api/tran/generic-data/import ; POST /api/tran/generic-data/:id/analyze ; PUT/DELETE /api/tran/generic-data/:id
+GET/POST /api/tran/generic-data ; GET /api/tran/generic-data/:id ; GET /api/tran/generic-data/:id/full ; POST /api/tran/generic-data/extract ; POST /api/tran/generic-data/:id/analyze ; PUT/DELETE /api/tran/generic-data/:id
+POST /api/tran/extract-json
 GET/POST /api/tran/mailing-cities ; DELETE /api/tran/mailing-cities/:id
 GET/POST /api/tran/mailing-postal-codes ; DELETE /api/tran/mailing-postal-codes/:id
 GET/POST /api/tran/mailing-states ; DELETE /api/tran/mailing-states/:id
@@ -36,7 +37,7 @@ GET/POST /api/tran/notes-todos ; GET/PUT/DELETE /api/tran/notes-todos/:id
 GET/POST /api/tran/big-notes ; GET/DELETE /api/tran/big-notes/:id ; POST /api/tran/big-notes/:id/regenerate ; POST /api/tran/big-notes/:id/publish
 GET/POST /api/tran/big-notes/:id/responses ; POST /api/tran/big-notes/:id/responses/:responseId/analyze ; POST /api/tran/big-notes/:id/analyze
 GET/POST /api/tran/comments ; PUT/DELETE /api/tran/comments/:id
-GET/POST /api/tran/case-tasks ; GET /api/tran/case-tasks/:id ; GET /api/tran/case-tasks/:id/full ; PUT/DELETE /api/tran/case-tasks/:id
+GET/POST /api/tran/case-tasks ; POST /api/tran/case-tasks/ai-draft ; GET /api/tran/case-tasks/:id ; GET /api/tran/case-tasks/:id/full ; PUT/DELETE /api/tran/case-tasks/:id
 POST /api/tran/:entity/:id/attachments ; DELETE /api/tran/:entity/:id/attachments/:attachmentId ; GET /api/tran/:entity/:id/attachments/:attachmentId/download ; GET /api/tran/attachment-config
 GET /api/tran/case-tasks/:id/pdf ; POST /api/tran/case-tasks/:id/send-email
 
@@ -70,6 +71,7 @@ POST /api/graph/search — body JSON: query, limit
 AI skills store:
 GET /api/skills ; GET /api/skills/:id
 POST /api/skills — body JSON: name, description, instructions|body (required), enabled?
+POST /api/skills/improve — draft-only JSON: name, description, instructions (does not save)
 PATCH /api/skills/:id — enable/disable or update fields
 DELETE /api/skills/:id
 

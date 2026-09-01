@@ -3,9 +3,8 @@
   import { fade } from 'svelte/transition'
   import TableFooterBar from './lib/TableFooterBar.svelte'
   import ButtonLeadingIcon from './lib/ButtonLeadingIcon.svelte'
-  import PlatformAssistantDrawer from './components/PlatformAssistantDrawer.svelte'
   import ComposePublishPanel from './components/ComposePublishPanel.svelte'
-  import { runAiProgress } from '@robo/platform-chat/aiProgress'
+  import { runAiProgress } from './lib/aiProgress'
   import ComposePublishRecordsPanel from './components/ComposePublishRecordsPanel.svelte'
   import ContentMarkdownPanel from './components/ContentMarkdownPanel.svelte'
   import { downloadMarkdownFile, savedContentMarkdown } from './lib/contentMarkdown'
@@ -54,7 +53,7 @@
 
   let currentPage = $state(PAGES.COMPOSE_CONTENT)
   /** @type {'light' | 'dark'} */
-  let theme = $state('light')
+  let theme = $state('dark')
 
   const navItems = [
     { id: PAGES.COMPOSE_CONTENT, label: 'Compose content', icon: 'compose' },
@@ -190,9 +189,6 @@
   let aiChatLogEl = $state(null)
   /** @type {HTMLDivElement | null} */
   let aiChatEndAnchorEl = $state(null)
-
-  // Platform assistant drawer (global, top-right button)
-  let platformAssistantOpen = $state(false)
 
   $effect(() => {
     const docs = referenceDocs
@@ -390,7 +386,7 @@
       const msg = err?.message || 'Login failed'
       if (err instanceof TypeError && /fetch|network|load failed/i.test(msg)) {
         const target = API_BASE || `${window.location.origin} (Vite proxy → :8043)`
-        loginError = `Cannot reach TranMail API (${target}). Start the backend on port 8043 and UsersPanel on :5001.`
+        loginError = `Cannot reach TranMail API (${target}). Start the backend on port 8043 and Morph (auth) on :9090.`
       } else {
         loginError = msg
       }
@@ -399,11 +395,6 @@
     } finally {
       loginLoading = false
     }
-  }
-
-  function logout() {
-    authToken = ''
-    storeSessionToken('')
   }
 
   async function loadSavedEmailsTable() {
@@ -894,12 +885,7 @@
     }
   }
 
-  function toggleTheme() {
-    applyTheme(theme === 'light' ? 'dark' : 'light')
-  }
-
   onMount(async () => {
-    let initial = 'light'
     let initialPage = PAGES.COMPOSE_CONTENT
     try {
       const params = new URLSearchParams(window.location.search)
@@ -912,12 +898,6 @@
         window.history.replaceState({}, '', url.toString())
       }
       authToken = readSessionToken()
-      const stored = localStorage.getItem(THEME_KEY)
-      if (stored === 'light' || stored === 'dark') {
-        initial = stored
-      } else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-        initial = 'dark'
-      }
       const pageStored = localStorage.getItem(LAST_PAGE_KEY) || ''
       if (pageStored === 'merge-data' || pageStored === 'dashboard' || pageStored === 'attachments') {
         initialPage = PAGES.COMPOSE_CONTENT
@@ -927,7 +907,7 @@
     } catch {
       // ignore
     }
-    applyTheme(initial)
+    applyTheme('dark')
     currentPage = initialPage
     if (!authToken) return
 
@@ -1069,15 +1049,6 @@
         </button>
       {/each}
     </nav>
-
-    <div class="shell-topbar-actions">
-      <button type="button" class="theme-toggle" onclick={toggleTheme} aria-label="Toggle color theme">
-        <span class="theme-toggle-hint" aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
-      </button>
-      <button type="button" class="theme-toggle" onclick={logout} aria-label="Sign out">
-        <span class="theme-toggle-label">Out</span>
-      </button>
-    </div>
   </header>
 
   <section class="shell-main">
@@ -1095,16 +1066,6 @@
       </div>
 
       <div class="header-actions">
-        <button
-          type="button"
-          class="btn-secondary"
-          aria-expanded={platformAssistantOpen}
-          aria-controls="platform-assistant-drawer"
-          onclick={() => (platformAssistantOpen = !platformAssistantOpen)}
-        >
-          <ButtonLeadingIcon name="ai" />
-          AI Assistant
-        </button>
         {#if currentPage === PAGES.COMPOSE_CONTENT || currentPage === PAGES.EMAIL_COMPOSER || currentPage === PAGES.COMPOSE_PUBLISH}
           <label class="btn-secondary btn-file">
             <input
@@ -1125,7 +1086,10 @@
 
     <div class="shell-main-fill">
       <div class="page-grid">
-      {#if currentPage === PAGES.COMPOSE_CONTENT || currentPage === PAGES.COMPOSE_PUBLISH}
+      <div
+        class="compose-keep"
+        class:is-hidden={currentPage !== PAGES.COMPOSE_CONTENT && currentPage !== PAGES.COMPOSE_PUBLISH}
+      >
         <ComposePublishPanel
           apiBase={API_BASE}
           {getAuthHeaders}
@@ -1135,7 +1099,8 @@
             else setMessage(msg || '')
           }}
         />
-      {:else if currentPage === PAGES.COMPOSE_PUBLISH_RECORDS}
+      </div>
+      {#if currentPage === PAGES.COMPOSE_PUBLISH_RECORDS}
         <ComposePublishRecordsPanel
           apiBase={API_BASE}
           {getAuthHeaders}
@@ -1320,8 +1285,6 @@
         {/if}
       </div>
     {/if}
-
-    <PlatformAssistantDrawer bind:open={platformAssistantOpen} apiBase={API_BASE} {getAuthHeaders} />
 
     {#if emailDetailOpen}
       <div
@@ -2150,6 +2113,17 @@
     grid-auto-rows: minmax(0, 1fr);
     gap: 1.1rem;
     align-items: stretch;
+  }
+
+  .compose-keep {
+    grid-column: 1 / -1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .compose-keep.is-hidden {
+    display: none;
   }
 
   .panel {

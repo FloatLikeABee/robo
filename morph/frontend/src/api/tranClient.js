@@ -52,6 +52,7 @@ export const tranEndpoints = {
   activities: '/api/tran/activities',
   activity: (id) => `/api/tran/activities/${id}`,
   caseTasks: '/api/tran/case-tasks',
+  caseTaskAiDraft: '/api/tran/case-tasks/ai-draft',
   caseTask: (id) => `/api/tran/case-tasks/${id}`,
   caseTaskFull: (id) => `/api/tran/case-tasks/${id}/full`,
   caseTaskAttachments: (id) => `/api/tran/case-tasks/${id}/attachments`,
@@ -100,6 +101,7 @@ export const tranEndpoints = {
   genericData: '/api/tran/generic-data',
   genericDataItem: (id) => `/api/tran/generic-data/${id}`,
   genericDataFull: (id) => `/api/tran/generic-data/${id}/full`,
-  genericDataImport: '/api/tran/generic-data/import',
-  genericDataAnalyze: (id) => `/api/tran/generic-data/${id}/analyze`,
+  genericDataExtract: '/api/tran/generic-data/extract',
+	genericDataAnalyze: (id) => `/api/tran/generic-data/${id}/analyze`,
+  extractJson: '/api/tran/extract-json',
 };

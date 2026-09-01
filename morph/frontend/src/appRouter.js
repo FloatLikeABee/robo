@@ -11,15 +11,12 @@ import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
 import SkillsPage from './pages/SkillsPage';
 import { ADMIN_BASE_PATH } from './adminPaths';
-import Resources from './pages/admin/Resources';
 import DistrictsSchools from './pages/admin/DistrictsSchools';
 import CaseTasks from './pages/admin/CaseTasks';
 import Timelines from './pages/admin/Timelines';
 import GenericData from './pages/admin/GenericData';
-import UserSettings from './pages/admin/UserSettings';
 import BigNotes from './pages/admin/BigNotes';
 import UsersAdmin from './pages/admin/UsersAdmin';
-import DataImport from './pages/admin/DataImport';
 import DocumentBranding from './DocumentBranding';
 
 function RootLayout() {
@@ -54,21 +51,21 @@ export const appRouter = createBrowserRouter([
         path: ADMIN_BASE_PATH,
         element: <AdminLayout />,
         children: [
-          { index: true, element: <Navigate to="assets" replace /> },
-          { path: 'assets', element: <Resources /> },
-          { path: 'resources', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'people', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'members', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'students', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'employees', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'staff', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
+          { index: true, element: <Navigate to="generic-data" replace /> },
+          { path: 'assets', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'resources', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'people', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'members', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'students', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'employees', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'staff', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
           { path: 'places', element: <DistrictsSchools /> },
           { path: 'facilities', element: <Navigate to={`${ADMIN_BASE_PATH}/places`} replace /> },
           { path: 'districts-schools', element: <Navigate to={`${ADMIN_BASE_PATH}/places`} replace /> },
-          { path: 'contacts', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'vehicles', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'activities', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
-          { path: 'trips', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
+          { path: 'contacts', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'vehicles', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'activities', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: 'trips', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
           { path: 'generic-data', element: <GenericData /> },
           { path: 'case-tasks', element: <CaseTasks /> },
           { path: 'timelines', element: <Timelines /> },
@@ -80,7 +77,7 @@ export const appRouter = createBrowserRouter([
             path: 'configuration',
             element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
           },
-          { path: 'configuration/user-settings', element: <UserSettings /> },
+          { path: 'configuration/user-settings', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
           {
             path: 'configuration/custom-attributes',
             element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
@@ -102,10 +99,13 @@ export const appRouter = createBrowserRouter([
             element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
           },
           { path: 'configuration/users', element: <UsersAdmin /> },
-          { path: 'configuration/file-import', element: <DataImport /> },
+          {
+            path: 'configuration/file-import',
+            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+          },
           {
             path: 'configuration/data-import',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/file-import`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
           },
           {
             path: 'settings',
@@ -135,7 +135,7 @@ export const appRouter = createBrowserRouter([
             path: 'settings/mailing',
             element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
           },
-          { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/assets`} replace /> },
+          { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
         ],
       },
       {

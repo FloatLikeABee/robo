@@ -15,10 +15,13 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import { MapContainer, Polygon, Polyline, TileLayer, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
@@ -27,6 +30,8 @@ import { validateJsonDetailStructure } from '../../components/admin/jsonDetailVa
 import CaseTaskEmailDialog from '../../components/admin/CaseTaskEmailDialog';
 import RecordAttachmentsPanel from '../../components/admin/RecordAttachmentsPanel';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { buildCaseTaskHTML, buildCaseTaskMarkdown } from './caseTaskViewDocs';
+import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 
 const MAP_CENTER = [39.8283, -98.5795];
 
@@ -96,13 +101,13 @@ function toDateTimeLocal(value) {
 }
 
 function dateTimeDisplay(value) {
-  if (!value) return '—';
+  if (!value) return '';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString([], {
     year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    month: 'short',
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -198,15 +203,60 @@ function AreaEditorDialog({ open, value, onCancel, onApply }) {
   );
 }
 
-const initialDraft = {
-  title: '',
-  description: '',
-  start_at: '',
-  end_at: '',
-  detail: '',
-  assignees: [],
-  location: '',
-};
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function localDayBounds(d = new Date()) {
+  const y = d.getFullYear();
+  const m = pad2(d.getMonth() + 1);
+  const day = pad2(d.getDate());
+  return {
+    start_at: `${y}-${m}-${day}T00:00`,
+    end_at: `${y}-${m}-${day}T23:59`,
+  };
+}
+
+function emptyTaskDraft() {
+  return {
+    title: '',
+    description: '',
+    ...localDayBounds(),
+    detail: '',
+    assignees: [],
+    location: '',
+  };
+}
+
+const CASE_TASK_AI_ACCEPT = '.txt,.md,.markdown,.pdf,.csv,.xlsx';
+
+function caseTaskDraftLooksFilled(draft) {
+  if (String(draft?.title || '').trim()) return true;
+  if (String(draft?.description || '').trim()) return true;
+  const d = jsonDetailToString(draft?.detail).trim();
+  return Boolean(d && d !== '{}' && d !== 'null');
+}
+
+function locationFromAiDraft(loc) {
+  if (loc == null || loc === '') return '';
+  if (typeof loc === 'string') {
+    const s = loc.trim();
+    if (!s || s === 'null') return '';
+    try {
+      JSON.parse(s);
+      return s;
+    } catch {
+      return JSON.stringify({ label: s, area: [] }, null, 2);
+    }
+  }
+  if (typeof loc === 'object') {
+    const label = typeof loc.label === 'string' ? loc.label.trim() : typeof loc.location === 'string' ? loc.location.trim() : '';
+    const area = Array.isArray(loc.area) ? loc.area : [];
+    if (!label && area.length === 0) return '';
+    return JSON.stringify({ label, area }, null, 2);
+  }
+  return '';
+}
 
 export default function CaseTasks() {
   const { confirm } = useConfirm();
@@ -218,7 +268,7 @@ export default function CaseTasks() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState(emptyTaskDraft);
   const [detailError, setDetailError] = useState('');
   const [detailInfo, setDetailInfo] = useState('');
   const [detailEditorMode, setDetailEditorMode] = useState('preview');
@@ -226,6 +276,11 @@ export default function CaseTasks() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiFile, setAiFile] = useState(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [detailsTab, setDetailsTab] = useState('details');
 
   const recipientOptions = useMemo(() => {
     const out = [];
@@ -249,6 +304,28 @@ export default function CaseTasks() {
     });
     return out;
   }, [employees, members]);
+
+  const viewMarkdown = useMemo(() => {
+    const assignees =
+      (draft.assignees || [])
+        .map((a) => a.label || a.name)
+        .filter(Boolean)
+        .join(', ') || editing?.assignees_label || '';
+    return buildCaseTaskMarkdown({
+      title: draft.title,
+      description: draft.description,
+      assignees,
+      startAt: draft.start_at,
+      endAt: draft.end_at,
+      location: draft.location,
+      detail: draft.detail,
+    });
+  }, [draft, editing?.assignees_label]);
+
+  const viewHTML = useMemo(
+    () => buildCaseTaskHTML({ title: draft.title, markdown: viewMarkdown, detail: draft.detail }),
+    [draft.title, draft.detail, viewMarkdown]
+  );
 
   const load = async () => {
     const [tasksRes, membersRes, employeesRes] = await Promise.all([
@@ -279,13 +356,22 @@ export default function CaseTasks() {
       .finally(() => setLoading(false));
   }, []);
 
+  const resetAiMaterial = () => {
+    setAiPrompt('');
+    setAiFile(null);
+    setAiGenerating(false);
+    setAiError('');
+  };
+
   const openCreate = () => {
     setEditing(null);
-    setDraft(initialDraft);
+    setDraft(emptyTaskDraft());
     setDetailEditorMode('preview');
     setAttachments([]);
     setDetailError('');
     setDetailInfo('');
+    setDetailsTab('details');
+    resetAiMaterial();
     setDialogOpen(true);
   };
 
@@ -295,6 +381,7 @@ export default function CaseTasks() {
     setDetailInfo('');
     setDetailEditorMode('preview');
     setAttachments([]);
+    setDetailsTab('details');
     const full = await tranApi.get(tranEndpoints.caseTaskFull(row.id));
     const data = full.data || {};
     const apiAssignees = Array.isArray(data.assignees) ? data.assignees : [];
@@ -316,27 +403,98 @@ export default function CaseTasks() {
       assignees: apiAssignees,
       assignees_label: data.assignees_label || row.assignees_label,
     });
+    const bounds = localDayBounds();
     setDraft({
       title: data.title || '',
       description: data.description || '',
-      start_at: toDateTimeLocal(data.start_at),
-      end_at: toDateTimeLocal(data.end_at),
+      start_at: toDateTimeLocal(data.start_at) || bounds.start_at,
+      end_at: toDateTimeLocal(data.end_at) || bounds.end_at,
       detail: typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || {}, null, 2),
       assignees: draftAssignees,
       location: typeof data.location === 'string' ? data.location : data.location ? JSON.stringify(data.location, null, 2) : '',
     });
     setAttachments(Array.isArray(data.attachments) ? data.attachments : []);
+    resetAiMaterial();
     setDialogOpen(true);
   };
 
   const onCloseDialog = () => {
-    if (submitting) return;
+    if (submitting || aiGenerating) return;
     setDialogOpen(false);
+  };
+
+  const generateFromMaterial = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt && !aiFile) {
+      setAiError('Provide a prompt, a file, or both.');
+      return;
+    }
+    if (caseTaskDraftLooksFilled(draft)) {
+      const ok = await confirm({
+        title: 'Replace case/task fields?',
+        message: 'This will replace the current title, description, dates, map area, and detail JSON. Save afterward to keep the change.',
+        confirmLabel: 'Replace',
+      });
+      if (!ok) return;
+    }
+    setAiGenerating(true);
+    setAiError('');
+    try {
+      let res;
+      if (aiFile) {
+        const form = new FormData();
+        if (prompt) form.append('prompt', prompt);
+        form.append('file', aiFile);
+        res = await tranApi.post(tranEndpoints.caseTaskAiDraft, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        res = await tranApi.post(tranEndpoints.caseTaskAiDraft, { prompt });
+      }
+      const data = res.data || {};
+      const title = String(data.title || '').trim();
+      const detail = data.detail;
+      const detailCheck = validateJsonDetailStructure(detail);
+      if (
+        !title ||
+        detail == null ||
+        typeof detail !== 'object' ||
+        Array.isArray(detail) ||
+        Object.keys(detail).length === 0 ||
+        !detailCheck.ok
+      ) {
+        throw new Error(detailCheck.error || 'AI did not return a valid case/task draft');
+      }
+      const bounds = localDayBounds();
+      setDraft((prev) => ({
+        ...prev,
+        title,
+        description: String(data.description || ''),
+        start_at: toDateTimeLocal(data.start_at) || bounds.start_at,
+        end_at: toDateTimeLocal(data.end_at) || bounds.end_at,
+        location: locationFromAiDraft(data.location),
+        detail: JSON.stringify(detail, null, 2),
+      }));
+      setDetailError('');
+      setDetailInfo('Draft filled from material. Review and save when ready.');
+    } catch (err) {
+      setAiError(err.response?.data?.error || err.message || 'Generate failed');
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const submit = async () => {
     if (!draft.title.trim()) {
       setDetailError('Title is required.');
+      return;
+    }
+    if (!draft.start_at) {
+      setDetailError('Start date is required.');
+      return;
+    }
+    if (!draft.end_at) {
+      setDetailError('End date is required.');
       return;
     }
     let parsedDetail = null;
@@ -442,15 +600,18 @@ export default function CaseTasks() {
                 md: 'repeat(3, minmax(0, 1fr))',
               },
               gap: 1.5,
-              alignItems: 'stretch',
+              alignItems: 'start',
             }}
           >
-            {rows.map((row) => (
-              <Card key={row.id} variant="outlined" sx={{ height: 170, display: 'flex' }}>
+            {rows.map((row) => {
+              const startLabel = dateTimeDisplay(row.start_at);
+              const endLabel = dateTimeDisplay(row.end_at);
+              return (
+              <Card key={row.id} variant="outlined" sx={{ minHeight: 96, height: 'auto', display: 'flex' }}>
                 <CardActionArea sx={{ height: 1, p: 0 }} onClick={() => openEdit(row)}>
-                  <CardContent sx={{ height: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <CardContent sx={{ py: 1.1, px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Typography
-                      variant="subtitle1"
+                      variant="subtitle2"
                       sx={{
                         fontWeight: 600,
                         whiteSpace: 'nowrap',
@@ -461,21 +622,24 @@ export default function CaseTasks() {
                     >
                       {row.title || 'Untitled'}
                     </Typography>
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Typography variant="body2" color="text.secondary" noWrap title={row.description || ''}>
-                        {row.description || 'No description'}
+                    <Typography variant="body2" color="text.secondary" noWrap title={row.description || ''}>
+                      {row.description || 'No description'}
+                    </Typography>
+                    {startLabel ? (
+                      <Typography variant="caption" color="text.secondary" noWrap title={startLabel}>
+                        Start: {startLabel}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Start: {dateTimeDisplay(row.start_at)}
+                    ) : null}
+                    {endLabel ? (
+                      <Typography variant="caption" color="text.secondary" noWrap title={endLabel}>
+                        End: {endLabel}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        End: {dateTimeDisplay(row.end_at)}
-                      </Typography>
-                    </Box>
+                    ) : null}
                   </CardContent>
                 </CardActionArea>
               </Card>
-            ))}
+              );
+            })}
           </Box>
         </Box>
       )}
@@ -488,6 +652,8 @@ export default function CaseTasks() {
           sx: {
             width: { xs: '100vw', sm: '66.666vw' },
             maxWidth: '100vw',
+            height: '100%',
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             pt: { xs: 'env(safe-area-inset-top)', sm: 0 },
@@ -498,8 +664,114 @@ export default function CaseTasks() {
         <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="h6">{editing ? 'Case/task details' : 'Create case/task'}</Typography>
         </Box>
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2.5 }}>
+        <Tabs
+          value={detailsTab}
+          onChange={(_, v) => setDetailsTab(v)}
+          sx={{ px: 1, minHeight: 42, borderBottom: 1, borderColor: 'divider' }}
+          variant="scrollable"
+          allowScrollButtonsMobile
+        >
+          <Tab value="details" label="Details" sx={{ minHeight: 42, textTransform: 'none' }} />
+          <Tab value="markdown" label="Markdown" sx={{ minHeight: 42, textTransform: 'none' }} />
+          <Tab value="html" label="HTML" sx={{ minHeight: 42, textTransform: 'none' }} />
+        </Tabs>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: detailsTab === 'details' ? 'auto' : 'hidden',
+            p: detailsTab === 'details' ? 2.5 : 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {detailsTab === 'markdown' ? (
+            <Box
+              component="pre"
+              className="themed-preview-scroll"
+              sx={{
+                m: 0,
+                p: 2.5,
+                flex: 1,
+                minHeight: 0,
+                overflow: 'auto',
+                borderRadius: 0,
+                bgcolor: 'action.hover',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                fontSize: 13,
+              }}
+            >
+              {viewMarkdown}
+            </Box>
+          ) : null}
+          {detailsTab === 'html' ? (
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: '#0b1220' }}>
+              <Box
+                component="iframe"
+                title="Case/task HTML preview"
+                srcDoc={withDarkPreviewSrcDoc(viewHTML)}
+                sandbox=""
+                sx={darkPreviewIframeSx}
+              />
+            </Box>
+          ) : null}
+          {detailsTab === 'details' ? (
           <Stack spacing={1.5}>
+            <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Generate from material
+              </Typography>
+              <TextField
+                size="small"
+                label="Prompt"
+                placeholder="Describe the case/task, or add notes to go with a file…"
+                fullWidth
+                multiline
+                minRows={2}
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                disabled={aiGenerating || submitting}
+              />
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                <Button component="label" size="small" variant="outlined" disabled={aiGenerating || submitting}>
+                  Upload file
+                  <input
+                    hidden
+                    type="file"
+                    accept={CASE_TASK_AI_ACCEPT}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      setAiFile(f);
+                      e.target.value = '';
+                    }}
+                  />
+                </Button>
+                {aiFile ? (
+                  <Chip size="small" label={aiFile.name} onDelete={aiGenerating ? undefined : () => setAiFile(null)} />
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    .txt, .md, .pdf, .csv, .xlsx
+                  </Typography>
+                )}
+                <Box sx={{ flex: 1 }} />
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={aiGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeOutlinedIcon />}
+                  onClick={generateFromMaterial}
+                  disabled={aiGenerating || submitting}
+                >
+                  {aiGenerating ? 'Generating…' : 'Generate'}
+                </Button>
+              </Stack>
+              {aiError ? (
+                <Alert severity="error" sx={{ mt: 1 }}>
+                  {aiError}
+                </Alert>
+              ) : null}
+            </Box>
             <TextField
               required
               size="small"
@@ -518,6 +790,7 @@ export default function CaseTasks() {
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
+                required
                 size="small"
                 type="datetime-local"
                 label="Start date/time"
@@ -527,6 +800,7 @@ export default function CaseTasks() {
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
+                required
                 size="small"
                 type="datetime-local"
                 label="End date/time"
@@ -608,8 +882,12 @@ export default function CaseTasks() {
             {detailInfo ? <Alert severity="success">{detailInfo}</Alert> : null}
             {detailError ? <Alert severity="error">{detailError}</Alert> : null}
           </Stack>
+          ) : null}
         </Box>
-        <Box sx={{ px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          {detailInfo && detailsTab !== 'details' ? <Alert severity="success" sx={{ mb: 1 }}>{detailInfo}</Alert> : null}
+          {detailError && detailsTab !== 'details' ? <Alert severity="error" sx={{ mb: 1 }}>{detailError}</Alert> : null}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {editing ? (
             <Button onClick={() => setEmailDialogOpen(true)} disabled={submitting}>
               Send email…
@@ -621,12 +899,13 @@ export default function CaseTasks() {
             </Button>
           ) : null}
           <Box sx={{ flex: 1 }} />
-          <Button onClick={onCloseDialog} disabled={submitting}>
+          <Button onClick={onCloseDialog} disabled={submitting || aiGenerating}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={submit} disabled={submitting}>
+          <Button variant="contained" onClick={submit} disabled={submitting || aiGenerating}>
             {submitting ? 'Saving...' : 'Save'}
           </Button>
+          </Box>
         </Box>
       </Drawer>
 
