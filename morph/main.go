@@ -83,7 +83,7 @@ func main() {
 	}
 
 	// Initialize handlers
-	h := handlers.New(database, aiService, cfg.ExternalAPIBase, cfg.UsersPanelBaseURL, tranSQL, entityDetails,
+	h := handlers.New(database, aiService, cfg.ExternalAPIBase, tranSQL, entityDetails,
 		cfg.SharpReportBaseURL, cfg.TranFormBaseURL, cfg.TranMailBaseURL, cfg.BookiBaseURL,
 		cfg.TranEntityAttachmentMax, cfg.TranEntityAttachmentDir)
 

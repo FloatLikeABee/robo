@@ -4,20 +4,14 @@ const STORAGE_KEY = 'morphdata-theme-mode';
 
 export function getStoredThemeMode() {
   try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === 'light' || v === 'dark') return v;
-    const legacy = localStorage.getItem('skoolz-theme-mode');
-    if (legacy === 'light' || legacy === 'dark') {
-      localStorage.setItem(STORAGE_KEY, legacy);
-      return legacy;
-    }
+    localStorage.setItem(STORAGE_KEY, 'dark');
   } catch {}
-  return 'light';
+  return 'dark';
 }
 
 /** DataGrid / table header background. Dark = Morph AI surface2; light = very soft neutral (not saturated blue). */
 export function getAdminTableHeaderBg(mode) {
-  return mode === 'dark' ? '#0a1220' : '#f1eff7';
+  return mode === 'dark' ? '#0a1220' : '#e4dfd6';
 }
 
 /** DataGrid / table header text & icon color (pairs with getAdminTableHeaderBg). */
@@ -67,8 +61,8 @@ export function getAdminTheme(mode) {
         disabledBackground: isDark ? 'rgba(37, 99, 235, 0.12)' : 'rgba(0, 0, 0, 0.12)',
       },
       background: {
-        default: isDark ? '#020408' : '#f9f8fb',
-        paper: isDark ? '#060a12' : '#ffffff',
+        default: isDark ? '#020408' : '#e8e4dc',
+        paper: isDark ? '#060a12' : '#f0ece4',
       },
       success: { main: '#2E7D32' },
     },
@@ -158,7 +152,7 @@ export function getAdminTheme(mode) {
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            backgroundColor: isDark ? '#040810' : '#f5f3f9',
+            backgroundColor: isDark ? '#040810' : '#ece8e1',
             borderRight: isDark ? '1px solid rgba(37, 99, 235, 0.3)' : '1px solid rgba(0, 0, 0, 0.08)',
           },
         },

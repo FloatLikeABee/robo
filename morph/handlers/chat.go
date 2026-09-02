@@ -37,6 +37,12 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		message := c.PostForm("message")
 		req.SessionID = c.PostForm("session_id")
 		req.AgentID = c.PostForm("agent_id")
+		req.SkillIDs = c.PostFormArray("skill_ids")
+		req.IncludeFiles = parseOptionalBoolForm(c, "include_files")
+		req.IncludeNotes = parseOptionalBoolForm(c, "include_notes")
+		req.IncludeKnowledge = parseOptionalBoolForm(c, "include_knowledge")
+		req.ContextCacheKey = c.PostForm("context_cache_key")
+		req.PinnedFiles = parsePinnedFilesForm(c)
 		action := c.PostForm("action")
 		file, err := c.FormFile("file")
 		if err == nil && file != nil {
@@ -197,9 +203,15 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		agentInstructions = instructions
 	}
 
+	userVisible := req.Message
+	applied := h.applyAgentContext(userID, sessionID, &req)
+	llmMessage := applied.message
+	if applied.includeKnowledge {
+		llmMessage = h.hybridAugmentMessage(userID, sessionID, llmMessage)
+	}
+
 	var chatResponse string
 	var genErr error
-	llmMessage := h.hybridAugmentMessage(userID, sessionID, req.Message)
 	if h.ginEngine != nil {
 		chatResponse, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
 	} else {
@@ -221,10 +233,11 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 	}
 
 	response := models.ChatResponse{
-		Response: chatResponse,
-		SQL:      "",
+		Response:  chatResponse,
+		SQL:       "",
+		SubAgents: applied.subAgents,
 	}
-	persistChatExchange(h, userID, sessionID, req.Message, &response)
+	persistChatExchange(h, userID, sessionID, userVisible, &response)
 	c.JSON(http.StatusOK, response)
 }
 

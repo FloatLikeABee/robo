@@ -7,8 +7,7 @@
 			<strong class="text-text-primary">data reports</strong> from uploaded files (CSV, TSV, JSON, Excel).
 		</p>
 		<p>
-			Use the AI Assistant from the header to analyze attached data tables. Start the DataX API (port 3050) if the
-			app cannot reach the backend.
+			Start the Data Access API if the app cannot reach the backend. Chat lives in Morph AI.
 		</p>
 	</div>
 </div>

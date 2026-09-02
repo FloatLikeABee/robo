@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { runAiProgress } from '@robo/platform-chat/aiProgress';
+import { runAiProgress } from '../lib/aiProgress';
 import { api, type Question } from '../lib/api';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';

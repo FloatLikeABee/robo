@@ -329,7 +329,7 @@ export async function ensureSession(): Promise<EnsureSessionResult> {
     return {
       ok: false,
       reason:
-        'No Morph AI session found. Sign in at http://localhost:3031, then open Projects from Morph Utils or reload.',
+        'No Morph AI session found. Sign in at http://localhost:3031, then open Projects from MorphUtils or reload.',
     }
   }
 

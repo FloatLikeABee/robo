@@ -12,7 +12,7 @@
 		type PageBuildSummary,
 		type PageChatMessage
 	} from '$lib/dataPagePublish';
-	import { runAiProgress } from '@robo/platform-chat/aiProgress';
+	import { runAiProgress } from '$lib/aiProgress';
 	import {
 		ArrowLeft,
 		Check,

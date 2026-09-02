@@ -6,10 +6,7 @@ import Header from './components/Header';
 import AppFooter from './components/AppFooter';
 import AssistantManager from './pages/AssistantManager';
 import SystemStatus from './pages/SystemStatus';
-import ReadersHub from './pages/ReadersHub';
 import PublishHub from './pages/PublishHub';
-import ImageGenerator from './pages/ImageGenerator';
-import VideoStoryGenerator from './pages/VideoStoryGenerator';
 import RAGToolsHub from './pages/RAGToolsHub';
 
 function App() {
@@ -58,9 +55,7 @@ function App() {
                 <Route path="/assistants" element={<AssistantManager />} />
                 <Route path="/rag" element={<RAGToolsHub />} />
                 <Route path="/rag-tools" element={<Navigate to="/rag" replace />} />
-                <Route path="/images" element={<ImageGenerator />} />
-                <Route path="/video-stories" element={<VideoStoryGenerator />} />
-                <Route path="/readers" element={<ReadersHub />} />
+                <Route path="/video-stories" element={<Navigate to="/assistants" replace />} />
                 <Route path="/documents" element={<PublishHub />} />
                 <Route path="/status" element={<SystemStatus />} />
                 <Route path="/tools" element={<Navigate to="/assistants" replace />} />
@@ -68,8 +63,6 @@ function App() {
                 <Route path="/agents" element={<Navigate to="/assistants" replace />} />
                 <Route path="/customizations" element={<Navigate to="/assistants" replace />} />
                 <Route path="/advisers" element={<Navigate to="/assistants" replace />} />
-                <Route path="/image-reader" element={<Navigate to="/readers" replace />} />
-                <Route path="/pdf-reader" element={<Navigate to="/readers" replace />} />
                 <Route path="/sources" element={<Navigate to="/rag" replace />} />
                 <Route path="/crawler" element={<Navigate to="/rag" replace />} />
                 <Route path="/gathering" element={<Navigate to="/rag" replace />} />

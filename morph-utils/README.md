@@ -1,6 +1,6 @@
-# Morph Utils
+# MorphUtils
 
-Integrated shell for **Survey Maker**, **Content Maker**, **Data Access**, and **Project**. The individual app frontends are unchanged; Morph Utils embeds them in a single Morph-themed workspace.
+Integrated shell for **Event Logs**, **Content Maker**, **Data Access**, and **Project**. Module frontends stay in their own folders; MorphUtils embeds them in one dark Morph-themed workspace.
 
 ## Dev
 
@@ -12,9 +12,11 @@ npm run dev
 
 Open http://localhost:3040
 
-Embedded app UIs must be running on their default ports (or set `VITE_*_URL` in `.env`).
+Prefer the repo launcher: `./start-all.sh start morph-utils` (and the module UIs you need).
 
-Sign in with Morph auth so the shared session cookie is present.
+Embedded app UIs must be running on their default ports (or set `VITE_*_URL` in the **repo-root** `.env`).
+
+Sign in with Morph auth so the shared session cookie is present. Chat is **Morph AI**, not a drawer in this shell.
 
 ## Environment
 
@@ -27,3 +29,5 @@ Sign in with Morph auth so the shared session cookie is present.
 | `VITE_PROJECTS_URL` | `http://localhost:5179` (falls back to `VITE_MORPH_ENGI_URL`) |
 | `VITE_MORPH_ENGI_URL` | `http://localhost:5179` (legacy alias) |
 | `VITE_MORPH_AI_URL` | `http://localhost:3031` |
+
+Embed ids stay `sheetx`, `composerx`, `datax`, `projects`. Event Logs iframe defaults to `/events-info`.

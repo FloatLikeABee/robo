@@ -407,7 +407,7 @@ func (h *Handler) execFormsXTool(ctx context.Context, call *formsXToolCall) (str
 	case "list_events":
 		page := intArg(call.Args, "page", 1)
 		limit := intArg(call.Args, "limit", 30)
-		list, total, err := h.EventInfoRepo.List(ctx, page, limit)
+		list, total, err := h.EventInfoRepo.List(ctx, page, limit, "")
 		if err != nil {
 			return "", nil, err
 		}

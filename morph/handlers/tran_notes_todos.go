@@ -15,10 +15,36 @@ import (
 )
 
 func scanUserNoteTodo(row *sql.Row) (models.UserNoteTodo, error) {
+	return scanUserNoteTodoDest(row)
+}
+
+func scanUserNoteTodoRows(rows *sql.Rows) ([]models.UserNoteTodo, error) {
+	var list []models.UserNoteTodo
+	for rows.Next() {
+		r, err := scanUserNoteTodoDest(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, r)
+	}
+	return list, rows.Err()
+}
+
+func scanUserNoteTodoDest(scanner interface{ Scan(dest ...interface{}) error }) (models.UserNoteTodo, error) {
 	var r models.UserNoteTodo
 	var title, body sql.NullString
-	var deadlineAt sql.NullTime
-	err := row.Scan(&r.ID, &r.UserID, &r.ItemType, &title, &body, &r.Completed, &deadlineAt, &r.CreatedOn, &r.LastUpdated)
+	var deadlineAt, createdOn, updatedOn sql.NullTime
+	err := scanner.Scan(
+		&r.ID,
+		&r.UserID,
+		&r.ItemType,
+		&title,
+		&body,
+		&r.Completed,
+		scanDestTime{&deadlineAt},
+		scanDestTime{&createdOn},
+		scanDestTime{&updatedOn},
+	)
 	if err != nil {
 		return r, err
 	}
@@ -34,33 +60,15 @@ func scanUserNoteTodo(row *sql.Row) (models.UserNoteTodo, error) {
 		d := deadlineAt.Time
 		r.DeadlineAt = &d
 	}
-	return r, nil
-}
-
-func scanUserNoteTodoRows(rows *sql.Rows) ([]models.UserNoteTodo, error) {
-	var list []models.UserNoteTodo
-	for rows.Next() {
-		var r models.UserNoteTodo
-		var title, body sql.NullString
-		var deadlineAt sql.NullTime
-		if err := rows.Scan(&r.ID, &r.UserID, &r.ItemType, &title, &body, &r.Completed, &deadlineAt, &r.CreatedOn, &r.LastUpdated); err != nil {
-			return nil, err
-		}
-		if title.Valid {
-			t := title.String
-			r.Title = &t
-		}
-		if body.Valid {
-			b := body.String
-			r.Body = &b
-		}
-		if deadlineAt.Valid {
-			d := deadlineAt.Time
-			r.DeadlineAt = &d
-		}
-		list = append(list, r)
+	if createdOn.Valid {
+		ts := createdOn.Time
+		r.CreatedOn = &ts
 	}
-	return list, rows.Err()
+	if updatedOn.Valid {
+		ts := updatedOn.Time
+		r.LastUpdated = &ts
+	}
+	return r, nil
 }
 
 func parseDeadlineAtRaw(raw json.RawMessage) (bool, *time.Time, error) {

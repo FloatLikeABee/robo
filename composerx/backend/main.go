@@ -17,6 +17,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gin-gonic/gin"
 	"github.com/robo/morphai"
+	"github.com/robo/repoenv"
 )
 
 // Config mirrors core environment + config.json for Phase 1
@@ -223,6 +224,7 @@ func resolveRoleAndPermissionsFromUsersPanel(baseURL, token string) (string, []s
 // --- bootstrap ---
 
 func main() {
+	_ = repoenv.Load()
 	cfg := Config{
 		SQLitePath:        getEnv("COMPOSERX_SQLITE_PATH", "./data/composerx.sqlite"),
 		BadgerPath:        getEnv("COMPOSERX_BADGER_PATH", "./data/composerx_badger"),
@@ -270,7 +272,7 @@ func main() {
 
 	app.registerRoutes()
 
-	port := getEnv("PORT", "8043")
+	port := getEnv("COMPOSERX_PORT", "8043")
 	log.Printf("ComposerX listening on :%s (sqlite=%s badger=%s)", port, cfg.SQLitePath, cfg.BadgerPath)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start HTTP server on %s: %v", port, err)

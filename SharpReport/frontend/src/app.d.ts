@@ -11,6 +11,8 @@ declare global {
 
 	interface ImportMetaEnv {
 		readonly PUBLIC_API_URL?: string;
+		readonly PUBLIC_MORPH_AI_URL?: string;
+		readonly VITE_MORPH_AI_URL?: string;
 	}
 }
 

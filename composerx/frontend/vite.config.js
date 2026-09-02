@@ -1,9 +1,15 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(__dirname, '../..')
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [svelte()],
+  envDir: repoRoot,
   server: {
     port: 8044,
     // Same-origin dev: set VITE_API_BASE="" in .env so requests hit the Vite server and proxy to the API (no CORS).

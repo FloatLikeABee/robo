@@ -355,6 +355,14 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			updated_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_ai_skills_enabled ON ai_skills(enabled)`,
+		`CREATE TABLE IF NOT EXISTS morph_agent_context_cache (
+			user_id TEXT NOT NULL,
+			session_id TEXT NOT NULL,
+			fingerprint TEXT NOT NULL,
+			blob TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			PRIMARY KEY (user_id, session_id)
+		)`,
 		`CREATE TABLE IF NOT EXISTS StaffType (
 			StaffTypeID INTEGER PRIMARY KEY AUTOINCREMENT,
 			StaffTypeName TEXT NOT NULL,

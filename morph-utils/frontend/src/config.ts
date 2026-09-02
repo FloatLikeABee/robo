@@ -24,12 +24,12 @@ export const MORPH_AI_URL = (import.meta.env.VITE_MORPH_AI_URL ?? 'http://localh
 export const UTILS_MODULES: UtilsModule[] = [
   {
     id: 'sheetx',
-    label: 'Survey Maker',
-    shortLabel: 'Surveys',
-    description: 'AI surveys and published survey links.',
+    label: 'Event Logs',
+    shortLabel: 'Logs',
+    description: 'Events & Info log and published Info Sheets.',
     accent: '#0ea5e9',
     icon: '/icons/sheetx-icon.svg',
-    embedUrl: `${sheetxUrl}/survey-bot`,
+    embedUrl: `${sheetxUrl}/events-info`,
   },
   {
     id: 'composerx',

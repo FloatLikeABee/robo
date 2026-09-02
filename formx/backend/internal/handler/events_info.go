@@ -51,8 +51,9 @@ func insertEventFromRequest(req models.CreateEventInfoRequest) (*models.EventInf
 func (h *Handler) ListEventInfo(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	q := strings.TrimSpace(c.Query("q"))
 	ctx := context.Background()
-	list, total, err := h.EventInfoRepo.List(ctx, page, limit)
+	list, total, err := h.EventInfoRepo.List(ctx, page, limit, q)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -164,6 +165,40 @@ func (h *Handler) DeleteEventInfo(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// BatchDeleteEventInfo removes many events; missing ids are skipped.
+func (h *Handler) BatchDeleteEventInfo(c *gin.Context) {
+	var body struct {
+		IDs []string `json:"ids"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(body.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ids is required"})
+		return
+	}
+	deleted := 0
+	ctx := context.Background()
+	for _, raw := range body.IDs {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			continue
+		}
+		err := h.EventInfoRepo.Delete(ctx, id)
+		if err == nil {
+			deleted++
+			continue
+		}
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			continue
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"deleted": deleted})
+}
+
 // FormsXMorphMiniMCP returns a small tool catalog so Morph AI and other clients can call FormsX Events APIs.
 func (h *Handler) FormsXMorphMiniMCP(c *gin.Context) {
 	base := "/api/v1"
@@ -176,7 +211,7 @@ func (h *Handler) FormsXMorphMiniMCP(c *gin.Context) {
 				"description":   "List recent events & info (title, reporter, time, id).",
 				"method":        "GET",
 				"path":          base + "/events-info",
-				"query_example": "page=1&limit=50",
+				"query_example": "page=1&limit=50&q=pump",
 			},
 			{
 				"name":        "formsx_get_event",

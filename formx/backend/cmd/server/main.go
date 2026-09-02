@@ -15,14 +15,14 @@ import (
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/formsx/backend/internal/mysql"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	"github.com/robo/repoenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // @host localhost:29909
 func main() {
-	_ = godotenv.Load()
+	_ = repoenv.Load()
 	cfg := config.Load()
 	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
 		log.Printf("warning: upload dir: %v", err)

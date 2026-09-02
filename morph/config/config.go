@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/joho/godotenv"
+	"github.com/robo/repoenv"
 )
 
 type Config struct {
@@ -25,8 +25,6 @@ type Config struct {
 	// Seed (cmd/seed_tran, full mode): optional; read from env / .env
 	SeedTranCap         int  // default 50; max rows per trimmed entity type
 	SeedTranSkipPrune bool // when true, skip delete/trim before seed
-	// UsersPanelBaseURL is deprecated (Morph hosts auth). Kept for optional legacy messaging proxy.
-	UsersPanelBaseURL string
 	AdminEmail        string
 	AdminUsername     string
 	AdminPassword     string
@@ -46,7 +44,7 @@ var dotOnce sync.Once
 func loadDotEnvOnce() {
 	dotOnce.Do(func() {
 		// Does not override variables already set in the process environment.
-		_ = godotenv.Load(".env")
+		_ = repoenv.Load()
 	})
 }
 
@@ -67,7 +65,6 @@ func GetConfig() Config {
 		TranMongoDB:          getEnv("TRAN_MONGO_DB", "athena"),
 		SeedTranCap:          getEnvInt("SEED_TRAN_CAP", 50),
 		SeedTranSkipPrune:    envTruthy("SEED_TRAN_SKIP_PRUNE"),
-		UsersPanelBaseURL:    getEnv("USERS_PANEL_BASE_URL", ""),
 		AdminEmail:           firstNonEmptyEnv("ADMIN_EMAIL", "BOOTSTRAP_ADMIN_EMAIL", "morphadmin@local.com"),
 		AdminUsername:        firstNonEmptyEnv("ADMIN_USERNAME", "BOOTSTRAP_ADMIN_USERNAME", "morphadmin"),
 		AdminPassword:        firstNonEmptyEnv("ADMIN_PASSWORD", "BOOTSTRAP_ADMIN_PASSWORD", "admin123"),

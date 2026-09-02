@@ -14,6 +14,8 @@ use crate::services::AppState;
 
 const MAX_IMPORT_ROWS: usize = 5000;
 const MAX_ANALYZE_CHARS: usize = 48_000;
+const AI_ANALYSIS_MAX_ROWS: usize = 80;
+const AI_ANALYSIS_MAX_CHARS: usize = 24_000;
 
 #[derive(Debug, Serialize)]
 pub struct DataTableSummary {
@@ -84,6 +86,95 @@ pub struct RowsQuery {
     pub search: Option<String>,
     pub sort_by: Option<String>,
     pub sort_dir: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AiAnalysisResponse {
+    pub markdown: String,
+}
+
+struct AiAnalysisSample {
+    name: String,
+    columns: Vec<String>,
+    row_count: i32,
+    sample_rows: Vec<Value>,
+    truncated: bool,
+}
+
+fn json_err(status: StatusCode, message: &str) -> (StatusCode, Json<Value>) {
+    (status, Json(json!({ "error": message })))
+}
+
+fn cap_analysis_rows(rows: Vec<Value>, max_rows: usize, max_chars: usize) -> (Vec<Value>, bool) {
+    let original_len = rows.len();
+    let mut sample: Vec<Value> = rows.into_iter().take(max_rows).collect();
+    let mut truncated = original_len > sample.len();
+    loop {
+        let encoded = serde_json::to_string(&sample).unwrap_or_default();
+        if encoded.chars().count() <= max_chars || sample.is_empty() {
+            break;
+        }
+        sample.pop();
+        truncated = true;
+    }
+    (sample, truncated)
+}
+
+fn build_ai_analysis_prompt(sample: &AiAnalysisSample) -> String {
+    let sample_json = serde_json::to_string(&sample.sample_rows).unwrap_or_else(|_| "[]".into());
+    let truncation = if sample.truncated {
+        format!(
+            "The sample below is truncated (showing {} of {} rows). State that in Overview.\n",
+            sample.sample_rows.len(),
+            sample.row_count
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        r#"You are analyzing one data table in Data Access. Write markdown only — no surrounding code fences, no preamble.
+
+Table name: {name}
+Columns: {columns}
+Total rows: {row_count}
+Sample rows in this prompt: {sample_count}
+{truncation}
+Use only this sample. Do not invent columns or values that are not evidenced. If the sample is too small to be sure, say so.
+
+Use these headings:
+## Overview
+## Key findings
+## Gaps
+## Actions
+
+Sample rows (JSON):
+{sample_json}"#,
+        name = sample.name,
+        columns = sample.columns.join(", "),
+        row_count = sample.row_count,
+        sample_count = sample.sample_rows.len(),
+        truncation = truncation,
+        sample_json = sample_json
+    )
+}
+
+fn normalize_analysis_markdown(raw: &str) -> String {
+    let trimmed = raw.trim();
+    let Some(rest) = trimmed.strip_prefix("```") else {
+        return trimmed.to_string();
+    };
+    let mut body = rest;
+    if let Some(after_lang) = body.strip_prefix("markdown") {
+        body = after_lang;
+    } else if let Some(after_lang) = body.strip_prefix("md") {
+        body = after_lang;
+    }
+    let body = body.strip_prefix('\n').unwrap_or(body);
+    let body = body
+        .strip_suffix("```")
+        .map(str::trim_end)
+        .unwrap_or(body);
+    body.trim().to_string()
 }
 
 #[derive(Debug, Deserialize)]
@@ -776,6 +867,74 @@ pub async fn query_table(
     })))
 }
 
+pub async fn ai_analysis(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<AiAnalysisResponse>, (StatusCode, Json<Value>)> {
+    let uuid = Uuid::parse_str(&id).map_err(|_| json_err(StatusCode::BAD_REQUEST, "Invalid id"))?;
+    let repo = DataTableRepository::new(state.db_pool.clone());
+    let table = repo
+        .find_by_id(uuid)
+        .await
+        .map_err(|e| json_err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?
+        .ok_or_else(|| json_err(StatusCode::NOT_FOUND, "Data table not found"))?;
+
+    let columns: Vec<String> = serde_json::from_str(&table.column_schema)
+        .map_err(|e| json_err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
+
+    let data_rows = repo
+        .fetch_rows(uuid, AI_ANALYSIS_MAX_ROWS as i32, 0)
+        .await
+        .map_err(|e| json_err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
+    let parsed: Vec<Value> = parse_data_rows(data_rows)
+        .into_iter()
+        .map(|r| r.data)
+        .collect();
+    let truncated_by_count = (table.row_count as usize) > parsed.len();
+    let (sample_rows, truncated_by_chars) =
+        cap_analysis_rows(parsed, AI_ANALYSIS_MAX_ROWS, AI_ANALYSIS_MAX_CHARS);
+
+    let cfg = Config::from_env();
+    if !cfg.configured() {
+        return Err(json_err(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Morph AI is not configured. Analysis cannot run.",
+        ));
+    }
+    let client = Client::new(cfg);
+    let prompt = build_ai_analysis_prompt(&AiAnalysisSample {
+        name: table.name.clone(),
+        columns,
+        row_count: table.row_count,
+        sample_rows,
+        truncated: truncated_by_count || truncated_by_chars,
+    });
+
+    let reply = client
+        .chat_completion(&[Message {
+            role: "user".to_string(),
+            content: prompt,
+        }])
+        .await
+        .map_err(|e| {
+            tracing::error!("data table AI analysis failed: {e}");
+            json_err(
+                StatusCode::BAD_GATEWAY,
+                "Could not generate analysis.",
+            )
+        })?;
+
+    let markdown = normalize_analysis_markdown(&reply);
+    if markdown.is_empty() {
+        return Err(json_err(
+            StatusCode::BAD_GATEWAY,
+            "Could not generate analysis.",
+        ));
+    }
+
+    Ok(Json(AiAnalysisResponse { markdown }))
+}
+
 pub async fn update_row(
     State(state): State<AppState>,
     Path((id, row_index)): Path<(String, i32)>,
@@ -823,4 +982,59 @@ pub async fn delete_table(
         return Err((StatusCode::NOT_FOUND, "Data table not found".into()));
     }
     Ok(Json(json!({ "ok": true })))
+}
+
+#[cfg(test)]
+mod ai_analysis_tests {
+    use super::*;
+
+    #[test]
+    fn cap_analysis_rows_limits_count() {
+        let rows: Vec<Value> = (0..100).map(|i| json!({ "n": i })).collect();
+        let (sample, truncated) = cap_analysis_rows(rows, 80, 24_000);
+        assert!(truncated);
+        assert_eq!(sample.len(), 80);
+    }
+
+    #[test]
+    fn cap_analysis_rows_limits_chars() {
+        let rows: Vec<Value> = (0..10)
+            .map(|_| json!({ "blob": "x".repeat(500) }))
+            .collect();
+        let (sample, truncated) = cap_analysis_rows(rows, 80, 800);
+        assert!(truncated);
+        assert!(sample.len() < 10);
+        let encoded = serde_json::to_string(&sample).unwrap();
+        assert!(encoded.chars().count() <= 800);
+    }
+
+    #[test]
+    fn prompt_mentions_truncation_and_headings() {
+        let prompt = build_ai_analysis_prompt(&AiAnalysisSample {
+            name: "Sales".into(),
+            columns: vec!["a".into()],
+            row_count: 500,
+            sample_rows: vec![json!({ "a": 1 })],
+            truncated: true,
+        });
+        assert!(prompt.contains("truncated"));
+        assert!(prompt.contains("## Overview"));
+        assert!(prompt.contains("## Key findings"));
+        assert!(prompt.contains("## Gaps"));
+        assert!(prompt.contains("## Actions"));
+        assert!(!prompt.contains("DataX"));
+        assert!(prompt.contains("Data Access"));
+    }
+
+    #[test]
+    fn normalize_strips_markdown_fences() {
+        let raw = "```markdown\n## Overview\nHi\n```";
+        assert_eq!(normalize_analysis_markdown(raw), "## Overview\nHi");
+    }
+
+    #[test]
+    fn normalize_plain_markdown_unchanged() {
+        let raw = "## Overview\nHi";
+        assert_eq!(normalize_analysis_markdown(raw), raw);
+    }
 }

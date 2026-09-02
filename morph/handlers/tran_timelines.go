@@ -90,13 +90,21 @@ func scanTimeline(scanner interface {
 }) (timelineDoc, error) {
 	var t timelineDoc
 	var fileName, srcURL, pubSlug, pubPath sql.NullString
+	var createdOn, updatedOn sql.NullTime
 	var hasPaste int
 	err := scanner.Scan(
 		&t.ID, &t.UserID, &t.OwnerKey, &t.Title, &t.SourceSummary, &fileName, &srcURL, &hasPaste,
-		&t.MarkdownContent, &t.HTMLContent, &pubSlug, &pubPath, &t.CreatedOn, &t.LastUpdated,
+		&t.MarkdownContent, &t.HTMLContent, &pubSlug, &pubPath,
+		scanDestTime{&createdOn}, scanDestTime{&updatedOn},
 	)
 	if err != nil {
 		return t, err
+	}
+	if createdOn.Valid {
+		t.CreatedOn = createdOn.Time
+	}
+	if updatedOn.Valid {
+		t.LastUpdated = updatedOn.Time
 	}
 	t.HasPaste = hasPaste != 0
 	if fileName.Valid && strings.TrimSpace(fileName.String) != "" {
@@ -729,7 +737,7 @@ func (h *Handlers) PublishTimeline(c *gin.Context) {
 	}
 	path := "/api/tran/public/timelines/" + slug
 	_, err = h.TranMySQL.DB.Exec(
-		`UPDATE timeline SET published_slug = ?, published_path = ?, html_content = ?, last_updated = NOW() WHERE id = ?`,
+		`UPDATE timeline SET published_slug = ?, published_path = ?, html_content = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
 		slug, path, t.HTMLContent, id,
 	)
 	if err != nil {

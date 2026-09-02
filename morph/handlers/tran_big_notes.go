@@ -200,13 +200,20 @@ func scanBigNote(scanner interface {
 }) (bigNote, error) {
 	var n bigNote
 	var pubSlug, pubPath, questions sql.NullString
+	var createdOn, updatedOn sql.NullTime
 	err := scanner.Scan(
 		&n.ID, &n.UserID, &n.OwnerKey, &n.Title, &n.Idea, &n.NoteKind,
 		&n.MarkdownContent, &n.HTMLContent, &questions, &n.Theme,
-		&pubSlug, &pubPath, &n.CreatedOn, &n.LastUpdated,
+		&pubSlug, &pubPath, scanDestTime{&createdOn}, scanDestTime{&updatedOn},
 	)
 	if err != nil {
 		return n, err
+	}
+	if createdOn.Valid {
+		n.CreatedOn = createdOn.Time
+	}
+	if updatedOn.Valid {
+		n.LastUpdated = updatedOn.Time
 	}
 	if questions.Valid && strings.TrimSpace(questions.String) != "" {
 		n.Questions = json.RawMessage(questions.String)
@@ -740,7 +747,7 @@ func (h *Handlers) RegenerateBigNote(c *gin.Context) {
 	}
 
 	_, err = h.TranMySQL.DB.Exec(
-		`UPDATE big_note SET title = ?, note_kind = ?, markdown_content = ?, html_content = ?, questions_json = ?, theme = ?, last_updated = NOW()
+		`UPDATE big_note SET title = ?, note_kind = ?, markdown_content = ?, html_content = ?, questions_json = ?, theme = ?, last_updated = CURRENT_TIMESTAMP
 		 WHERE id = ?`,
 		gen.Title, kind, gen.Markdown, gen.HTML, qJSON, theme, id,
 	)
@@ -797,7 +804,7 @@ func (h *Handlers) PublishBigNote(c *gin.Context) {
 	}
 	path := "/api/tran/public/big-notes/" + slug
 	_, err = h.TranMySQL.DB.Exec(
-		`UPDATE big_note SET published_slug = ?, published_path = ?, html_content = ?, last_updated = NOW() WHERE id = ?`,
+		`UPDATE big_note SET published_slug = ?, published_path = ?, html_content = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
 		slug, path, n.HTMLContent, id,
 	)
 	if err != nil {
@@ -1106,7 +1113,7 @@ Answers JSON:
 	}
 	out = strings.TrimSpace(out)
 	_, err = h.TranMySQL.DB.Exec(
-		`UPDATE big_note_response SET analysis_markdown = ?, last_updated = NOW() WHERE id = ?`,
+		`UPDATE big_note_response SET analysis_markdown = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
 		out, respID,
 	)
 	if err != nil {

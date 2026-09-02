@@ -14,9 +14,6 @@
 <div class="flex min-h-0 flex-1 flex-col gap-4">
 	<div class="shrink-0">
 		<h1 class="text-2xl font-bold text-text-primary">Docs</h1>
-		<p class="mt-1 max-w-2xl text-sm text-text-secondary">
-			Content documents (PDF, TXT) and Docs AI — separate from Data tables (CSV/JSON).
-		</p>
 		<nav class="mt-3 flex flex-wrap gap-2" aria-label="Docs sections">
 			<a
 				href="/docs"

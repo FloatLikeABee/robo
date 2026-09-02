@@ -2,119 +2,86 @@
 
 ## What is robo?
 
-**robo** is a monorepo containing 8+ independent platform applications that share:
-- A central auth service (UsersPanel) — except **morph**, which is self-hosted
-- A shared AI client library (`pkg/morphai` for Go, `pkg/morphai-rs` for Rust)
-- A shared chat drawer UI component (`platform-chat/`, published as `@robo/platform-chat`)
-- A unified shell (`morph-utils/`) that embeds all apps in iframes
-- A common AI assistant contract (`AI_ASSISTANT_MORPHAI_CONTRACT.md`)
+**robo** is a monorepo of Morph platform apps that share:
+
+- Central authentication hosted by **Morph** (JWT + bcrypt in SQLite `plat_users`)
+- Shared AI clients (`pkg/morphai` for Go, `pkg/morphai-rs` for Rust)
+- **Morph AI** as the system chat (no shared `platform-chat` drawer)
+- **MorphUtils** (`morph-utils/`) — iframe shell for Event Logs, Content Maker, Data Access, and Project
+- One repo-root `.env`
+
+Booki, Academi, and a standalone UsersPanel app are **not** in the supported stack (`start-all.sh` does not launch them).
 
 ## App map
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        robo MONOREPO                             │
-│                                                                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
-│  │  morph   │  │  formx   │  │composerx │  │  booki   │        │
-│  │ Go+React │  │ Go+React │  │Go+Svelte │  │ Go+React │        │
-│  │ :9090    │  │ :29909   │  │ :8043    │  │ :9095    │        │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
-│       │              │              │              │              │
-│  ┌────┴─────┐  ┌────┴─────┐  ┌────┴─────┐  ┌────┴─────┐        │
-│  │morph-engi│  │UsersPanel│  │SharpRpt  │  │ academi  │        │
-│  │Rust+Svel │  │Rust+Svel │  │Rust+SvK  │  │ Go+RN    │        │
-│  │ :9096    │  │ :5001    │  │ :3050    │  │ :8978    │        │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
-│       │              │              │              │              │
-│       └──────────────┼──────────────┘              │              │
-│                      │                             │              │
-│              ┌───────┴───────┐                     │              │
-│              │   SHARED      │                     │              │
-│              │  pkg/morphai  │ (Go AI client)      │              │
-│              │ pkg/morphai-rs│ (Rust AI client)    │              │
-│              │ platform-chat │ (TS chat drawer)    │              │
-│              │ pkg/assistmd  │ (MD formatting)     │              │
-│              │ pkg/morphgraph│ (GraphRAG types)    │              │
-│              │ pkg/webresearch│ (web search)       │              │
-│              └───────────────┘                     │              │
-│                                                    │              │
-│              ┌────────────────────────────────────┴───┐          │
-│              │           INFRASTRUCTURE               │          │
-│              │  MySQL · MongoDB · Redis · BadgerDB    │          │
-│              │  SQLite · Neo4j (optional GraphRAG)    │          │
-│              │  DashScope (Qwen) AI provider          │          │
-│              └────────────────────────────────────────┘          │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  morph-utils/  —  Unified shell (React, :3040)           │   │
-│  │  Embeds all apps in iframes with shared JWT cookie        │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  bk/  —  Ground Control RAG workspace (Python, :8000)     │   │
-│  │  Linked from Morph AI header; UI on :3000                 │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
+                         Morph AI  :3031 / API :9090
+                         (login, chat, MorphNotes)
+                                   │
+                    JWT cookie  userspanel_session_token
+                                   │
+        ┌──────────────────────────┼──────────────────────────┐
+        ▼                          ▼                          ▼
+   MorphUtils :3040            AI tools                   optional
+   iframe shell                bk :3000/:8000             Neo4j :7687
+        │
+        ├── Event Logs     formx      UI :19909  API :29909
+        ├── Content Maker  composerx  UI :8044   API :8043
+        ├── Data Access    SharpReport UI :5178  API SHARPREPORT_PORT
+        └── Project        morph-engi UI :5179  API :9096
 ```
 
 ## Tech stack summary
 
-| App | Backend | Frontend | Primary DB | Auth |
-|-----|---------|----------|------------|------|
-| **morph** | Go (Gin) | React (CRA) | BadgerDB + MySQL + Mongo + Redis | **Self-hosted** JWT+bcrypt |
-| **formx** | Go (Gin, GORM) | React (Vite) | MySQL + MongoDB | UsersPanel |
-| **composerx** | Go (Gin) | Svelte (Vite) | MySQL + MongoDB + Redis | UsersPanel |
-| **booki** | Go (Gin) | React (Vite) | MySQL + Redis | UsersPanel SSO |
-| **UsersPanel** | Rust (Axum) | Svelte 5 (Vite) | MySQL | Self-hosted (auth hub) |
-| **SharpReport** | Rust (Axum) | SvelteKit | SQLite | UsersPanel SSO |
-| **morph-engi** | Rust (Axum) | Svelte 5 (Vite) | SQLite | UsersPanel SSO |
-| **academi** | Go (Gin) | React Native | BadgerDB | UsersPanel SSO + local fallback |
-| **bk** | Python (FastAPI) | React (CRA) | ChromaDB | UsersPanel token (via Morph AI link) |
+| Product (folder) | Backend | Frontend | Local data | Auth |
+|------------------|---------|----------|------------|------|
+| Morph AI / MorphNotes (`morph/`) | Go (Gin) | React (CRA) | SQLite + Badger | Morph JWT (auth hub) |
+| Event Logs (`formx/`) | Go (Gin) | React (Vite) | SQLite + Badger | Morph SSO |
+| Content Maker (`composerx/`) | Go (Gin) | Svelte (Vite) | SQLite + Badger | Morph SSO |
+| Data Access (`SharpReport/`) | Rust (Axum) | SvelteKit | SQLite | Morph SSO |
+| Project (`morph-engi/`) | Rust (Axum) | Svelte (Vite) | SQLite | Morph SSO |
+| MorphUtils (`morph-utils/`) | — | React (Vite) | — | Morph cookie |
+| AI tools (`bk/`) | Python (FastAPI) | React (CRA) | Chroma (local) | Morph token via Morph AI |
+
+**Leftover package names:** Event Logs and Content Maker Go packages may still be named `mysql` / `mongo` while `main` opens **SQLite** and **Badger**. Do not install MySQL, MongoDB, or Redis for the default stack.
 
 ## Port map
 
-| Service | API Port | UI Port |
-|---------|----------|---------|
-| UsersPanel | 5001 | 5173 |
+| Service | API | UI |
+|---------|-----|-----|
 | Morph | 9090 | 3031 |
-| Morph Utils | — | 3040 |
-| FormsX | 29909 | 19909 |
-| ComposerX | 8043 | 8044 |
-| Booki | 9095 | 5174 |
-| Morph Engi | 9096 | 5179 |
-| Academi | 8978 | 8765 |
-| SharpReport | 3050 | 5178 |
-| BK | 8000 | 3000 |
+| MorphUtils | — | 3040 |
+| Event Logs | 29909 | 19909 |
+| Content Maker | 8043 | 8044 |
+| Project | 9096 | 5179 |
+| Data Access | `SHARPREPORT_PORT` (often 3050) | 5178 |
+| AI tools | 8000 | 3000 |
 
-## Dependency matrix
+## User-facing names vs ids
 
-| Capability | Apps that use it |
-|------------|------------------|
-| MySQL | morph, formx, composerx, booki, UsersPanel |
-| MongoDB | morph, formx, composerx |
-| Redis | morph, composerx, booki |
-| BadgerDB (embedded) | morph, academi |
-| SQLite | SharpReport, morph-engi |
-| Neo4j (GraphRAG) | morph (optional, via morphgraph-worker) |
-| ChromaDB | bk |
+| Say this | Folder / URL id (do not “fix”) |
+|----------|--------------------------------|
+| Morph AI, MorphNotes | `morph/`, UI `/morphdata` |
+| MorphUtils | `morph-utils/` |
+| Event Logs | `formx/`, embed id `sheetx`, default embed `/events-info` |
+| Content Maker | `composerx/` |
+| Data Access | `SharpReport/`, iframe `/datax` |
+| Project | `morph-engi/` |
+| AI tools | `bk/` |
 
-## Key documents
+Auth env is still `USERS_PANEL_BASE_URL` → Morph `:9090`. Cookie is still `userspanel_session_token`.
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Quick start, ports, service names |
-| `DEVELOPER_BASELINE.md` | Architecture map, conventions (**note: morph auth section is outdated**) |
-| `AI_ASSISTANT_MORPHAI_CONTRACT.md` | Cross-app assistant API contract |
-| `AI_ASSISTANT_SESSIONS_API.md` | Session persistence spec |
-| `DEPLOY-README.md` | Production deployment (Render, Alibaba) |
+## Shared libraries
 
-## How to use these agent docs
+`pkg/morphai`, `pkg/morphai-rs`, `pkg/repoenv`, `pkg/assistmd`, `pkg/docextract`, `pkg/morphgraph`, `pkg/webresearch`. See `10-shared-libraries.md`.
 
-- **00-architecture-overview.md** (this file) — start here for orientation
-- **01-auth-flow.md** — understand auth before touching any login/session code
-- **02-ai-integration.md** — understand AI before touching any assistant/chat code
-- **03–09** — per-app deep dives: read the one for the app you're modifying
-- **10-shared-libraries.md** — reference for `pkg/*` usage
-- **11-platform-chat.md** — reference for chat drawer integration
-- **12-build-deploy.md** — reference for build, run, and deploy commands
-- **13-conventions.md** — cross-cutting patterns to follow
+## Optional GraphRAG
+
+Neo4j and `morphgraph-worker` are optional. The rest of the stack starts without them. See [`docs/MORPH_GRAPH_OPS.md`](../MORPH_GRAPH_OPS.md).
+
+## Next
+
+- Auth: `01-auth-flow.md`
+- AI: `02-ai-integration.md`
+- Conventions: `13-conventions.md`
+- Run: `12-build-deploy.md`

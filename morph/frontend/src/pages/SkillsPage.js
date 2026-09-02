@@ -7,8 +7,7 @@ const THEME_KEY = 'skool-ai-chat-theme';
 
 function getStoredChatTheme() {
   try {
-    const v = localStorage.getItem(THEME_KEY);
-    if (v === 'light' || v === 'dark') return v;
+    localStorage.setItem(THEME_KEY, 'dark');
   } catch {}
   return 'dark';
 }

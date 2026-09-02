@@ -1,14 +1,9 @@
 package handlers
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -324,19 +319,7 @@ func (h *Handlers) CreateTranUser(c *gin.Context) {
 		c.JSON(http.StatusCreated, gin.H{"id": id64})
 		return
 	}
-	syncErr := syncTranUserToUsersPanel(u)
-	if syncErr != nil {
-		c.JSON(http.StatusCreated, gin.H{
-			"user":              u,
-			"users_panel_sync":  "failed",
-			"users_panel_error": syncErr.Error(),
-		})
-		return
-	}
-	c.JSON(http.StatusCreated, gin.H{
-		"user":             u,
-		"users_panel_sync": "ok",
-	})
+	c.JSON(http.StatusCreated, gin.H{"user": u})
 }
 
 var allowedTranUserWrite = map[string]string{
@@ -467,46 +450,4 @@ func (h *Handlers) DeleteTranUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"id": id, "deactivated": true})
-}
-
-func syncTranUserToUsersPanel(u models.TranUser) error {
-	baseURL := strings.TrimSpace(os.Getenv("USERS_PANEL_BASE_URL"))
-	if baseURL == "" {
-		return nil
-	}
-	email := strings.TrimSpace(valueOrEmpty(u.Email))
-	if email == "" {
-		return nil
-	}
-	username := strings.TrimSpace(valueOrEmpty(u.LoginID))
-	if username == "" {
-		fullName := strings.TrimSpace(strings.Join([]string{valueOrEmpty(u.FirstName), strings.TrimSpace(u.LastName)}, " "))
-		username = strings.ReplaceAll(strings.ToLower(fullName), " ", "_")
-	}
-	if username == "" {
-		username = fmt.Sprintf("tran_user_%d", u.ID)
-	}
-
-	registerBody := map[string]string{
-		"email":    email,
-		"username": username,
-		"password": fmt.Sprintf("Tmp!%dPass2026", u.ID),
-	}
-	raw, _ := json.Marshal(registerBody)
-	req, err := http.NewRequest(http.MethodPost, strings.TrimRight(baseURL, "/")+"/api/auth/register", bytes.NewReader(raw))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	// Register can fail with conflict when account already exists; treat as synced.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusConflict {
-		return fmt.Errorf("register failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-	return nil
 }

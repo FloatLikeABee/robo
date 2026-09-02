@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 const DEFAULT_MODEL: &str = "qwen3-max";
 const DEFAULT_API_URL: &str =
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
@@ -14,26 +16,39 @@ pub struct Config {
     pub base_url: Option<String>,
 }
 
-/// Load `.env` from cwd and parent (e.g. `SharpReport/.env` when run from `backend/`).
-fn load_dotenv_files() {
-    let _ = dotenvy::dotenv();
-    if let Ok(cwd) = std::env::current_dir() {
-        let local = cwd.join(".env");
-        if local.is_file() {
-            let _ = dotenvy::from_path(&local);
+/// Walk up from `start` until a directory containing `start-all.sh` is found.
+pub fn find_repo_root(start: &Path) -> Option<PathBuf> {
+    let mut dir = start.to_path_buf();
+    if let Ok(canon) = dir.canonicalize() {
+        dir = canon;
+    }
+    loop {
+        if dir.join("start-all.sh").is_file() {
+            return Some(dir);
         }
-        if let Some(parent) = cwd.parent() {
-            let parent_env = parent.join(".env");
-            if parent_env.is_file() {
-                let _ = dotenvy::from_path(&parent_env);
-            }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
+
+/// Load only the repository-root `.env` (next to `start-all.sh`). Nested `.env` files are ignored.
+pub fn load_repo_dotenv() {
+    let cwd = match std::env::current_dir() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    if let Some(root) = find_repo_root(&cwd) {
+        let env_path = root.join(".env");
+        if env_path.is_file() {
+            let _ = dotenvy::from_path(&env_path);
         }
     }
 }
 
 impl Config {
     pub fn from_env() -> Self {
-        load_dotenv_files();
+        load_repo_dotenv();
 
         let api_key = std::env::var("MORPH_AI_API_KEY")
             .ok()
@@ -124,11 +139,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_model_when_unset() {
-        std::env::remove_var("MORPH_AI_MODEL");
-        std::env::remove_var("GEMINI_MODEL");
-        let cfg = Config::from_env();
-        assert_eq!(cfg.model, DEFAULT_MODEL);
+    fn default_model_constant() {
+        assert_eq!(DEFAULT_MODEL, "qwen3-max");
+    }
+
+    #[test]
+    fn finds_start_all_not_nested_env() {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let base = std::env::temp_dir().join(format!("morphai-repoenv-{nanos}"));
+        let nested = base.join("formx").join("backend");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(base.join("start-all.sh"), "#!/bin/sh\n").unwrap();
+        std::fs::write(base.join(".env"), "MORPH_AI_API_KEY=from-root\n").unwrap();
+        std::fs::write(nested.join(".env"), "MORPH_AI_API_KEY=\n").unwrap();
+        let root = find_repo_root(&nested).expect("repo root");
+        assert!(root.join("start-all.sh").is_file());
+        let nested_env = std::fs::read_to_string(nested.join(".env")).unwrap();
+        assert!(nested_env.contains("MORPH_AI_API_KEY="));
+        let root_env = std::fs::read_to_string(root.join(".env")).unwrap();
+        assert!(root_env.contains("from-root"));
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

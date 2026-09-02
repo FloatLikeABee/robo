@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { whenSessionReady } from '$lib/stores/auth.svelte';
-	import { requestAssistantOpen } from '$lib/stores/assistantContext.svelte';
 	import { apiUrl, authHeaders } from '$lib/api';
 
 	let db: {
@@ -88,13 +87,6 @@
 					>
 						Open queries
 					</a>
-					<button
-						type="button"
-						class="rounded-md border border-border px-3 py-2 text-sm text-text-primary hover:bg-bg-tertiary"
-						onclick={() => requestAssistantOpen()}
-					>
-						AI Assistant
-					</button>
 				</div>
 			</div>
 		{/if}

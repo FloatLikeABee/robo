@@ -11,9 +11,9 @@
 [data-theme='light'] {
   color-scheme: light;
 
-  --color-bg: #f0f5fc;
-  --color-bg-elevated: #e2ebf8;
-  --color-surface: #ffffff;
+  --color-bg: #e8e4dc;
+  --color-bg-elevated: #ece8e1;
+  --color-surface: #f0ece4;
   --color-border-subtle: rgba(30, 64, 175, 0.12);
   --color-text: #0f172a;
   --color-text-subtle: #64748b;

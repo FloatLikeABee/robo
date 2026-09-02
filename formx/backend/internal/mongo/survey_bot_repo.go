@@ -290,6 +290,22 @@ func (r *SurveyBotResultRepo) Insert(ctx context.Context, res *models.SurveyBotR
 	})
 }
 
+func (r *SurveyBotResultRepo) Update(ctx context.Context, res *models.SurveyBotResult) error {
+	_ = ctx
+	if res == nil || res.ID == "" {
+		return ErrNoDocuments
+	}
+	return r.store.db.Update(func(txn *badger.Txn) error {
+		if _, err := txn.Get(surveyResKey(res.ID)); err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNoDocuments
+			}
+			return err
+		}
+		return putJSON(txn, surveyResKey(res.ID), res)
+	})
+}
+
 func (r *SurveyBotResultRepo) GetByID(ctx context.Context, idHex string) (*models.SurveyBotResult, error) {
 	_ = ctx
 	var out models.SurveyBotResult

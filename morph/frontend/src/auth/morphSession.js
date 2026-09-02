@@ -26,45 +26,38 @@ function writeCookie(name, value, maxAgeSeconds) {
   document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
 }
 
-function writeSessionCookie(name, value) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax`;
-}
-
-function rememberEnabled() {
-  return localStorage.getItem(AUTH_REMEMBER_KEY) !== '0';
-}
-
 export function getMorphToken() {
   let t = readCookie(SHARED_SESSION_COOKIE);
   if (t) return t;
-  const remember = rememberEnabled();
-  if (remember) return localStorage.getItem(AUTH_TOKEN_KEY) || '';
-  return sessionStorage.getItem(AUTH_TOKEN_KEY) || '';
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
 }
 
 /**
+ * Always persist until Sign out. `rememberMe` is ignored (kept for callers).
  * @param {string} token
- * @param {boolean} [rememberMe=true]
+ * @param {boolean} [_rememberMe]
  */
-export function setMorphToken(token, rememberMe = true) {
+export function setMorphToken(token, _rememberMe = true) {
   if (!token) {
     clearMorphSession();
     return;
   }
   try {
-    localStorage.setItem(AUTH_REMEMBER_KEY, rememberMe ? '1' : '0');
+    localStorage.setItem(AUTH_REMEMBER_KEY, '1');
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
   } catch {
     /* ignore */
   }
-  if (rememberMe) {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  try {
     sessionStorage.removeItem(AUTH_TOKEN_KEY);
-    writeCookie(SHARED_SESSION_COOKIE, token, SESSION_MAX_AGE_SECONDS);
-  } else {
-    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    writeSessionCookie(SHARED_SESSION_COOKIE, token);
+  } catch {
+    /* ignore */
   }
+  writeCookie(SHARED_SESSION_COOKIE, token, SESSION_MAX_AGE_SECONDS);
 }
 
 export function clearMorphSession() {
@@ -79,6 +72,11 @@ export function clearMorphSession() {
     /* ignore */
   }
   writeCookie(SHARED_SESSION_COOKIE, '', 0);
+  try {
+    localStorage.removeItem(AUTH_REMEMBER_KEY);
+  } catch {
+    /* ignore */
+  }
   try {
     localStorage.removeItem(AUTH_SNAPSHOT_KEY);
   } catch {

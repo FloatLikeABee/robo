@@ -5,7 +5,7 @@
 #   ./scripts/deploy.sh help
 #   ./scripts/deploy.sh doctor
 #   ./scripts/deploy.sh build --all
-#   ./scripts/deploy.sh build --app=morph,formx,userspanel
+#   ./scripts/deploy.sh build --app=morph,formx,composerx
 #   ./scripts/deploy.sh package
 #   ./scripts/deploy.sh docker build --all --tag=robo
 #   ./scripts/deploy.sh render validate|apply|status
@@ -43,7 +43,6 @@ warn() { echo -e "${YELLOW}!${NC} $*"; }
 err()  { echo -e "${RED}✗${NC} $*" >&2; }
 
 ALL_APPS=(
-  userspanel
   morph
   formx
   composerx
@@ -55,7 +54,6 @@ ALL_APPS=(
 
 # Apps that produce Docker API images
 DOCKER_APPS=(
-  userspanel
   morph
   formx
   composerx
@@ -144,7 +142,7 @@ cmd_doctor() {
   if have go; then ok "go $(go version | awk '{print $3}')"; else err "go missing"; missing=1; fi
   if have node; then ok "node $(node -v)"; else err "node missing"; missing=1; fi
   if have npm; then ok "npm $(npm -v)"; else err "npm missing"; missing=1; fi
-  if have cargo; then ok "cargo $(cargo --version | awk '{print $2}')"; else warn "cargo missing (UsersPanel / Engi / SharpReport)"; fi
+  if have cargo; then ok "cargo $(cargo --version | awk '{print $2}')"; else warn "cargo missing (Morph Engi / SharpReport)"; fi
   if have docker; then ok "docker $(docker --version | awk '{print $3}' | tr -d ',')"; else warn "docker missing (needed for image builds)"; fi
   if have render; then ok "render CLI present"; else warn "render CLI optional — https://render.com/docs/cli"; fi
   if have rsync; then ok "rsync present"; else warn "rsync missing (alibaba sync)"; fi
@@ -166,14 +164,6 @@ cmd_list() {
   for a in "${DOCKER_APPS[@]}"; do
     echo "  - $a  (deploy/docker/${a}.Dockerfile)"
   done
-}
-
-build_userspanel() {
-  log "Building UsersPanel API…"
-  (cd "${ROOT}/UsersPanel/backend" && cargo build --release)
-  log "Building UsersPanel Admin…"
-  (cd "${ROOT}/UsersPanel/admin" && npm ci && npm run build)
-  ok "userspanel"
 }
 
 build_morph() {
@@ -221,7 +211,7 @@ build_morph_engi() {
 
 
 build_morph_utils() {
-  log "Building Morph Utils UI…"
+  log "Building MorphUtils UI…"
   (cd "${ROOT}/morph-utils/frontend" && npm ci && npm run build)
   ok "morph-utils"
 }
@@ -240,7 +230,6 @@ cmd_build() {
   local app
   while IFS= read -r app; do
     case "$app" in
-      userspanel) build_userspanel ;;
       morph) build_morph ;;
       formx) build_formx ;;
       composerx) build_composerx ;;
@@ -268,8 +257,6 @@ cmd_package() {
   [[ -d "${DIST_DIR}/bin" ]] && cp -R "${DIST_DIR}/bin/." "${staging}/bin/" 2>/dev/null || true
 
   # Copy release binaries from cargo targets when present
-  [[ -f "${ROOT}/UsersPanel/backend/target/release/users-panel-api" ]] && \
-    cp "${ROOT}/UsersPanel/backend/target/release/users-panel-api" "${staging}/bin/"
   [[ -f "${ROOT}/morph-engi/backend/target/release/morph-engi-api" ]] && \
     cp "${ROOT}/morph-engi/backend/target/release/morph-engi-api" "${staging}/bin/"
   [[ -f "${ROOT}/SharpReport/backend/target/release/datapulse" ]] && \
@@ -283,7 +270,6 @@ cmd_package() {
       cp -R "$src" "$dest"
     fi
   }
-  copy_dist "${ROOT}/UsersPanel/admin/dist" "${staging}/apps/userspanel-admin"
   copy_dist "${ROOT}/morph/frontend/build" "${staging}/apps/morph-ui"
   copy_dist "${ROOT}/formx/frontend/dist" "${staging}/apps/formx-ui"
   copy_dist "${ROOT}/composerx/frontend/dist" "${staging}/apps/composerx-ui"
@@ -440,8 +426,7 @@ VPC
  ├─ Tair Redis
  ├─ OSS + CDN (SPA dist + uploads optional)
  ├─ ECS / SAE
- │   ├─ userspanel-api   (first)
- │   ├─ morph-api        (+ disk for Badger)
+ │   ├─ morph-api        (first — hosts auth; + disk for Badger)
  │   ├─ formx-api        (+ uploads volume)
  │   ├─ composerx-api    (+ storage volume)
  │   ├─ booki-api

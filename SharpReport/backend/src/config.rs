@@ -45,7 +45,7 @@ pub struct JwtSettings {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct UsersPanelSettings {
-    /// Base URL for UsersPanel API (e.g. http://127.0.0.1:5001).
+    /// Base URL for the Morph auth API (legacy name; e.g. http://127.0.0.1:9090).
     pub base_url: String,
 }
 
@@ -72,22 +72,9 @@ pub struct CorsSettings {
     pub allowed_origins: Vec<String>,
 }
 
-/// Load `.env` from the backend directory and parent app directory (`SharpReport/.env`).
+/// Load only the repository-root `.env` (nested SharpReport/.env is ignored).
 pub fn load_env_files() {
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(parent) = cwd.parent() {
-            let parent_env = parent.join(".env");
-            if parent_env.is_file() {
-                let _ = dotenvy::from_path(&parent_env);
-            }
-        }
-        let local_env = cwd.join(".env");
-        if local_env.is_file() {
-            let _ = dotenvy::from_path(&local_env);
-        }
-    } else {
-        let _ = dotenvy::dotenv();
-    }
+    morphai::load_repo_dotenv();
 }
 
 impl Settings {
@@ -118,6 +105,18 @@ impl Settings {
             let url = url.trim();
             if !url.is_empty() {
                 settings.academi.base_url = url.trim_end_matches('/').to_string();
+            }
+        }
+
+        if let Ok(p) = std::env::var("SHARPREPORT_PORT") {
+            if let Ok(port) = p.trim().parse() {
+                settings.server.port = port;
+            }
+        }
+        if let Ok(url) = std::env::var("SHARPREPORT_DATABASE_URL") {
+            let url = url.trim();
+            if !url.is_empty() {
+                settings.database.url = url.to_string();
             }
         }
 

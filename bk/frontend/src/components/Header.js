@@ -17,9 +17,6 @@ import {
   Info as StatusIcon,
   Menu as MenuIcon,
   Description as DocumentsIcon,
-  Image as ImageIcon,
-  ImportContacts as ReadersIcon,
-  Movie as VideoStoryIcon,
   Storage as RagIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -41,9 +38,6 @@ const Header = () => {
   const navItems = [
     { path: '/assistants', label: 'Assistants', icon: <AssistantIcon /> },
     { path: '/rag', label: 'RAG', icon: <RagIcon /> },
-    { path: '/images', label: 'Images', icon: <ImageIcon /> },
-    { path: '/video-stories', label: 'Video stories', icon: <VideoStoryIcon /> },
-    { path: '/readers', label: 'Readers', icon: <ReadersIcon /> },
     { path: '/documents', label: 'Documents', icon: <DocumentsIcon /> },
     { path: '/status', label: 'System', icon: <StatusIcon /> },
   ];

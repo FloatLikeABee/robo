@@ -121,90 +121,34 @@ function formatWhen(v) {
   return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function GenericDataContentView({ record }) {
-  const detail = parseDetail(record?.detail);
-  const sourceType = record?.source_type;
-
-  if (!detail) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        No imported content yet.
-      </Typography>
-    );
-  }
-
-  if (sourceType === 'pdf') {
-    const md = detail.content_markdown || '';
-    return (
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 2, sm: 3 },
-          borderRadius: 2,
-          border: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          maxWidth: 820,
-          mx: 'auto',
-        }}
-      >
-        {detail.article_title && (
-          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.2 }}>
-            Article
-          </Typography>
-        )}
-        <Box sx={markdownArticleSx}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{md || '_Empty document_'}</ReactMarkdown>
-        </Box>
-      </Paper>
-    );
-  }
-
-  if (sourceType === 'csv') {
-    const columns = (detail.columns || []).map((col, i) => ({
-      field: `c${i}`,
-      headerName: String(col),
-      flex: 1,
-      minWidth: 120,
-    }));
-    const colKeys = detail.columns || [];
-    const rows = (detail.rows || []).map((row, idx) => {
-      const out = { id: idx + 1 };
-      colKeys.forEach((col, i) => {
-        out[`c${i}`] = row?.[col] ?? '';
-      });
-      return out;
-    });
-    const truncated = detail.import_meta?.truncated;
-
-    return (
-      <Stack spacing={1.5}>
-        <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-          <Chip size="small" label={`${rows.length} rows`} color="success" variant="outlined" />
-          <Chip size="small" label={`${colKeys.length} columns`} variant="outlined" />
-          {truncated && (
-            <Chip size="small" color="warning" label={`Truncated at ${detail.import_meta?.max_rows || 'limit'}`} />
-          )}
-        </Stack>
-        <Paper variant="outlined" sx={{ height: 420, width: '100%' }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            density="compact"
-            disableRowSelectionOnClick
-            pageSizeOptions={[25, 50, 100]}
-            initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
-            sx={{ border: 0 }}
-          />
-        </Paper>
-        <Typography variant="caption" color="text.secondary">
-          Structured data is stored in MongoDB and shown here as a searchable table.
+function GenericDataMarkdownView({ markdown, articleTitle }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 2, sm: 3 },
+        borderRadius: 2,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        maxWidth: 820,
+        mx: 'auto',
+        width: '100%',
+      }}
+    >
+      {articleTitle && (
+        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.2 }}>
+          Article
         </Typography>
-      </Stack>
-    );
-  }
+      )}
+      <Box sx={markdownArticleSx}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown || '_Empty document_'}</ReactMarkdown>
+      </Box>
+    </Paper>
+  );
+}
 
-  const payload = detail.payload ?? detail;
+function GenericDataJsonView({ payload }) {
   return (
     <Stack spacing={1.5} sx={{ width: '100%', minWidth: 0 }}>
       <Chip
@@ -229,6 +173,86 @@ function GenericDataContentView({ record }) {
           <RecordSheetJsonDetail raw={payload} />
         </Box>
       </Paper>
+    </Stack>
+  );
+}
+
+function GenericDataContentView({ record }) {
+  const detail = parseDetail(record?.detail);
+  const sourceType = record?.source_type;
+
+  if (!detail) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No imported content yet.
+      </Typography>
+    );
+  }
+
+  const md = typeof detail.content_markdown === 'string' ? detail.content_markdown : '';
+  const colKeys = detail.columns || [];
+  const hasTable = Array.isArray(colKeys) && colKeys.length > 0;
+  const jsonPayload =
+    detail.payload !== undefined
+      ? detail.payload
+      : !hasTable && !md
+        ? detail
+        : sourceType === 'json' && !hasTable
+          ? Object.fromEntries(
+              Object.entries(detail).filter(
+                ([k]) => !['content_markdown', 'import_meta', 'article_title'].includes(k)
+              )
+            )
+          : null;
+  const showJson =
+    jsonPayload != null &&
+    (typeof jsonPayload !== 'object' ||
+      jsonPayload === null ||
+      Array.isArray(jsonPayload) ||
+      Object.keys(jsonPayload).length > 0);
+
+  return (
+    <Stack spacing={2.5} sx={{ width: '100%', minWidth: 0 }}>
+      {hasTable && (
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            <Chip size="small" label={`${(detail.rows || []).length} rows`} color="success" variant="outlined" />
+            <Chip size="small" label={`${colKeys.length} columns`} variant="outlined" />
+            {detail.import_meta?.truncated && (
+              <Chip size="small" color="warning" label={`Truncated at ${detail.import_meta?.max_rows || 'limit'}`} />
+            )}
+          </Stack>
+          <Paper variant="outlined" sx={{ height: 420, width: '100%' }}>
+            <DataGrid
+              rows={(detail.rows || []).map((row, idx) => {
+                const out = { id: idx + 1 };
+                colKeys.forEach((col, i) => {
+                  out[`c${i}`] = row?.[col] ?? '';
+                });
+                return out;
+              })}
+              columns={colKeys.map((col, i) => ({
+                field: `c${i}`,
+                headerName: String(col),
+                flex: 1,
+                minWidth: 120,
+              }))}
+              density="compact"
+              disableRowSelectionOnClick
+              pageSizeOptions={[25, 50, 100]}
+              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+              sx={{ border: 0 }}
+            />
+          </Paper>
+        </Stack>
+      )}
+      {showJson && <GenericDataJsonView payload={jsonPayload} />}
+      {md ? <GenericDataMarkdownView markdown={md} articleTitle={detail.article_title} /> : null}
+      {!hasTable && !showJson && !md ? (
+        <Typography variant="body2" color="text.secondary">
+          No imported content yet.
+        </Typography>
+      ) : null}
     </Stack>
   );
 }
@@ -298,7 +322,7 @@ function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord }) {
       ) : (
         !loading && (
           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-            No analysis yet — import a file and run Morph AI to get insights.
+            No analysis yet — save a record and run Morph AI to get insights.
           </Typography>
         )
       )}
@@ -307,9 +331,15 @@ function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord }) {
 }
 
 function ImportDialog({ open, onClose, onImported }) {
+  const [mode, setMode] = useState('file');
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [pasteText, setPasteText] = useState('');
+  const [extractedJson, setExtractedJson] = useState('');
+  const [extractedMarkdown, setExtractedMarkdown] = useState('');
+  const [extractSourceType, setExtractSourceType] = useState('json');
+  const [extractFilename, setExtractFilename] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -317,9 +347,15 @@ function ImportDialog({ open, onClose, onImported }) {
 
   useEffect(() => {
     if (!open) {
+      setMode('file');
       setFile(null);
       setTitle('');
       setDescription('');
+      setPasteText('');
+      setExtractedJson('');
+      setExtractedMarkdown('');
+      setExtractSourceType('json');
+      setExtractFilename('');
       setError(null);
       setDragOver(false);
     }
@@ -328,18 +364,65 @@ function ImportDialog({ open, onClose, onImported }) {
   const pickFile = (f) => {
     if (!f) return;
     const ext = (f.name.split('.').pop() || '').toLowerCase();
-    if (!['csv', 'json', 'pdf', 'md', 'markdown'].includes(ext)) {
-      setError('Use a .csv, .json, .pdf, or .md file');
+    if (!['csv', 'xlsx', 'json', 'pdf', 'md', 'markdown'].includes(ext)) {
+      setError('Use a .csv, .xlsx, .json, .pdf, or .md file');
       return;
     }
     setFile(f);
+    setExtractedJson('');
+    setExtractedMarkdown('');
+    setExtractSourceType('json');
+    setExtractFilename(f.name);
     setError(null);
     if (!title) setTitle(f.name.replace(/\.[^.]+$/, ''));
   };
 
-  const submit = async () => {
+  const wrapDetail = (parsed, markdown) => {
+    let detail;
+    if (parsed == null || typeof parsed !== 'object') {
+      detail = { payload: parsed };
+    } else if (Array.isArray(parsed)) {
+      detail = { payload: parsed };
+    } else {
+      detail = { ...parsed };
+    }
+    if (markdown != null) {
+      detail.content_markdown = markdown;
+    }
+    return detail;
+  };
+
+  const extractPaste = async () => {
+    if (!pasteText.trim()) {
+      setError('Paste some text to extract');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await tranApi.post(tranEndpoints.extractJson, {
+        text: pasteText.trim(),
+        purpose: 'generic_data',
+      });
+      const obj = res.data?.json;
+      if (obj == null || typeof obj !== 'object') {
+        throw new Error('AI did not return JSON');
+      }
+      setExtractedJson(JSON.stringify(obj, null, 2));
+      if (!title.trim()) {
+        const first = pasteText.trim().split('\n')[0].slice(0, 80);
+        setTitle(first || 'Extracted data');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Extract failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const extractFile = async () => {
     if (!file) {
-      setError('Choose a file to import');
+      setError('Choose a file to extract');
       return;
     }
     setLoading(true);
@@ -348,69 +431,199 @@ function ImportDialog({ open, onClose, onImported }) {
       const fd = new FormData();
       fd.append('file', file);
       if (title.trim()) fd.append('title', title.trim());
-      if (description.trim()) fd.append('description', description.trim());
       const token = getMorphToken();
-      const res = await axios.post(`${API_BASE}${tranEndpoints.genericDataImport}`, fd, {
+      const res = await axios.post(`${API_BASE}${tranEndpoints.genericDataExtract}`, fd, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 300000,
       });
-      onImported(res.data);
-      onClose();
+      const obj = res.data?.json;
+      if (obj == null) {
+        throw new Error(res.data?.error || 'Extract is unavailable for this file');
+      }
+      setExtractedJson(JSON.stringify(obj, null, 2));
+      setExtractedMarkdown(typeof res.data?.markdown === 'string' ? res.data.markdown : '');
+      if (res.data?.source_type) setExtractSourceType(res.data.source_type);
+      if (res.data?.filename) setExtractFilename(res.data.filename);
+      if (res.data?.title && !title.trim()) setTitle(res.data.title);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Import failed');
+      setError(err.response?.data?.error || err.message || 'Extract failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const submit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!extractedJson.trim()) {
+        setError(mode === 'file' ? 'Extract JSON and Markdown first' : 'Extract JSON first');
+        setLoading(false);
+        return;
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(extractedJson);
+      } catch {
+        setError('JSON is not valid — fix it before saving');
+        setLoading(false);
+        return;
+      }
+      if (mode === 'paste') {
+        const res = await tranApi.post(tranEndpoints.genericData, {
+          title: title.trim() || 'Extracted data',
+          source_type: 'json',
+          description: description.trim() || undefined,
+          detail: parsed,
+        });
+        onImported(res.data);
+        onClose();
+        return;
+      }
+      const detail = wrapDetail(parsed, extractedMarkdown);
+      const res = await tranApi.post(tranEndpoints.genericData, {
+        title: title.trim() || 'Imported data',
+        source_type: extractSourceType || 'json',
+        source_filename: extractFilename || file?.name,
+        description: description.trim() || undefined,
+        detail,
+      });
+      onImported(res.data);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Save failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canSubmit = Boolean(extractedJson);
+
   return (
-    <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+    <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
       <DialogTitle sx={{ fontWeight: 700 }}>Import generic data</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary">
-            Upload CSV, JSON, PDF, or Markdown. PDFs are converted to markdown locally (fast, no AI). Content is stored in MongoDB for display and analysis.
-          </Typography>
-          <Paper
-            variant="outlined"
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              pickFile(e.dataTransfer.files?.[0]);
-            }}
-            onClick={() => inputRef.current?.click()}
-            sx={{
-              p: 3,
-              textAlign: 'center',
-              cursor: 'pointer',
-              borderStyle: 'dashed',
-              borderWidth: 2,
-              borderRadius: 2,
-              borderColor: dragOver ? 'primary.main' : 'divider',
-              bgcolor: dragOver ? 'action.hover' : 'background.default',
-              transition: 'border-color 0.15s, background 0.15s',
-            }}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".csv,.json,.pdf,.md,.markdown,text/csv,application/json,application/pdf,text/markdown"
-              hidden
-              onChange={(e) => pickFile(e.target.files?.[0])}
-            />
-            <CloudUploadOutlinedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-            <Typography variant="subtitle2">{file ? file.name : 'Drop a file or click to browse'}</Typography>
-            <Stack direction="row" spacing={0.75} justifyContent="center" sx={{ mt: 1 }}>
-              {['CSV', 'JSON', 'PDF', 'MD'].map((t) => (
-                <Chip key={t} size="small" label={t} variant="outlined" />
-              ))}
-            </Stack>
-          </Paper>
+          <Tabs value={mode} onChange={(_, v) => setMode(v)} sx={{ minHeight: 42 }}>
+            <Tab value="file" label="File" sx={{ textTransform: 'none', minHeight: 42 }} />
+            <Tab value="paste" label="Paste text" sx={{ textTransform: 'none', minHeight: 42 }} />
+          </Tabs>
+          {mode === 'file' ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Upload CSV, Excel (.xlsx), JSON, PDF, or Markdown. Morph AI extracts JSON and Markdown you can edit, then Save. Cancel does not create a record.
+              </Typography>
+              <Paper
+                variant="outlined"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  pickFile(e.dataTransfer.files?.[0]);
+                }}
+                onClick={() => inputRef.current?.click()}
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  borderStyle: 'dashed',
+                  borderWidth: 2,
+                  borderRadius: 2,
+                  borderColor: dragOver ? 'primary.main' : 'divider',
+                  bgcolor: dragOver ? 'action.hover' : 'background.default',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".csv,.xlsx,.json,.pdf,.md,.markdown,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json,application/pdf,text/markdown"
+                  hidden
+                  onChange={(e) => pickFile(e.target.files?.[0])}
+                />
+                <CloudUploadOutlinedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                <Typography variant="subtitle2">{file ? file.name : 'Drop a file or click to browse'}</Typography>
+                <Stack direction="row" spacing={0.75} justifyContent="center" sx={{ mt: 1 }} flexWrap="wrap">
+                  {['CSV', 'XLSX', 'JSON', 'PDF', 'MD'].map((t) => (
+                    <Chip key={t} size="small" label={t} variant="outlined" />
+                  ))}
+                </Stack>
+              </Paper>
+              <Button
+                variant="outlined"
+                startIcon={loading ? <CircularProgress size={16} /> : <AutoAwesomeOutlinedIcon />}
+                onClick={extractFile}
+                disabled={loading || !file}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+              >
+                {loading ? 'Extracting…' : 'Extract JSON & Markdown'}
+              </Button>
+              {extractedJson ? (
+                <TextField
+                  label="JSON (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedJson}
+                  onChange={(e) => setExtractedJson(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+              {extractedJson || extractedMarkdown ? (
+                <TextField
+                  label="Markdown (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedMarkdown}
+                  onChange={(e) => setExtractedMarkdown(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Paste plain text. Morph AI extracts JSON you can review, then save as generic data. Cancel does not create a record.
+              </Typography>
+              <TextField
+                label="Pasted text"
+                size="small"
+                fullWidth
+                multiline
+                minRows={5}
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+              />
+              <Button
+                variant="outlined"
+                startIcon={loading ? <CircularProgress size={16} /> : <AutoAwesomeOutlinedIcon />}
+                onClick={extractPaste}
+                disabled={loading}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+              >
+                {loading ? 'Extracting…' : 'Extract JSON'}
+              </Button>
+              {extractedJson ? (
+                <TextField
+                  label="JSON (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedJson}
+                  onChange={(e) => setExtractedJson(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+            </>
+          )}
           <TextField label="Title" size="small" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} />
           <TextField
             label="Description (optional)"
@@ -428,8 +641,8 @@ function ImportDialog({ open, onClose, onImported }) {
         <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={submit} disabled={loading || !file} sx={{ textTransform: 'none' }}>
-          {loading ? 'Importing…' : 'Import'}
+        <Button variant="contained" onClick={submit} disabled={loading || !canSubmit} sx={{ textTransform: 'none' }}>
+          {loading ? 'Saving…' : 'Save'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -639,7 +852,7 @@ export default function GenericData() {
                 {labels.nav_generic_data || 'Generic data'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Import any CSV, JSON, PDF, or Markdown — PDFs become markdown articles instantly.
+                Import any CSV, Excel, JSON, PDF, or Markdown — extract JSON and Markdown, edit, then Save. Run AI analysis on the saved record.
               </Typography>
             </Box>
           </Stack>

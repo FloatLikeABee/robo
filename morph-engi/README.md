@@ -1,10 +1,11 @@
 # Morph Engi — Projects
 
-AI **project documents** from files or paste, plus a simple **files library**. Rust API + Svelte UI. Embedded as **Project** in Morph Utils.
+AI **project documents** from files or paste, plus a simple **files library**. Rust API + Svelte UI. Embedded as **Project** in MorphUtils.
 
 ## Quick start
 
 ```bash
+# From the repo root:
 cp .env.example .env
 
 # From repo root (with morph-api running):

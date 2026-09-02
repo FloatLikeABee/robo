@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -54,49 +53,64 @@ func slugifyPublishName(name string) string {
 	return s
 }
 
-func (r *PublishedPageRepository) nextUniqueSlug(ctx context.Context, base string) (string, error) {
-	base = strings.TrimSpace(base)
-	if base == "" {
-		base = "page"
-	}
-
-	candidate := base
-	for i := 2; i <= 5000; i++ {
-		var exists int
-		err := r.db.QueryRowContext(ctx, `SELECT 1 FROM published_pages WHERE slug = ? LIMIT 1`, candidate).Scan(&exists)
-		if errors.Is(err, sql.ErrNoRows) {
-			return candidate, nil
-		}
-		if err != nil {
-			return "", err
-		}
-		candidate = fmt.Sprintf("%s-%d", base, i)
-	}
-	return "", errors.New("could not find available publish slug")
-}
-
 func (r *PublishedPageRepository) ResolveUniqueSlug(ctx context.Context, name string) (string, error) {
-	return r.nextUniqueSlug(ctx, slugifyPublishName(name))
+	_ = ctx
+	return slugifyPublishName(name), nil
 }
 
-func (r *PublishedPageRepository) nextUniqueName(ctx context.Context, base string) (string, error) {
-	base = strings.TrimSpace(base)
-	if base == "" {
-		base = "Untitled page"
+func isUniqueConstraint(err error) bool {
+	if err == nil {
+		return false
 	}
-	candidate := base
-	for i := 2; i <= 5000; i++ {
-		var exists int
-		err := r.db.QueryRowContext(ctx, `SELECT 1 FROM published_pages WHERE name = ? LIMIT 1`, candidate).Scan(&exists)
-		if errors.Is(err, sql.ErrNoRows) {
-			return candidate, nil
-		}
-		if err != nil {
-			return "", err
-		}
-		candidate = fmt.Sprintf("%s (%d)", base, i)
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unique constraint failed") ||
+		strings.Contains(msg, "duplicate entry") ||
+		strings.Contains(msg, "error 1062")
+}
+
+type publishedPageRow struct {
+	ID        int64
+	Name      string
+	Slug      string
+	Theme     string
+	MongoID   string
+	CreatedBy int64
+}
+
+func (r *PublishedPageRepository) lookupBySlug(ctx context.Context, slug string) (*publishedPageRow, error) {
+	const q = `
+SELECT id, name, slug, theme, content_mongo_id, created_by
+FROM published_pages
+WHERE slug = ?
+LIMIT 1`
+	var row publishedPageRow
+	err := r.db.QueryRowContext(ctx, q, strings.TrimSpace(slug)).Scan(
+		&row.ID, &row.Name, &row.Slug, &row.Theme, &row.MongoID, &row.CreatedBy,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return "", errors.New("could not find available publish name")
+	return &row, nil
+}
+
+func (r *PublishedPageRepository) updateExisting(ctx context.Context, row *publishedPageRow, name, theme, html string) (*PublishedPage, error) {
+	if err := r.content.UpdateHTML(ctx, row.MongoID, html, ""); err != nil {
+		return nil, err
+	}
+	_, err := r.db.ExecContext(ctx, `
+UPDATE published_pages
+SET name = ?, theme = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?`, name, theme, row.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &PublishedPage{
+		ID:        row.ID,
+		Name:      name,
+		Slug:      row.Slug,
+		Theme:     theme,
+		CreatedBy: row.CreatedBy,
+	}, nil
 }
 
 func (r *PublishedPageRepository) Create(ctx context.Context, name, theme, html string, createdBy int64) (*PublishedPage, error) {
@@ -112,12 +126,12 @@ func (r *PublishedPageRepository) Create(ctx context.Context, name, theme, html 
 		theme = "default"
 	}
 
-	uniqueName, err := r.nextUniqueName(ctx, name)
-	if err != nil {
-		return nil, err
+	slug := slugifyPublishName(name)
+	existing, err := r.lookupBySlug(ctx, slug)
+	if err == nil {
+		return r.updateExisting(ctx, existing, name, theme, html)
 	}
-	slug, err := r.ResolveUniqueSlug(ctx, uniqueName)
-	if err != nil {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
@@ -129,9 +143,16 @@ func (r *PublishedPageRepository) Create(ctx context.Context, name, theme, html 
 	const ins = `
 INSERT INTO published_pages (name, slug, theme, content_mongo_id, created_by, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-	res, err := r.db.ExecContext(ctx, ins, uniqueName, slug, theme, mongoID, createdBy)
+	res, err := r.db.ExecContext(ctx, ins, name, slug, theme, mongoID, createdBy)
 	if err != nil {
 		_ = r.content.DeleteByHexID(ctx, mongoID)
+		if isUniqueConstraint(err) {
+			row, lookupErr := r.lookupBySlug(ctx, slug)
+			if lookupErr != nil {
+				return nil, err
+			}
+			return r.updateExisting(ctx, row, name, theme, html)
+		}
 		return nil, err
 	}
 	id, err := res.LastInsertId()
@@ -141,7 +162,7 @@ VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 	}
 	return &PublishedPage{
 		ID:        id,
-		Name:      uniqueName,
+		Name:      name,
 		Slug:      slug,
 		Theme:     theme,
 		CreatedBy: createdBy,
@@ -192,8 +213,15 @@ LIMIT ? OFFSET ?`
 	var out []PublishedPageListRow
 	for rows.Next() {
 		var row PublishedPageListRow
-		if err := rows.Scan(&row.ID, &row.Name, &row.Slug, &row.Theme, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt); err != nil {
+		var createdAt, updatedAt sql.NullTime
+		if err := rows.Scan(&row.ID, &row.Name, &row.Slug, &row.Theme, &row.CreatedBy, scanDestTime{&createdAt}, scanDestTime{&updatedAt}); err != nil {
 			return nil, 0, err
+		}
+		if createdAt.Valid {
+			row.CreatedAt = createdAt.Time
+		}
+		if updatedAt.Valid {
+			row.UpdatedAt = updatedAt.Time
 		}
 		out = append(out, row)
 	}

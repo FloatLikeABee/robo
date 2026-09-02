@@ -74,8 +74,15 @@ LIMIT ? OFFSET ?`
 	var out []PublishDraftListRow
 	for rows.Next() {
 		var row PublishDraftListRow
-		if err := rows.Scan(&row.ID, &row.Name, &row.Theme, &row.CreatedBy, &row.CreatedAt, &row.UpdatedAt); err != nil {
+		var createdAt, updatedAt sql.NullTime
+		if err := rows.Scan(&row.ID, &row.Name, &row.Theme, &row.CreatedBy, scanDestTime{&createdAt}, scanDestTime{&updatedAt}); err != nil {
 			return nil, 0, err
+		}
+		if createdAt.Valid {
+			row.CreatedAt = createdAt.Time
+		}
+		if updatedAt.Valid {
+			row.UpdatedAt = updatedAt.Time
 		}
 		out = append(out, row)
 	}
@@ -96,16 +103,23 @@ SELECT id, name, theme, html_content, created_by, created_at, updated_at
 FROM publish_drafts
 WHERE id = ?`
 	var row PublishDraft
+	var createdAt, updatedAt sql.NullTime
 	if err := r.db.QueryRowContext(ctx, q, id).Scan(
 		&row.ID,
 		&row.Name,
 		&row.Theme,
 		&row.HTMLContent,
 		&row.CreatedBy,
-		&row.CreatedAt,
-		&row.UpdatedAt,
+		scanDestTime{&createdAt},
+		scanDestTime{&updatedAt},
 	); err != nil {
 		return nil, err
+	}
+	if createdAt.Valid {
+		row.CreatedAt = createdAt.Time
+	}
+	if updatedAt.Valid {
+		row.UpdatedAt = updatedAt.Time
 	}
 	return &row, nil
 }

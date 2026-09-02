@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Dev launcher for robo platform apps (academi excluded).
-# Folder map: morph, formx, composerx, booki, UsersPanel, SharpReport, …
+# Dev launcher for robo platform apps.
+# Folders: morph, morph-utils, formx, composerx, morph-engi, SharpReport, bk.
 #
 # Usage:
 #   ./start-all.sh                         start everything (foreground; Ctrl+C stops all)
@@ -15,10 +15,10 @@
 #   ./start-all.sh logs <service>          tail -f log file
 #   ./start-all.sh list                    list service names + aliases
 #
-# Aliases (API + UI): morph, morph-utils, bk, formx, composerx, booki,
-#   morph-engi, academi, sharpreport — or `all` for every service below.
+# Aliases (API + UI): morph, morph-utils, bk, formx, composerx,
+#   morph-engi, sharpreport — or `all` for every service below.
 # Neo4j: full-stack start/restart ensures bolt port 7687 is up when `neo4j` CLI exists.
-# Deprecated alias: userspanel (UsersPanel UI/API — auth moved into Morph).
+# Auth: hosted by Morph (the standalone UsersPanel project has been removed).
 #
 set -euo pipefail
 
@@ -27,25 +27,20 @@ RUN_DIR="${ROOT}/.robo-dev"
 LOG_DIR="${RUN_DIR}/logs"
 PID_FILE="${RUN_DIR}/pids"
 
-# Default stack — UsersPanel removed (auth + user admin live in Morph).
-# Deprecated: userspanel-api / userspanel-admin still startable via alias `userspanel`.
+# Default stack — auth + user admin live in Morph (UsersPanel project removed).
 ALL_SERVICES=(
   morph-api
   formx-api
   composerx-api
-  booki-api
   morph-engi-api
   bk-api
-  academi-api
   sharpreport-api
   morph-ui
   morph-utils-ui
   bk-ui
   formx-ui
   composerx-ui
-  booki-ui
   morph-engi-ui
-  academi-ui
   sharpreport-ui
 )
 
@@ -87,17 +82,9 @@ apply_dotenv() {
   done <"$envfile"
 }
 
-# Parent .env first, then app dir (app overrides parent — e.g. booki/.env over backend/).
-load_app_env() {
-  local workdir="$1"
-  local parent
-  parent="$(dirname "$workdir")"
-  if [[ -f "${parent}/.env" ]]; then
-    apply_dotenv "${parent}/.env"
-  fi
-  if [[ -f "${workdir}/.env" ]]; then
-    apply_dotenv "${workdir}/.env"
-  fi
+# Single local config: repo-root .env only (nested app .env files are ignored).
+load_root_env() {
+  apply_dotenv "${ROOT}/.env"
 }
 
 ensure_morph_binary() {
@@ -270,15 +257,9 @@ start_service() {
   remove_pid_entry "$name"
   log "Starting ${name} → ${logfile}"
   (
+    trap '' HUP
     cd "$workdir"
-    if [[ "$name" == "sharpreport-ui" ]]; then
-      # SharpReport/.env is for the Rust backend (PORT, DATABASE_URL, JVM opts, etc.).
-      if [[ -f "${workdir}/.env" ]]; then
-        apply_dotenv "${workdir}/.env"
-      fi
-    else
-      load_app_env "$workdir"
-    fi
+    load_root_env
     exec "$@"
   ) >>"$logfile" 2>&1 &
   disown 2>/dev/null || true
@@ -303,9 +284,6 @@ stop_service() {
 start_one() {
   local name="$1"
   case "$name" in
-    userspanel-api)
-      start_service userspanel-api "${ROOT}/UsersPanel/backend" cargo run
-      ;;
     morph-api)
       ensure_morph_binary
       if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -315,7 +293,7 @@ start_one() {
       fi
       ;;
     formx-api)
-      load_app_env "${ROOT}/formx/backend"
+      load_root_env
       free_listening_port "${SERVER_PORT:-29909}"
       if [[ "$(uname -s)" == "Darwin" ]]; then
         ensure_formx_binary
@@ -332,9 +310,6 @@ start_one() {
         start_service composerx-api "${ROOT}/composerx/backend" go run .
       fi
       ;;
-    booki-api)
-      start_service booki-api "${ROOT}/booki/backend" go run ./cmd/server
-      ;;
     morph-engi-api)
       start_service morph-engi-api "${ROOT}/morph-engi/backend" cargo run
       ;;
@@ -342,14 +317,8 @@ start_one() {
       ensure_bk_venv || { err "bk-api: Python environment not ready"; return 1; }
       start_service bk-api "${ROOT}/bk" "$(bk_python)" main.py
       ;;
-    academi-api)
-      start_service academi-api "${ROOT}/academi/backend" go run ./cmd/main.go
-      ;;
     sharpreport-api)
       start_service sharpreport-api "${ROOT}/SharpReport/backend" cargo run
-      ;;
-    userspanel-admin)
-      start_service userspanel-admin "${ROOT}/UsersPanel/admin" npm run dev
       ;;
     morph-ui)
       start_service morph-ui "${ROOT}/morph/frontend" npm start
@@ -366,14 +335,8 @@ start_one() {
     composerx-ui)
       start_service composerx-ui "${ROOT}/composerx/frontend" npm run dev
       ;;
-    booki-ui)
-      start_service booki-ui "${ROOT}/booki/frontend" npm run dev
-      ;;
     morph-engi-ui)
       start_service morph-engi-ui "${ROOT}/morph-engi/frontend" npm run dev
-      ;;
-    academi-ui)
-      start_service academi-ui "${ROOT}/academi/web" python3 -m http.server 8765 --bind 127.0.0.1
       ;;
     sharpreport-ui)
       start_service sharpreport-ui "${ROOT}/SharpReport/frontend" npm run dev
@@ -397,9 +360,6 @@ resolve_services() {
     all|"")
       echo "${ALL_SERVICES[*]}"
       ;;
-    userspanel|users-panel)
-      echo "userspanel-api userspanel-admin"
-      ;;
     morph)
       echo "morph-api morph-ui"
       ;;
@@ -415,14 +375,8 @@ resolve_services() {
     composerx|tranmail)
       echo "composerx-api composerx-ui"
       ;;
-    booki)
-      echo "booki-api booki-ui"
-      ;;
     morph-engi|engi)
       echo "morph-engi-api morph-engi-ui"
-      ;;
-    academi)
-      echo "academi-api academi-ui"
       ;;
     sharpreport|datapulse)
       echo "sharpreport-api sharpreport-ui"
@@ -483,8 +437,6 @@ stop_all() {
 
 service_url() {
   case "$1" in
-    userspanel-api)     echo "http://127.0.0.1:5001/swagger-ui" ;;
-    userspanel-admin)   echo "http://localhost:5173" ;;
     morph-api)          echo "http://localhost:9090" ;;
     morph-ui)           echo "http://localhost:3031" ;;
     morph-utils-ui)     echo "http://localhost:3040" ;;
@@ -494,13 +446,9 @@ service_url() {
     formx-ui)           echo "http://localhost:19909" ;;
     composerx-api)      echo "http://localhost:8043/health" ;;
     composerx-ui)       echo "http://localhost:8044" ;;
-    booki-api)          echo "http://127.0.0.1:9095/health" ;;
-    booki-ui)           echo "http://localhost:5174" ;;
     morph-engi-api)     echo "http://127.0.0.1:9096/health" ;;
     morph-engi-ui)      echo "http://localhost:5179" ;;
-    academi-api)        echo "http://127.0.0.1:8978/health" ;;
-    academi-ui)         echo "http://localhost:8765" ;;
-    sharpreport-api)    echo "http://127.0.0.1:3050" ;;
+    sharpreport-api)    echo "http://127.0.0.1:${SHARPREPORT_PORT:-3050}" ;;
     sharpreport-ui)     echo "http://localhost:5178" ;;
     *)                  echo "" ;;
   esac
@@ -528,29 +476,23 @@ print_list() {
   cat <<'EOF'
 Services (use with start | stop | restart | logs):
 
-  userspanel-api       UsersPanel Rust API
-  userspanel-admin     UsersPanel Svelte admin UI
   morph-api            Morph / MorphData backend
   morph-ui             Morph React frontend
-  morph-utils-ui       Morph Utils shell (FormsX + ComposerX + DataX)
-  bk-api               AI tools API (Ground Control / Python FastAPI)
-  bk-ui                AI tools UI (Ground Control / React)
-  formx-api            FormsX backend
-  formx-ui             FormsX frontend
-  composerx-api        ComposerX (TranMail) backend
-  composerx-ui         ComposerX frontend
-  booki-api            Booki backend
-  booki-ui             Booki frontend
-  morph-engi-api       Morph Engi civil engineering API (Rust)
-  morph-engi-ui        Morph Engi frontend (Svelte)
-  academi-api          Academi study assistant API (Go)
-  academi-ui           Academi web frontend (static)
-  sharpreport-api      SharpReport / DataPulse backend
-  sharpreport-ui       SharpReport frontend
+  morph-utils-ui       MorphUtils shell (Event Logs, Content Maker, Data Access, Project)
+  bk-api               AI tools API
+  bk-ui                AI tools UI
+  formx-api            Event Logs backend
+  formx-ui             Event Logs frontend
+  composerx-api        Content Maker backend
+  composerx-ui         Content Maker frontend
+  morph-engi-api       Project API (Rust)
+  morph-engi-ui        Project frontend (Svelte)
+  sharpreport-api      Data Access backend
+  sharpreport-ui       Data Access frontend
 
 Aliases (API + UI together):
 
-  userspanel, morph, morph-utils, bk, formx, composerx, booki, morph-engi, academi, sharpreport
+  morph, morph-utils, bk, formx, composerx, morph-engi, sharpreport
   all                  every service above (same as start/stop/restart with no args)
 
 Examples:
@@ -567,8 +509,6 @@ EOF
 
 do_install() {
   log "Installing dependencies..."
-  (cd "${ROOT}/UsersPanel/admin" && npm install)
-  (cd "${ROOT}/UsersPanel/backend" && cargo fetch)
   (cd "${ROOT}/morph/frontend" && npm install)
   (cd "${ROOT}/morph-utils/frontend" && npm install)
   (cd "${ROOT}/bk/frontend" && npm install)
@@ -578,11 +518,8 @@ do_install() {
   (cd "${ROOT}/formx/backend" && go mod download)
   (cd "${ROOT}/composerx/frontend" && npm install)
   (cd "${ROOT}/composerx/backend" && go mod download)
-  (cd "${ROOT}/booki/frontend" && npm install)
-  (cd "${ROOT}/booki/backend" && go mod download)
   (cd "${ROOT}/morph-engi/frontend" && npm install)
   (cd "${ROOT}/morph-engi/backend" && cargo fetch)
-  (cd "${ROOT}/academi/backend" && go mod download)
   (cd "${ROOT}/SharpReport/frontend" && npm install)
   (cd "${ROOT}/SharpReport/backend" && cargo fetch)
   ok "Dependencies ready"
@@ -601,7 +538,7 @@ start_all() {
   done
 
   echo ""
-  ok "All apps started (academi excluded)."
+  ok "All apps started."
   echo ""
   print_status
   echo ""
@@ -617,6 +554,8 @@ usage() {
 }
 
 # --- main ---
+
+load_root_env
 
 CMD="${1:-all}"
 shift || true

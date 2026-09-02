@@ -1,12 +1,12 @@
 # robo — local development
 
-This workspace contains multiple independent platform apps. Use **`start-all.sh`** to run them together in dev.
+This workspace contains the Morph platform apps. Use **`start-all.sh`** to run them together in dev.
 
-For architecture and per-app deep docs, see [`DEVELOPER_BASELINE.md`](./DEVELOPER_BASELINE.md).
+Architecture and per-app notes: [`docs/agents/00-architecture-overview.md`](./docs/agents/00-architecture-overview.md). Local run and build: [`docs/agents/12-build-deploy.md`](./docs/agents/12-build-deploy.md).
 
-**Production / staging (Render or Alibaba Cloud):** see [`DEPLOY-README.md`](./DEPLOY-README.md) and run [`scripts/deploy.sh`](./scripts/deploy.sh).
+**Project static preview (Vercel, UI only):** import this repo with Framework **Other**, root `./`, Build Command `npm run vercel-build`, Output Directory `morph-engi/frontend/dist`. Details: [`morph-engi/README.md`](./morph-engi/README.md#vercel-static-preview).
 
-**Vercel static preview (Projects UI only):** import this repo on Vercel with Framework **Other**, root `./`, then set Build Command to `npm run vercel-build` and Output Directory to `morph-engi/frontend/dist`. Details: [`morph-engi/README.md`](./morph-engi/README.md#vercel-static-preview).
+The supported path is **local `start-all.sh`**. `scripts/deploy.sh` still mentions Render/Alibaba, but the `deploy/` tree is not in this repo — do not treat that script as a complete production runbook.
 
 ---
 
@@ -14,21 +14,21 @@ For architecture and per-app deep docs, see [`DEVELOPER_BASELINE.md`](./DEVELOPE
 
 | Folder | Product | Stack |
 |--------|---------|-------|
-| `morph/` | Morph AI / MorphData | Go + React |
-| `morph-utils/` | Morph Utils (SheetX, ComposerX, DataX, Booki, Projects, Academi) | React (Vite) |
-| `formx/` | FormsX / SheetX | Go + React (Vite) |
-| `composerx/` | ComposerX (TranMail) | Go + Svelte (Vite) |
-| `booki/` | Morph Booki | Go + React (Vite) |
-| `morph-engi/` | Projects / Morph Engi (in Morph Utils) | Rust + Svelte (Vite) |
-| `UsersPanel/` | Users, roles, auth | Rust + Svelte admin |
-| `SharpReport/` | DataPulse / SharpReport | Rust + SvelteKit |
-| `academi/` | Academi (study assistant; in Morph Utils) | Go API + static web (+ React Native) |
-| `bk/` | BK / Ground Control (RAG agent workspace) | Python FastAPI + React |
-| `pkg/` | Shared libraries (`morphai`, etc.) | — |
-| `platform-chat/` | Shared chat drawer UI | — |
-| `morph-broadcast/` | Shared broadcast email composer (legacy; removed from Utils) | — |
+| `morph/` | Morph AI and MorphNotes | Go + React (CRA) |
+| `morph-utils/` | MorphUtils shell (Event Logs, Content Maker, Data Access, Project) | React (Vite) |
+| `formx/` | Event Logs | Go + React (Vite) |
+| `composerx/` | Content Maker | Go + Svelte (Vite) |
+| `morph-engi/` | Project (in MorphUtils) | Rust + Svelte (Vite) |
+| `SharpReport/` | Data Access | Rust + SvelteKit |
+| `bk/` | AI tools (Assistants, RAG, Documents, System) | Python FastAPI + React |
+| `pkg/` | Shared libraries (`morphai`, `morphai-rs`, …) | — |
+| `morphgraph-worker/` | Optional GraphRAG worker | — |
 
-**Legacy names** (still referenced in some docs): `TranDemo` → `morph`, `tranform` → `formx`, `tranmail` → `composerx`.
+**Auth:** Morph hosts platform authentication. Other apps point `USERS_PANEL_BASE_URL` (legacy env name) at the Morph API (`http://127.0.0.1:9090`).
+
+Chat lives in **Morph AI**. MorphUtils modules do not ship a separate assistant drawer.
+
+Booki, Academi, and a standalone UsersPanel app are **not** part of the supported stack (even if leftover folders remain on disk).
 
 ---
 
@@ -38,18 +38,40 @@ Install these before running the stack:
 
 | Tool | Used by |
 |------|---------|
-| **Go** 1.21+ | morph, formx, composerx, booki |
+| **Go** 1.21+ | morph, formx, composerx |
 | **Node.js** 18+ (20+ recommended) | All frontends |
-| **Rust** (stable) + `cargo` | UsersPanel, SharpReport, morph-engi |
-| **Java** 17+ | SharpReport (embedded Metabase) |
+| **Rust** (stable) + `cargo` | Data Access, Project |
+| **Java** 17+ | Data Access (embedded Metabase) |
 | **Neo4j** (optional) | Morph GraphRAG / AI graph — `start-all.sh` tries `neo4j start` on full stack boot |
-| **Python** 3.11+ (optional) | BK / Ground Control API |
+| **Python** 3.11+ | AI tools API |
 
-**No MySQL, MongoDB, or Redis.** Morph AI, Morph Data, ComposerX, SheetX/FormsX, and related Utils backends use embedded SQLite + Badger + in-process cache under each app’s `./data/` directory.
+**No MySQL, MongoDB, or Redis.** Apps use embedded SQLite + Badger + in-process cache under each app’s `./data/` directory.
 
-Each app may have its own `.env` (copy from `.env.example` in that project). **Morph API (`:9090`) is the auth source** — other apps set `USERS_PANEL_BASE_URL=http://127.0.0.1:9090`.
+---
+
+## One config file
+
+Local/dev configuration is a **single repo-root `.env`**. Nested leftover `.env` files are ignored (they must not blank shared keys). Production stays `deploy/.env.production` when that tree exists.
+
+```bash
+cp .env.example .env
+```
+
+Set `MORPH_AI_API_KEY`, `USERS_PANEL_BASE_URL=http://127.0.0.1:9090`, and per-app data paths (`TRAN_SQLITE_PATH`, `COMPOSERX_SQLITE_PATH`, …) in that file. Relative `./data/...` paths stay relative to each app’s working directory.
 
 Default Morph login: **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`).
+
+**Minimum AI setup** (DashScope / Qwen by default):
+
+```bash
+MORPH_AI_API_KEY=sk-your-dashscope-key
+MORPH_AI_MODEL=qwen3-max
+```
+
+After editing `.env`, restart the affected API: `./start-all.sh restart morph-api` (etc.).
+
+**Content Maker only:** optional `TRAN_OPENAI_API_KEY` for reference-library embeddings.  
+**Shared libraries:** [`pkg/morphai/`](./pkg/morphai/) (Go), [`pkg/morphai-rs/`](./pkg/morphai-rs/) (Rust). Auth and AI details: [`docs/agents/01-auth-flow.md`](./docs/agents/01-auth-flow.md), [`docs/agents/02-ai-integration.md`](./docs/agents/02-ai-integration.md).
 
 ---
 
@@ -60,20 +82,13 @@ From the repo root:
 ```bash
 chmod +x start-all.sh   # once
 
-# Start every app (backends + frontends)
-./start-all.sh
-
-# Install deps first, then start
-./start-all.sh --install
+./start-all.sh              # start every remaining app
+./start-all.sh --install    # install deps, then start
 ```
 
 Press **Ctrl+C** or run `./start-all.sh --stop` to shut everything down.
 
-### Standalone data (no MySQL / Mongo / Redis)
-
-Clone → copy `.env.example` → `.env` → `./start-all.sh`. Relational data and documents live under each app’s `./data/` (SQLite + Badger). Optional **Neo4j** is only for AI graph / GraphRAG; uploads and skills enqueue async Neo4j ingest when Neo4j is configured. Morph AI skills UI: `/skills` after login.
-
-**Smoke checklist (this change):** Morph login without ports 3306/27017/6379; ComposerX `/publishes/history` + FormsX `/api/v1/forms` with Morph JWT; `GET /api/skills` returns builtins; `GET /api/admin/neo4j-ingest/status` reachable for admin.
+Clone → `cp .env.example .env` → `./start-all.sh`. Data lives under each app’s `./data/` (SQLite + Badger). Optional **Neo4j** is only for AI graph / GraphRAG. Morph AI Skills: header **Skills** after login.
 
 ---
 
@@ -81,44 +96,36 @@ Clone → copy `.env.example` → `.env` → `./start-all.sh`. Relational data a
 
 | Service | URL |
 |---------|-----|
-| UsersPanel API | http://127.0.0.1:5001/swagger-ui |
-| UsersPanel Admin | http://localhost:5173 |
 | Morph API | http://localhost:9090 |
-| Morph UI | http://localhost:3031 |
-| Morph Utils | http://localhost:3040 |
-| BK API | http://localhost:8000/docs |
-| BK UI | http://localhost:3000 |
-| FormsX API | http://localhost:29909/swagger/index.html |
-| FormsX UI | http://localhost:19909 |
-| ComposerX API | http://localhost:8043/health |
-| ComposerX UI | http://localhost:8044 |
-| Booki API | http://127.0.0.1:9095/health |
-| Morph Booki UI | http://localhost:5174 |
-| Morph Engi API | http://127.0.0.1:9096/health |
-| Morph Engi UI | http://localhost:5179 |
-| SharpReport API | http://127.0.0.1:3050 |
-| SharpReport UI | http://localhost:5178 |
+| Morph AI / MorphNotes UI | http://localhost:3031 |
+| MorphUtils | http://localhost:3040 |
+| AI tools API | http://localhost:8000/docs |
+| AI tools UI | http://localhost:3000 |
+| Event Logs API | http://localhost:29909/swagger/index.html |
+| Event Logs UI | http://localhost:19909 |
+| Content Maker API | http://localhost:8043/health |
+| Content Maker UI | http://localhost:8044 |
+| Project API | http://127.0.0.1:9096/health |
+| Project UI | http://localhost:5179 |
+| Data Access API | http://127.0.0.1:3050 |
+| Data Access UI | http://localhost:5178 |
+
+Data Access API port follows `SHARPREPORT_PORT` in `.env` (Vite on 5178 proxies to it).
 
 ---
 
 ## `start-all.sh` commands
 
-### Start / stop / restart everything
-
-Includes the default stack (academi excluded unless you start it explicitly).
-
 ```bash
 ./start-all.sh              # start all apps (foreground; Ctrl+C stops all)
 ./start-all.sh --install    # npm install / go mod download / cargo fetch, then start
 ./start-all.sh start        # start all (one-shot; skips already running)
-./start-all.sh stop         # stop all  (same as --stop)
+./start-all.sh stop         # stop all
 ./start-all.sh restart      # stop all, then start all again
 ./start-all.sh status       # show running / stopped for each service
 ./start-all.sh list         # print service names and aliases
 ./start-all.sh help         # short usage summary
 ```
-
-`start all` / `stop all` / `restart all` work the same as the no-arg forms above.
 
 ### One app at a time
 
@@ -126,23 +133,16 @@ Includes the default stack (academi excluded unless you start it explicitly).
 ./start-all.sh start <service>
 ./start-all.sh stop <service>
 ./start-all.sh restart <service>
-./start-all.sh logs <service>    # tail -f that app's log
+./start-all.sh logs <service>
 ```
 
 **Examples:**
 
 ```bash
-# Restart only the Morph backend after a code change
 ./start-all.sh restart morph-api
-
-# Restart FormsX frontend only
 ./start-all.sh restart formx-ui
-
-# Restart both API + UI for an app (alias)
 ./start-all.sh restart morph
 ./start-all.sh restart composerx
-
-# Watch logs for a failing service
 ./start-all.sh logs sharpreport-api
 ```
 
@@ -150,15 +150,12 @@ Includes the default stack (academi excluded unless you start it explicitly).
 
 | API | UI | Alias *(restarts both)* |
 |-----|----|-------------------------|
-| `userspanel-api` | `userspanel-admin` | `userspanel` |
 | `morph-api` | `morph-ui` | `morph` |
 | — | `morph-utils-ui` | `morph-utils` |
 | `bk-api` | `bk-ui` | `bk` |
 | `formx-api` | `formx-ui` | `formx` |
 | `composerx-api` | `composerx-ui` | `composerx` |
-| `booki-api` | `booki-ui` | `booki` |
 | `morph-engi-api` | `morph-engi-ui` | `morph-engi`, `engi` |
-| `academi-api` | `academi-ui` | `academi` |
 | `sharpreport-api` | `sharpreport-ui` | `sharpreport` |
 
 You can pass multiple services: `./start-all.sh restart morph-api formx-ui`.
@@ -185,63 +182,27 @@ On macOS, `morph-api` is **built** before run (`go build`) to avoid a known Badg
 
 ### Start order
 
-When starting all apps, **UsersPanel API** starts first. Other backends and frontends follow. Individual `start` / `restart` does not enforce order — start `userspanel-api` before apps that need auth if you bring them up one by one.
+When starting all apps, bring up **Morph API** (auth) first so other apps can resolve sessions. Individual `start` / `restart` does not enforce order — start `morph-api` before apps that need auth if you bring them up one by one.
 
 ### Neo4j (Morph GraphRAG)
 
-On full-stack `start` / `restart` / default `./start-all.sh`, the launcher checks bolt port **7687** and runs `neo4j start` when the CLI is installed. Install with `brew install neo4j` on macOS. Graph features are optional — other apps start even if Neo4j is missing.
-
-### academi
-
-The **academi** app (React Native + Go API) is intentionally excluded. Run it from `academi/` per [`academi/README.md`](./academi/README.md).
+On full-stack `start` / `restart` / default `./start-all.sh`, the launcher checks bolt port **7687** and runs `neo4j start` when the CLI is installed. Install with `brew install neo4j` on macOS. Graph features are optional — other apps start even if Neo4j is missing. Ops notes: [`docs/MORPH_GRAPH_OPS.md`](./docs/MORPH_GRAPH_OPS.md).
 
 ### Port already in use
-
-If a service fails to bind its port:
 
 ```bash
 ./start-all.sh status
 ./start-all.sh logs <service>
-lsof -i :<port>    # find conflicting process
+lsof -i :<port>
 ```
 
 Then `./start-all.sh restart <service>` after freeing the port.
-
-### Environment files
-
-The script loads `.env` from each app's directory when present (e.g. `morph/.env`, `formx/backend/.env`). Configure embedded paths (`TRAN_SQLITE_PATH`, `COMPOSERX_SQLITE_PATH`, …), `MORPH_AI_API_KEY`, and `USERS_PANEL_BASE_URL=http://127.0.0.1:9090` — see each project's `.env.example`.
-
----
-
-## AI provider configuration
-
-All platform assistants (except **morph** and **academi**, which have their own stacks) use the shared **MorphAI** provider — [Alibaba DashScope](https://dashscope.aliyun.com/) with Qwen models by default.
-
-| App | Config file | README section |
-|-----|-------------|----------------|
-| FormsX | `formx/backend/.env` | [`formx/README.md`](./formx/README.md#ai-provider-configuration) |
-| ComposerX | `composerx/backend/.env` (+ optional `ai.config.json`) | [`composerx/backend/README.md`](./composerx/backend/README.md#ai-provider-configuration) |
-| Booki | `booki/.env` | [`booki/README.md`](./booki/README.md#ai-provider-configuration) |
-| UsersPanel | `UsersPanel/backend/.env` | [`UsersPanel/README.md`](./UsersPanel/README.md#ai-provider-configuration) |
-| SharpReport | `SharpReport/.env` | [`SharpReport/README.md`](./SharpReport/README.md#ai-provider-configuration) |
-
-**Minimum setup** (same key can be reused across apps in local dev):
-
-```bash
-MORPH_AI_API_KEY=sk-your-dashscope-key
-MORPH_AI_MODEL=qwen3-max
-```
-
-After editing `.env`, restart that app's API: `./start-all.sh restart formx-api` (etc.).
-
-**ComposerX only:** optional `TRAN_OPENAI_API_KEY` for reference-library embeddings (RAG).  
-**Shared libraries:** [`pkg/morphai/`](./pkg/morphai/) (Go), [`pkg/morphai-rs/`](./pkg/morphai-rs/) (Rust).  
-**Contract:** [`AI_ASSISTANT_MORPHAI_CONTRACT.md`](./AI_ASSISTANT_MORPHAI_CONTRACT.md).
 
 ---
 
 ## Related docs
 
-- [`DEVELOPER_BASELINE.md`](./DEVELOPER_BASELINE.md) — workspace map, shared MorphAI config, conventions
-- [`AI_ASSISTANT_MORPHAI_CONTRACT.md`](./AI_ASSISTANT_MORPHAI_CONTRACT.md) — assistant API contract across apps
-- Per-app READMEs: `morph/`, `formx/`, `composerx/`, `booki/`, `UsersPanel/`, `SharpReport/`, `academi/`
+- [`docs/agents/00-architecture-overview.md`](./docs/agents/00-architecture-overview.md) — live app map
+- [`docs/agents/12-build-deploy.md`](./docs/agents/12-build-deploy.md) — run, build, honest deploy status
+- [`docs/agents/13-conventions.md`](./docs/agents/13-conventions.md) — names, dark-only, one `.env`
+- Per-app READMEs: [`morph/`](./morph/README.md), [`morph-utils/`](./morph-utils/README.md), [`formx/`](./formx/README.md), [`composerx/backend/`](./composerx/backend/README.md), [`SharpReport/`](./SharpReport/README.md), [`morph-engi/`](./morph-engi/README.md), [`bk/`](./bk/README.md)

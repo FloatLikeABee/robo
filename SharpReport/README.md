@@ -1,164 +1,50 @@
-# DataPulse - Metabase-Powered Analytics Platform
+# Data Access (`SharpReport/`)
 
-A modern analytics platform that embeds Metabase as its reporting engine, providing a sleek, intuitive interface for database connectivity, data manipulation, and visualization.
+Rust API + SvelteKit UI for **Data Access**: data tables, file-based reports, embedded Metabase. MorphUtils iframe: `/datax` on **5178**. Product UI is **dark-only** (no theme switch).
 
-## Features
+Agent notes: [`docs/agents/07-rust-apps.md`](../docs/agents/07-rust-apps.md). More detail: [`docs/API.md`](./docs/API.md), [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md), [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 
-- **Metabase Integration**: Embed Metabase dashboards and queries with signed JWT tokens
-- **Database Connectivity**: Connect to any Metabase-compatible database
-- **First-Run Setup**: Automatic Metabase initialization and configuration
-- **Modern UI**: Svelte 5 frontend with TailwindCSS and dark/light themes
-- **Rust Backend**: Fast, reliable, and secure API server
-- **Docker Deployment**: Easy containerized deployment
+## Stack
 
-## Tech Stack
+- **Backend:** Rust, Axum, SQLx (SQLite), Tokio, Metabase subprocess
+- **Frontend:** SvelteKit + Svelte 5, TailwindCSS, ECharts
+- **Auth:** Morph JWT (`USERS_PANEL_BASE_URL` → Morph `:9090`). Reuse `userspanel_session_token`; do not add a second login form.
 
-### Backend
-- Rust 2024 Edition
-- Axum web framework
-- SQLx for database access
-- Tokio for async runtime
-- Metabase process management
+## Ports
 
-### Frontend
-- Svelte 5 with Runes
-- TailwindCSS v4
-- Lucide icons
-- ECharts for visualization
+| | |
+|--|--|
+| UI | http://localhost:5178 |
+| API | `SHARPREPORT_PORT` in the repo-root `.env` (often 3050). Vite **must** proxy 5178 to that port. |
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
-- Rust 1.84+
-- Node.js 22+
-- Java 17+ (for Metabase)
-- Docker (optional)
+- Rust (stable)
+- Node.js 18+
+- Java 17+ (Metabase)
 
-### Development Setup
+No MySQL/Mongo/Redis required for local SQLite.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/your-repo/datapulse.git
-cd datapulse
-```
-
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-3. Start the development servers:
-```bash
-# In one terminal
-cd backend
-cargo run
-
-# In another terminal
-cd frontend
-npm install
-npm run dev
-```
-
-### Docker Deployment
-
-1. Build and start containers:
-```bash
-cd deploy
-docker-compose up --build
-```
-
-2. Access the application at `http://localhost:3000`
-
-## Project Structure
-
-```
-datapulse/
-├── backend/          # Rust backend
-├── frontend/         # Svelte frontend
-├── deploy/           # Docker configuration
-├── metabase/         # Metabase JAR storage
-├── docs/             # Documentation
-└── design.md         # Architecture design
-```
-
-## Configuration
-
-See `.env.example` for all configuration options.
-
-## AI provider configuration
-
-SharpReport (DataPulse) uses **MorphAI** ([`pkg/morphai-rs`](../../pkg/morphai-rs)) for the report-building assistant in the UI (SQL help, chart guidance, Metabase context).
-
-### 1. Get a DashScope API key
-
-Create an API key at [Alibaba Cloud DashScope](https://dashscope.aliyun.com/) (Qwen models).
-
-### 2. Configure the backend
-
-Copy and edit the repo **`.env`**:
+## Run
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # repo root
+./start-all.sh start morph-api sharpreport
 ```
 
-Add:
-
-```bash
-MORPH_AI_API_KEY=sk-your-dashscope-key
-MORPH_AI_MODEL=qwen3-max
-# optional:
-# MORPH_AI_API_URL=https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
-```
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `MORPH_AI_API_KEY` | _(empty)_ | **Required** for LLM assistant |
-| `MORPH_AI_MODEL` | `qwen3-max` | Chat model |
-| `MORPH_AI_API_URL` | DashScope text-generation URL | Optional endpoint override |
-
-**Legacy fallbacks:** `GEMINI_API_KEY`, `GEMINI_MODEL`.
-
-The Rust backend loads `.env` from the `SharpReport/` directory when you run `cargo run` from `backend/`.
-
-### 3. Restart
+Manual:
 
 ```bash
 cd backend && cargo run
+cd frontend && npm install && npm run dev
 ```
 
-Or: `./start-all.sh restart sharpreport-api`
+If MorphUtils `/datax` refuses to connect, `sharpreport-ui` on 5178 is down or bound oddly — start it even if the API is already up.
 
-### 4. Verify
+## AI
 
-1. Open `http://localhost:5178` and sign in (UsersPanel account).
-2. Open the **AI assistant** drawer in Report Builder or Reports hub.
-3. Ask about SQL or report setup — without a key you get static guidance mentioning `MORPH_AI_API_KEY`.
+[`pkg/morphai-rs`](../pkg/morphai-rs) for table/report help. Set `MORPH_AI_API_KEY` in the root `.env`. Operator chat is Morph AI, not a satellite drawer.
 
-**Assistant API:** `POST /api/v1/assistant/chat` (also aliased as `/api/v1/reports/assistant/chat`).
-
-See also: [`AI_ASSISTANT_MORPHAI_CONTRACT.md`](../../AI_ASSISTANT_MORPHAI_CONTRACT.md).
-
-## License
-
-Proprietary - All rights reserved
-
-## Roadmap
-
-- [ ] Complete backend API implementation
-- [ ] Finish frontend components
-- [ ] Implement Metabase embedding
-- [ ] Add database management UI
-- [ ] Build query builder interface
-- [ ] Create dashboard designer
-- [ ] Implement user management
-- [ ] Add SSO integration
-- [ ] Production hardening
-
-## Contributing
-
-This is a proprietary project. Contributions are not currently accepted.
-
-## Support
-
-For issues or questions, please contact support@datapulse.app
+```bash
+./start-all.sh restart sharpreport-api
+```

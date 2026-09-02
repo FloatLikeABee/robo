@@ -4,6 +4,19 @@ from typing import Optional, List
 import os
 
 
+def _repo_root_env_file() -> Optional[str]:
+    """Absolute path to repo-root `.env` (next to start-all.sh), or None."""
+    d = os.path.abspath(os.path.dirname(__file__))
+    while True:
+        if os.path.isfile(os.path.join(d, "start-all.sh")):
+            env_path = os.path.join(d, ".env")
+            return env_path if os.path.isfile(env_path) else None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
 def _read_local_key(filename: str) -> str:
   """
   Read a secret key from a local file (one-line), returning empty string if missing.
@@ -20,9 +33,9 @@ def _read_local_key(filename: str) -> str:
 
 
 class Settings(BaseSettings):
-    """Loads env vars from the process environment and, if present, `.env` then `env` at the project root."""
+    """Loads env vars from the process environment and, if present, the repo-root `.env` only."""
     model_config = SettingsConfigDict(
-        env_file=(".env", "env"),
+        env_file=_repo_root_env_file() or (),
         env_file_encoding="utf-8",
         extra="ignore",
     )

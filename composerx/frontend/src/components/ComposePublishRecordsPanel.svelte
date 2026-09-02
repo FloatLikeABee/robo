@@ -1,18 +1,21 @@
 <script>
+  import { mergePublishedContents } from '../lib/publishedContents.js'
+
   /** @type {{ apiBase: string, getAuthHeaders: (extra?: Record<string, string>) => Record<string, string>, notify?: (kind?: string, msg?: string) => void }} */
   let { apiBase, getAuthHeaders, notify = () => {} } = $props()
 
   let drafts = $state([])
   let draftsLoading = $state(false)
-  let draftsTotal = $state(0)
   let published = $state([])
   let publishedLoading = $state(false)
-  let publishedTotal = $state(0)
 
   /** @type {{ id: number, name: string, html_content: string, theme: string, updated_at: string } | null} */
   let draftDetail = $state(null)
   let draftDetailOpen = $state(false)
   let draftDetailLoading = $state(false)
+
+  const rows = $derived(mergePublishedContents(drafts, published))
+  const loading = $derived(draftsLoading || publishedLoading)
 
   function endpoint(path) {
     return `${apiBase}${path}`
@@ -52,7 +55,6 @@
     try {
       const data = await apiGet('/publish-drafts?limit=200&offset=0')
       drafts = data?.items || []
-      draftsTotal = data?.total || drafts.length
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Failed to load drafts')
     } finally {
@@ -65,12 +67,15 @@
     try {
       const data = await apiGet('/publishes/history?limit=200&offset=0')
       published = data?.items || []
-      publishedTotal = data?.total || published.length
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Failed to load publish history')
     } finally {
       publishedLoading = false
     }
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadDrafts(), loadPublished()])
   }
 
   async function openDraftDetail(id) {
@@ -98,99 +103,60 @@
   }
 
   $effect(() => {
-    void loadDrafts()
-    void loadPublished()
+    void refreshAll()
   })
 </script>
 
 <section class="panel panel-wide publish-records">
   <header class="panel-header">
-    <div>
-      <h2>Published contents</h2>
-      <span class="panel-meta">Saved HTML drafts and published page history.</span>
-    </div>
+    <h2>Published contents</h2>
     <div class="publish-records-actions">
-      <button type="button" class="btn-secondary" onclick={loadDrafts} disabled={draftsLoading}>Refresh drafts</button>
-      <button type="button" class="btn-secondary" onclick={loadPublished} disabled={publishedLoading}>Refresh history</button>
+      <button type="button" class="btn-secondary" onclick={refreshAll} disabled={loading}>Refresh</button>
     </div>
   </header>
 
   <div class="panel-body publish-records-body">
-    <div class="publish-records-grid">
-      <section class="publish-records-card">
-        <div class="publish-records-card-head">
-          <h3>Saved HTML files</h3>
-          <span>{draftsTotal}</span>
-        </div>
-        <div class="table-scroll">
-          <table class="grid">
-            <thead>
+    <div class="table-scroll">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Path</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {#if loading && rows.length === 0}
+            <tr class="grid-empty"><td colspan="5">Loading…</td></tr>
+          {:else if rows.length === 0}
+            <tr class="grid-empty"><td colspan="5">No saved or published HTML yet. Use <strong>Save HTML</strong> or <strong>Publish</strong> in Compose &amp; Publish.</td></tr>
+          {:else}
+            {#each rows as row (row.key)}
               <tr>
-                <th>Name</th>
-                <th>Theme</th>
-                <th>Updated</th>
-                <th></th>
+                <td>{row.name}</td>
+                <td>{row.status}</td>
+                <td>{#if row.path}<code>{row.path}</code>{:else}—{/if}</td>
+                <td>{row.updated_at ? new Date(row.updated_at).toLocaleString() : '—'}</td>
+                <td class="grid-actions">
+                  <span class="grid-actions-inner">
+                    {#if row.canView}
+                      <button type="button" class="btn-ghost" onclick={() => openDraftDetail(row.draftId)}>View</button>
+                    {/if}
+                    {#if row.canDelete}
+                      <button type="button" class="btn-ghost btn-danger-lite" onclick={() => deleteDraft(row.draftId)}>Delete</button>
+                    {/if}
+                    {#if row.canOpen}
+                      <a class="btn-ghost publish-open-link" href={row.path} target="_blank" rel="noreferrer">Open</a>
+                    {/if}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {#if draftsLoading}
-                <tr class="grid-empty"><td colspan="4">Loading drafts…</td></tr>
-              {:else if drafts.length === 0}
-                <tr class="grid-empty"><td colspan="4">No saved HTML yet. Use <strong>Save HTML</strong> in Compose &amp; Publish.</td></tr>
-              {:else}
-                {#each drafts as row}
-                  <tr>
-                    <td>{row.name}</td>
-                    <td>{row.theme || 'default'}</td>
-                    <td>{row.updated_at ? new Date(row.updated_at).toLocaleString() : '—'}</td>
-                    <td class="grid-actions">
-                      <button type="button" class="btn-ghost" onclick={() => openDraftDetail(row.id)}>View</button>
-                      <button type="button" class="btn-ghost btn-danger-lite" onclick={() => deleteDraft(row.id)}>Delete</button>
-                    </td>
-                  </tr>
-                {/each}
-              {/if}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="publish-records-card">
-        <div class="publish-records-card-head">
-          <h3>Published history</h3>
-          <span>{publishedTotal}</span>
-        </div>
-        <div class="table-scroll">
-          <table class="grid">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Path</th>
-                <th>Updated</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {#if publishedLoading}
-                <tr class="grid-empty"><td colspan="4">Loading history…</td></tr>
-              {:else if published.length === 0}
-                <tr class="grid-empty"><td colspan="4">No published pages yet.</td></tr>
-              {:else}
-                {#each published as row}
-                  <tr>
-                    <td>{row.name}</td>
-                    <td><code>/public/p/{row.slug}</code></td>
-                    <td>{row.updated_at ? new Date(row.updated_at).toLocaleString() : '—'}</td>
-                    <td class="grid-actions">
-                      <a class="btn-ghost publish-open-link" href={`/public/p/${row.slug}`} target="_blank" rel="noreferrer">Open</a>
-                    </td>
-                  </tr>
-                {/each}
-              {/if}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            {/each}
+          {/if}
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
@@ -248,6 +214,10 @@
     font-size: 0.76rem;
     cursor: pointer;
     text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    text-box: trim-both cap alphabetic;
   }
 
   .btn-ghost:hover {
@@ -269,7 +239,7 @@
   .panel-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 0.9rem;
     flex-wrap: wrap;
     border-bottom: 1px solid var(--color-border-subtle);
@@ -279,11 +249,6 @@
   .panel-header h2 {
     margin: 0;
     font-size: 1rem;
-  }
-
-  .panel-meta {
-    font-size: 0.76rem;
-    color: var(--color-text-subtle);
   }
 
   .panel-body {
@@ -296,27 +261,13 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   .publish-records-body {
     overflow: hidden;
-  }
-
-  .publish-records-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.85rem;
-    min-height: 0;
-  }
-
-  .publish-records-card {
-    min-height: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 0.85rem;
-    background: var(--color-bg-elevated);
-    overflow: hidden;
   }
 
   .table-scroll {
@@ -335,7 +286,7 @@
   table.grid td {
     padding: 0.48rem 0.55rem;
     text-align: left;
-    vertical-align: top;
+    vertical-align: middle;
     border-bottom: 1px solid var(--color-border-subtle);
   }
 
@@ -355,18 +306,10 @@
     white-space: nowrap;
   }
 
-  .publish-records-card-head {
-    display: flex;
-    justify-content: space-between;
+  .grid-actions-inner {
+    display: inline-flex;
     align-items: center;
-    padding: 0.55rem 0.7rem;
-    border-bottom: 1px solid var(--color-border-subtle);
-    background: linear-gradient(90deg, var(--color-primary-soft), transparent);
-  }
-
-  .publish-records-card-head h3 {
-    margin: 0;
-    font-size: 0.84rem;
+    gap: 0.2rem;
   }
 
   .publish-open-link {
@@ -454,11 +397,5 @@
     color: var(--color-text);
     font-size: 0.78rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  }
-
-  @media (max-width: 1080px) {
-    .publish-records-grid {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

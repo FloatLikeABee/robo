@@ -2,7 +2,7 @@ package surveybot
 
 import "strings"
 
-// UIBlock is an MCP-app style interactive widget for platform-chat.
+// UIBlock is an MCP-app style interactive widget for assistant chat UIs.
 type UIBlock struct {
 	Type     string          `json:"type"` // mcp_app
 	Widget   string          `json:"widget"`

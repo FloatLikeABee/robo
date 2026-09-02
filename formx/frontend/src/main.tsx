@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { setAuthToken } from './lib/api'
 
-/** Morph Utils / Morph AI handoff: ?userspanel_token=… → shared session cookie. */
+/** MorphUtils / Morph AI handoff: ?userspanel_token=… → shared session cookie. */
 function consumePlatformTokenFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search)

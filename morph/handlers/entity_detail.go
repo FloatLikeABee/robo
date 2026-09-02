@@ -114,7 +114,7 @@ func popDetailString(in map[string]interface{}) (string, bool, error) {
 func (h *Handlers) savePoppedDetail(c *gin.Context, entity string, id int, jsonText string) error {
 	store := h.entityDetailStore()
 	if store == nil {
-		return nil
+		return fmt.Errorf("detail store not configured")
 	}
 	ctx := c.Request.Context()
 	if err := store.SetEntityDetailJSON(ctx, entity, id, jsonText); err != nil {

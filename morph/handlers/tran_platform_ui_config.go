@@ -12,7 +12,7 @@ import (
 // Default platform labels (MorphData + generic module names). DB stores overrides only.
 func platformUILabelDefaults() map[string]string {
 	return map[string]string{
-		"product_name":               "MorphData",
+        "product_name":               "MorphNotes",
 		"ai_assistant_name":          "Morph AI",
 		"nav_districts_facilities":   "Places",
 		"nav_people":                 "People",

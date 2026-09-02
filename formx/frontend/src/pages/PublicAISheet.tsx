@@ -16,7 +16,7 @@ function sessionKey(slug: string) {
 
 export function PublicAISheet() {
   const { slug = '' } = useParams();
-  const [title, setTitle] = useState('AI Survey');
+  const [title, setTitle] = useState('Info Sheet');
   const [metaError, setMetaError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
@@ -120,7 +120,7 @@ export function PublicAISheet() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <header className="border-b border-white/10 px-4 py-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.22em] text-violet-300/80">SurveyX · AI Survey</p>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-violet-300/80">Event Logs · Info Sheet</p>
           <h1 className="text-lg font-semibold">{title}</h1>
         </div>
         {done ? (

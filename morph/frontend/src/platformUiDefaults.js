@@ -1,6 +1,6 @@
 /** Keys and defaults must stay in sync with handlers/tran_platform_ui_config.go */
 export const defaultPlatformUILabels = {
-  product_name: 'MorphData',
+  product_name: 'MorphNotes',
   ai_assistant_name: 'Morph AI',
   nav_districts_facilities: 'Places',
   nav_people: 'People',

@@ -9,6 +9,7 @@ require (
 	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/robo/assistmd v0.0.0
 	github.com/robo/morphai v0.0.0
+	github.com/robo/repoenv v0.0.0
 	github.com/robo/webresearch v0.0.0
 	github.com/sashabaranov/go-openai v1.41.2
 	modernc.org/sqlite v1.56.0
@@ -32,6 +33,7 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
@@ -67,3 +69,5 @@ replace github.com/robo/morphai => ../../pkg/morphai
 replace github.com/robo/assistmd => ../../pkg/assistmd
 
 replace github.com/robo/webresearch => ../../pkg/webresearch
+
+replace github.com/robo/repoenv => ../../pkg/repoenv

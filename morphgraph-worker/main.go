@@ -12,13 +12,12 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 	"github.com/robo/morphgraph"
+	"github.com/robo/repoenv"
 )
 
 func main() {
-	_ = godotenv.Load()
-	_ = godotenv.Load(".env")
+	_ = repoenv.Load()
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(2)

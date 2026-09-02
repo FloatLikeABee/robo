@@ -5,35 +5,20 @@ import { QuestionPromptAttachment } from '../components/QuestionPromptAttachment
 import { api, type Form, type FormPage, type Question, type QuestionRule } from '../lib/api';
 
 const PUBLIC_THEME_KEY = 'sheetx-public-theme';
-const LEGACY_PUBLIC_THEME_KEY = 'formsx-public-theme';
 
 function useRespondentTheme() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      const saved =
-        localStorage.getItem(PUBLIC_THEME_KEY) ?? localStorage.getItem(LEGACY_PUBLIC_THEME_KEY);
-      return saved === 'light' ? 'light' : 'dark';
-    } catch {
-      return 'dark';
-    }
-  });
   useEffect(() => {
     try {
-      localStorage.setItem(PUBLIC_THEME_KEY, theme);
+      localStorage.setItem(PUBLIC_THEME_KEY, 'dark');
     } catch {
       /* ignore */
     }
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
-  useEffect(() => {
+    document.documentElement.classList.add('dark');
     return () => {
       document.documentElement.classList.remove('dark');
     };
   }, []);
-  return {
-    isDark: theme === 'dark',
-    toggle: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
-  };
+  return { isDark: true as const };
 }
 
 /** Stable per-browser ID so single-response forms can enforce one submission. */
@@ -98,30 +83,11 @@ function formatExamElapsed(ms: number): string {
   return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
 }
 
-function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={
-        isDark
-          ? 'fixed top-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg backdrop-blur-md transition hover:border-violet-400/40 hover:bg-white/10'
-          : 'fixed top-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-lg shadow-sm backdrop-blur-md transition hover:border-violet-300 hover:shadow-md'
-      }
-    >
-      {isDark ? '☀' : '☾'}
-    </button>
-  );
-}
-
 function PublicFormShell({
   isDark,
-  onToggleTheme,
   children,
 }: {
   isDark: boolean;
-  onToggleTheme: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -139,7 +105,6 @@ function PublicFormShell({
           <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_0%_60%,rgba(217,70,239,0.06),transparent)]" />
         </>
       )}
-      <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
       <div className="relative mx-auto max-w-xl px-4 py-12 pb-24 sm:py-14 sm:pb-28">{children}</div>
     </div>
   );
@@ -168,7 +133,7 @@ function secondaryBtnClass(isDark: boolean) {
 
 export function PublicForm() {
   const { slug } = useParams<{ slug: string }>();
-  const { isDark, toggle: toggleTheme } = useRespondentTheme();
+  const { isDark } = useRespondentTheme();
   const [form, setForm] = useState<Form | null>(null);
   const [pages, setPages] = useState<FormPage[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -374,7 +339,7 @@ export function PublicForm() {
 
   if (loading) {
     return (
-      <PublicFormShell isDark={isDark} onToggleTheme={toggleTheme}>
+      <PublicFormShell isDark={isDark}>
         <div className={`text-center text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           Loading form…
         </div>
@@ -384,7 +349,7 @@ export function PublicForm() {
 
   if (error || !form) {
     return (
-      <PublicFormShell isDark={isDark} onToggleTheme={toggleTheme}>
+      <PublicFormShell isDark={isDark}>
         <div className={`text-center text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>
           {error || 'Form not found'}
         </div>
@@ -394,7 +359,7 @@ export function PublicForm() {
 
   if (slug && form.exam_mode && examPhase === 'prestart') {
     return (
-      <PublicFormShell isDark={isDark} onToggleTheme={toggleTheme}>
+      <PublicFormShell isDark={isDark}>
         <div className={`${cardClass(isDark)} mb-5`}>
           <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {form.name}
@@ -430,7 +395,7 @@ export function PublicForm() {
 
   if (submitStatus === 'done') {
     return (
-      <PublicFormShell isDark={isDark} onToggleTheme={toggleTheme}>
+      <PublicFormShell isDark={isDark}>
         <div className={`${cardClass(isDark)} text-center`}>
           <div
             className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-2xl ${
@@ -461,7 +426,7 @@ export function PublicForm() {
   const showExamTimer = !!(slug && form.exam_mode && examPhase === 'active');
 
   return (
-    <PublicFormShell isDark={isDark} onToggleTheme={toggleTheme}>
+    <PublicFormShell isDark={isDark}>
       <div className={`${cardClass(isDark)} mb-5`}>
         <h1 className={`text-xl font-semibold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
           {form.name}

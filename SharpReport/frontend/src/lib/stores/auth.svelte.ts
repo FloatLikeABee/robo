@@ -83,6 +83,38 @@ function mapUser(raw: MeResponse): User {
 	};
 }
 
+/** Morph JWT payload — enough to treat the user as signed in when Data Access /auth/me is down. */
+function userFromJwt(token: string): User | null {
+	const parts = token.split('.');
+	if (parts.length !== 3) return null;
+	try {
+		let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+		const pad = b64.length % 4;
+		if (pad) b64 += '='.repeat(4 - pad);
+		const payload = JSON.parse(atob(b64)) as {
+			sub?: string;
+			email?: string;
+			username?: string;
+			roles?: string[];
+		};
+		const email = (payload.email || '').trim();
+		const username = (payload.username || '').trim();
+		const name = username || email || 'Signed in';
+		if (!email && !payload.sub) return null;
+		const roles = Array.isArray(payload.roles) ? payload.roles : [];
+		const isAdmin = roles.some((r) => r.toLowerCase() === 'admin');
+		return {
+			id: String(payload.sub || email),
+			email: email || name,
+			name,
+			role: isAdmin ? 'admin' : 'viewer',
+			roles
+		};
+	} catch {
+		return null;
+	}
+}
+
 export async function login(
 	email: string,
 	password: string,
@@ -161,7 +193,20 @@ export async function checkAuth(): Promise<AuthState> {
 		};
 	} catch (error) {
 		console.error('Auth check error:', error);
-		setAuthToken('');
+		// 401 already cleared the token. Keep a Morph JWT on API-down / 502 so Data Access
+		// does not wipe Morph AI SSO or bounce to a second login form.
+		const still = getAuthToken();
+		if (still) {
+			const fallback = userFromJwt(still);
+			if (fallback) {
+				return {
+					isAuthenticated: true,
+					user: fallback,
+					loading: false,
+					token: still
+				};
+			}
+		}
 		return {
 			isAuthenticated: false,
 			user: null,
@@ -169,3 +214,4 @@ export async function checkAuth(): Promise<AuthState> {
 		};
 	}
 }
+

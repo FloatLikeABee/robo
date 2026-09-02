@@ -34,15 +34,15 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
-          <Route index element={<Navigate to="/survey-bot" replace />} />
+          <Route index element={<Navigate to="/events-info" replace />} />
           <Route path="forms" element={<Navigate to="/survey-bot" replace />} />
           <Route path="events-info" element={<EventsInfo />} />
           <Route path="survey-bot" element={<SurveyBot />} />
-          <Route path="settings" element={<Navigate to="/survey-bot" replace />} />
+          <Route path="settings" element={<Navigate to="/events-info" replace />} />
           <Route path="forms/new" element={<Navigate to="/survey-bot" replace />} />
           <Route path="forms/:id/edit" element={<Navigate to="/survey-bot" replace />} />
           <Route path="forms/:id/results" element={<Navigate to="/survey-bot" replace />} />
-          <Route path="*" element={<Navigate to="/survey-bot" replace />} />
+          <Route path="*" element={<Navigate to="/events-info" replace />} />
         </Route>
         <Route path="f/:slug" element={<PublicForm />} />
         <Route path="s/:slug" element={<PublicAISheet />} />

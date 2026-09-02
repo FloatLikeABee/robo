@@ -85,28 +85,26 @@ func (h *Handlers) TranTextAssist(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"text": out})
 }
 
+const textAssistBodyOnlyRules = `Follow only that title as the topic. Do not invent a different subject. Do not output a replacement title (the app keeps the user's title). Plain text, no preamble, no markdown fences. Output only the body.`
+
 func textAssistGenerateNotePrompt(seed string) string {
 	if seed == "" {
-		return `Write a concise personal note (2–6 short paragraphs, plain text, no preamble) for a transportation / school operations staff member. Pick a realistic operational topic (e.g. route change, parent communication, vehicle check). Output only the note body.`
+		return `Write a concise personal note (2–6 short paragraphs) on a generic personal or work topic. Plain text, no preamble, no markdown fences. Output only the body.`
 	}
-	return `Write a concise personal note (2–6 short paragraphs, plain text, no preamble) for a transportation / school operations staff member.
+	return `Title: "` + seed + `"
 
-Topic / intent:
-` + seed + `
-
-Output only the note body.`
+Write a concise personal note (2–6 short paragraphs) about that title.
+` + textAssistBodyOnlyRules
 }
 
 func textAssistGenerateTodoPrompt(seed string) string {
 	if seed == "" {
-		return `Write a single actionable TODO for a transportation / school operations staff member: one clear title line, then up to 5 bullet subtasks (plain text, no preamble). Output only the TODO text.`
+		return `Write an actionable TODO body: up to 5 bullet subtasks for a generic personal or work task. Plain text, no preamble, no markdown fences. Output only the body.`
 	}
-	return `Write a single actionable TODO for a transportation / school operations staff member: one clear title line, then up to 5 bullet subtasks (plain text, no preamble).
+	return `Title: "` + seed + `"
 
-Context:
-` + seed + `
-
-Output only the TODO text.`
+Write an actionable TODO body for that title: up to 5 bullet subtasks.
+` + textAssistBodyOnlyRules
 }
 
 func textAssistImprovePrompt(kind, seed, text string) string {
@@ -119,7 +117,7 @@ func textAssistImprovePrompt(kind, seed, text string) string {
 	}
 	extra := ""
 	if strings.TrimSpace(seed) != "" {
-		extra = "\nAdditional instruction from user:\n" + seed + "\n"
+		extra = "\nItem title (keep this topic):\n" + seed + "\n"
 	}
 	return `Improve the following ` + kindHint + ` text for clarity, tone, and usefulness. Keep the same meaning; fix grammar; be concise. Plain text only, no markdown fences, no preamble or closing remarks.` + extra + `
 
@@ -135,12 +133,14 @@ func textAssistTaskChainStepPrompt(taskDescription, priorOutputs string) string 
 	if prior != "" {
 		priorBlock = prior + "\n"
 	}
-	return `You are Morph AI executing one step in a user's "task chain" for school transportation / MorphData-style operations.
+	return `You are Morph AI executing one step in a user's task chain. Follow the current task text as the only domain.
+
+Current task:
+` + taskDescription + `
 
 Prior outputs from earlier task nodes (plain text, may be empty):
 ` + priorBlock + `
-Current task — fulfill it in a single response:
-` + taskDescription + `
+Fulfill the current task in a single response.
 
 Rules:
 - Produce concrete, useful output: drafts, summaries, plans, email text, checklists, tables in plain text, or step-by-step instructions — whatever fits the task.

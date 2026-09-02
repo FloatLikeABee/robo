@@ -156,7 +156,7 @@ func (h *Handler) execMongoMCPTool(ctx context.Context, tool string, args map[st
 	case "list_events_info":
 		page := intArg(args, "page", 1)
 		limit := intArg(args, "limit", 50)
-		list, total, err := h.EventInfoRepo.List(ctx, page, limit)
+		list, total, err := h.EventInfoRepo.List(ctx, page, limit, "")
 		if err != nil {
 			return nil, err
 		}

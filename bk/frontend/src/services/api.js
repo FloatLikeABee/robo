@@ -552,27 +552,6 @@ export const getSavedConversationContent = async (filename) => {
   return response.data;
 };
 
-// Image Generation
-export const generateImage = async (payload) => {
-  const response = await api.post('/images/generate', payload);
-  return response.data;
-};
-
-export const polishImagePrompt = async (payload) => {
-  const response = await api.post('/images/polish-prompt', payload);
-  return response.data;
-};
-
-export const getGeneratedImages = async () => {
-  const response = await api.get('/images');
-  return response.data;
-};
-
-export const deleteGeneratedImage = async (filename) => {
-  const response = await api.delete(`/images/${encodeURIComponent(filename)}`);
-  return response.data;
-};
-
 // Graphic Document Generator (LLM + several image downloads; allow long server time)
 export const generateGraphicDocument = async (payload) => {
   const response = await api.post('/graphic-document/generate', payload, {
@@ -585,134 +564,6 @@ export const generateGraphicDocument = async (payload) => {
 export const executeBrowserAutomation = async (payload) => {
   const response = await api.post('/browser-automation/execute', payload);
   return response.data;
-};
-
-// Image Reader
-export const readImage = async (file, prompt = null, minPixels = null, maxPixels = null) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (prompt) formData.append('prompt', prompt);
-  if (minPixels) formData.append('min_pixels', minPixels);
-  if (maxPixels) formData.append('max_pixels', maxPixels);
-  
-  const response = await api.post('/image-reader/read', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-export const readMultipleImages = async (files, prompt = null, minPixels = null, maxPixels = null) => {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
-  if (prompt) formData.append('prompt', prompt);
-  if (minPixels) formData.append('min_pixels', minPixels);
-  if (maxPixels) formData.append('max_pixels', maxPixels);
-  
-  const response = await api.post('/image-reader/read-multiple', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-/** Read image (OCR) then process with chosen AI model using system prompt. */
-export const readImageAndProcess = async (file, systemPrompt, provider, model, ocrPrompt = null) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('system_prompt', systemPrompt);
-  formData.append('provider', provider);
-  formData.append('model', model);
-  if (ocrPrompt) formData.append('ocr_prompt', ocrPrompt);
-
-  const response = await api.post('/image-reader/read-and-process', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-/** Read multiple images (OCR each), combine text, then process with AI once. */
-export const readImageAndProcessMultiple = async (files, systemPrompt, provider, model, ocrPrompt = null) => {
-  const formData = new FormData();
-  files.forEach((file) => formData.append('files', file));
-  formData.append('system_prompt', systemPrompt);
-  formData.append('provider', provider);
-  formData.append('model', model);
-  if (ocrPrompt) formData.append('ocr_prompt', ocrPrompt);
-
-  const response = await api.post('/image-reader/read-and-process-multiple', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-// PDF Reader
-export const readPDF = async (formData) => {
-  const response = await api.post('/pdf-reader/read', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-// Video Story Generator
-export const getVideoStories = async () => {
-  const response = await api.get('/video-stories');
-  return response.data;
-};
-
-export const getVideoStory = async (projectId) => {
-  const response = await api.get(`/video-stories/${projectId}`);
-  return response.data;
-};
-
-export const createVideoStory = async (payload) => {
-  const response = await api.post('/video-stories', payload);
-  return response.data;
-};
-
-export const updateVideoStory = async (projectId, payload) => {
-  const response = await api.put(`/video-stories/${projectId}`, payload);
-  return response.data;
-};
-
-export const deleteVideoStory = async (projectId) => {
-  const response = await api.delete(`/video-stories/${projectId}`);
-  return response.data;
-};
-
-export const polishVideoStoryScenes = async (projectId, payload) => {
-  const response = await api.post(`/video-stories/${projectId}/polish`, payload, { timeout: 600000 });
-  return response.data;
-};
-
-export const polishVideoStoryContent = async (projectId, payload) => {
-  const response = await api.post(`/video-stories/${projectId}/polish-content`, payload, { timeout: 120000 });
-  return response.data;
-};
-
-export const generateVideoStoryImages = async (projectId, payload) => {
-  const response = await api.post(`/video-stories/${projectId}/generate-images`, payload, { timeout: 900000 });
-  return response.data;
-};
-
-export const generateVideoStoryVideos = async (projectId, payload) => {
-  const response = await api.post(`/video-stories/${projectId}/generate-videos`, payload, { timeout: 900000 });
-  return response.data;
-};
-
-export const getVideoStoryFileUrl = (projectId, kind, filename, download = false) => {
-  const q = download ? '?download=true' : '';
-  return `${API_BASE_URL}/video-stories/${projectId}/files/${kind}/${encodeURIComponent(filename)}${q}`;
 };
 
 // Export all functions
@@ -778,16 +629,6 @@ const apiService = {
   streamScholarForge,
   exportScholarForgePdf,
   getScholarForgeDownloadUrl,
-  getVideoStories,
-  getVideoStory,
-  createVideoStory,
-  updateVideoStory,
-  deleteVideoStory,
-  polishVideoStoryScenes,
-  polishVideoStoryContent,
-  generateVideoStoryImages,
-  generateVideoStoryVideos,
-  getVideoStoryFileUrl,
   crawlWebsite,
   getCrawlerProfiles,
   getCrawlerProfile,
@@ -814,22 +655,10 @@ const apiService = {
   getConversationHistory,
   listSavedConversations,
   getSavedConversationContent,
-  // Image Generation
-  generateImage,
-  polishImagePrompt,
-  getGeneratedImages,
-  deleteGeneratedImage,
   // Graphic Document Generator
   generateGraphicDocument,
   // Browser Automation
   executeBrowserAutomation,
-  // Image Reader
-  readImage,
-  readMultipleImages,
-  readImageAndProcess,
-  readImageAndProcessMultiple,
-  // PDF Reader
-  readPDF,
 };
 
 export default apiService; 

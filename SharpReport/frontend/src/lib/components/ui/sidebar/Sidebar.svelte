@@ -4,8 +4,8 @@
 	import { page } from '$app/stores';
 
 	const navItems = [
-		{ href: '/data-tables', icon: Sheet, label: 'Data tables', requiresAuth: true },
 		{ href: '/reports/builder', icon: Table, label: 'Data reports', requiresAuth: true },
+		{ href: '/data-tables', icon: Sheet, label: 'Data tables', requiresAuth: true },
 		{ href: '/help', icon: HelpCircle, label: 'Help', requiresAuth: false }
 	];
 

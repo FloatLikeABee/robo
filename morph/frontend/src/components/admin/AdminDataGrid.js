@@ -36,6 +36,7 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import CommentsModal from './CommentsModal';
@@ -54,6 +55,8 @@ import { ActivityLocationFieldEditor, RecordSheetActivityLocation } from './Acti
 import { activityLocationDescriptionOnly } from '../../utils/activityLocationJson';
 import { JsonDetailEditor, RecordSheetJsonDetail, jsonDetailToString } from './jsonDetailViews';
 import { validateJsonDetailStructure } from './jsonDetailValidate';
+import ExtractJsonFromTextDialog from './ExtractJsonFromTextDialog';
+import { useConfirm } from '../ConfirmDialog';
 import {
   DETAIL_DRAWER_BG_DARK,
   DETAIL_PANEL_BG_DARK,
@@ -150,6 +153,12 @@ function isEmptyJsonDetailValue(v) {
   if (v == null) return true;
   if (typeof v === 'string' && v.trim() === '') return true;
   return false;
+}
+
+function jsonDetailLooksEmpty(v) {
+  if (isEmptyJsonDetailValue(v)) return true;
+  const s = jsonDetailToString(v).trim();
+  return s === '' || s === '{}' || s === 'null';
 }
 
 /** Split all-lowercase glued keys from SQL maps (e.g. licensenumber → license number). */
@@ -486,6 +495,7 @@ export default function AdminDataGrid({
   entityRouteForAttachments = null,
 }) {
   const { dictionaries: entityDictionaries, labels: platformLabels } = usePlatformUi();
+  const { confirm } = useConfirm();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
@@ -550,6 +560,7 @@ export default function AdminDataGrid({
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   /** Per-field: 'preview' | 'tree' | 'raw' for json_detail fields */
   const [jsonDetailEditorMode, setJsonDetailEditorMode] = useState({});
+  const [extractJsonField, setExtractJsonField] = useState(null);
   /** Current detail card order for the open record; persists to localStorage on drag. */
   const [detailFieldOrder, setDetailFieldOrder] = useState([]);
   const [dragOverDetailIndex, setDragOverDetailIndex] = useState(null);
@@ -2078,6 +2089,17 @@ export default function AdminDataGrid({
         <input type="file" hidden accept="application/json,.json,text/plain" onChange={onImportFile} />
       </Button>
     );
+    const extractBtn = (
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<AutoAwesomeOutlinedIcon />}
+        sx={{ flexShrink: 0, textTransform: 'none' }}
+        onClick={() => setExtractJsonField(field)}
+      >
+        Extract from text
+      </Button>
+    );
 
     if (String(field).toLowerCase() === 'description') {
       return (
@@ -2171,6 +2193,7 @@ export default function AdminDataGrid({
         <Box key={field} sx={{ width: '100%' }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
             {importBtn}
+            {extractBtn}
             {editJsonToolbarBtn}
           </Box>
           <JsonDetailEditor
@@ -2189,6 +2212,7 @@ export default function AdminDataGrid({
         <Box key={field} sx={{ width: '100%' }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
             {importBtn}
+            {extractBtn}
           </Box>
           <TextField
             size="small"
@@ -3293,6 +3317,33 @@ export default function AdminDataGrid({
           onThreadChanged={handleCommentThreadChanged}
         />
       )}
+
+      <ExtractJsonFromTextDialog
+        open={Boolean(extractJsonField)}
+        onClose={() => setExtractJsonField(null)}
+        purpose="asset_detail"
+        title="Extract Detail JSON from text"
+        applyLabel="Apply to Detail"
+        onApply={async (_parsed, jsonText) => {
+          const field = extractJsonField;
+          if (!field) return false;
+          const current = createOpen ? createDraft[field] : editDraft[field];
+          if (!jsonDetailLooksEmpty(current)) {
+            const ok = await confirm({
+              title: 'Replace Detail JSON?',
+              message: 'This will replace the existing Detail (JSON). Save the asset afterward to keep the change.',
+              confirmLabel: 'Replace',
+            });
+            if (!ok) return false;
+          }
+          if (createOpen) {
+            setCreateDraft((prev) => ({ ...prev, [field]: jsonText }));
+          } else {
+            setEditDraft((prev) => ({ ...prev, [field]: jsonText }));
+          }
+          return true;
+        }}
+      />
 
       <Snackbar
         open={saveSuccessOpen}

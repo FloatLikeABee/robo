@@ -6,12 +6,14 @@ import (
 
 // EventInfo is stored in Badger (former Mongo workspace_events collection).
 type EventInfo struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Detail    string    `json:"detail"`
-	Reporter  string    `json:"reporter"`
-	EventTime time.Time `json:"time"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	Detail         string    `json:"detail"`
+	Reporter       string    `json:"reporter"`
+	EventTime      time.Time `json:"time"`
+	Source         string    `json:"source,omitempty"`
+	SourceResultID string    `json:"source_result_id,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type CreateEventInfoRequest struct {
@@ -27,12 +29,14 @@ type EventInfoAIContextResponse struct {
 }
 
 type EventInfoResponse struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Detail    string    `json:"detail"`
-	Reporter  string    `json:"reporter"`
-	Time      time.Time `json:"time"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	Detail         string    `json:"detail"`
+	Reporter       string    `json:"reporter"`
+	Time           time.Time `json:"time"`
+	Source         string    `json:"source,omitempty"`
+	SourceResultID string    `json:"source_result_id,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 func EventInfoToResponse(e *EventInfo) *EventInfoResponse {
@@ -40,11 +44,13 @@ func EventInfoToResponse(e *EventInfo) *EventInfoResponse {
 		return nil
 	}
 	return &EventInfoResponse{
-		ID:        e.ID,
-		Title:     e.Title,
-		Detail:    e.Detail,
-		Reporter:  e.Reporter,
-		Time:      e.EventTime,
-		CreatedAt: e.CreatedAt,
+		ID:             e.ID,
+		Title:          e.Title,
+		Detail:         e.Detail,
+		Reporter:       e.Reporter,
+		Time:           e.EventTime,
+		Source:         e.Source,
+		SourceResultID: e.SourceResultID,
+		CreatedAt:      e.CreatedAt,
 	}
 }

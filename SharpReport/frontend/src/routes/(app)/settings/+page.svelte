@@ -7,4 +7,4 @@
 	});
 </script>
 
-<p class="p-4 text-sm text-text-secondary">Settings moved to Morph Utils → Settings. Redirecting…</p>
+<p class="p-4 text-sm text-text-secondary">Settings moved to MorphUtils → Settings. Redirecting…</p>

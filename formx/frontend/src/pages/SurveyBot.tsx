@@ -32,6 +32,7 @@ export function SurveyBot() {
   const [refreshingAnswers, setRefreshingAnswers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedResult, setSelectedResult] = useState<SurveyBotResult | null>(null);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<SurveyBotTemplate | null>(null);
   const [draftMd, setDraftMd] = useState('');
   const [draftTitle, setDraftTitle] = useState('');
@@ -93,7 +94,7 @@ export function SurveyBot() {
         setResultsTotal(r.total ?? (r.results ?? []).length);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load AI Surveys data');
+      setError(e instanceof Error ? e.message : 'Failed to load Info Sheets data');
     } finally {
       setLoading(false);
       setRefreshingAnswers(false);
@@ -288,7 +289,7 @@ export function SurveyBot() {
 
   const deleteTemplate = async (t: SurveyBotTemplate) => {
     const ok = await confirm({
-      title: 'Delete AI Survey?',
+      title: 'Delete Info Sheet?',
       message: `Delete “${t.title}”?`,
     });
     if (!ok) return;
@@ -311,6 +312,20 @@ export function SurveyBot() {
       setEnlarge(null);
     }
     await load({ answersOnly: true });
+  };
+
+  const recordResultAsEvent = async (r: SurveyBotResult) => {
+    setRecordingId(r.id);
+    setError(null);
+    try {
+      const updated = await api.surveyBot.recordResultAsEvent(r.id);
+      setResults((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...updated } : x)));
+      setSelectedResult((prev) => (prev?.id === r.id ? { ...prev, ...updated } : prev));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not record in Events & Info');
+    } finally {
+      setRecordingId(null);
+    }
   };
 
   const previewResult = async (r: SurveyBotResult) => {
@@ -387,7 +402,7 @@ export function SurveyBot() {
         </p>
         <p>
           Save, then <strong>Publish link</strong> so respondents open <code>/s/&#123;slug&#125;</code> and chat with a
-          bot scoped to that survey.
+          bot scoped to that info sheet.
         </p>
       </div>
     );
@@ -408,10 +423,7 @@ export function SurveyBot() {
     <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div>
-          <h1 className="text-xl font-semibold text-sky-800 dark:text-sky-200">AI Surveys</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            MD/TXT survey briefs · compile questions · publish a bot link · collect answers
-          </p>
+          <h1 className="text-xl font-semibold text-sky-800 dark:text-sky-200">Info Sheets</h1>
         </div>
         <div className="flex gap-2">
           <button
@@ -419,7 +431,7 @@ export function SurveyBot() {
             className={tabBtn(tab === 'surveys')}
             onClick={() => setTab('surveys')}
           >
-            Surveys
+            Sheets
           </button>
           <button type="button" className={tabBtn(tab === 'answers')} onClick={() => setTab('answers')}>
             Answers
@@ -440,7 +452,7 @@ export function SurveyBot() {
           <div className="shrink-0 flex flex-wrap items-center gap-2">
             <input
               className="flex-1 min-w-[12rem] rounded-lg border border-[#b7deee] dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-              placeholder="Search answers by title or survey slug…"
+              placeholder="Search answers by title or sheet slug…"
               value={answersQuery}
               onChange={(e) => setAnswersQuery(e.target.value)}
               aria-label="Search answers"
@@ -466,27 +478,52 @@ export function SurveyBot() {
                       'No answers match your search.'
                     ) : (
                       <>
-                        No answers yet. Publish an AI Survey link, or in chat say <strong>survey bot</strong>.
+                        No answers yet. Publish an Info Sheet link, or in chat say <strong>survey bot</strong>.
                       </>
                     )}
                   </li>
                 ) : (
                   results.map((r: SurveyBotResult) => (
                     <li key={r.id} className="p-3 flex items-start justify-between gap-2">
-                      <button type="button" className="text-left flex-1" onClick={() => void previewResult(r)}>
+                      <button type="button" className="text-left flex-1 min-w-0" onClick={() => void previewResult(r)}>
                         <div className="font-medium text-[#0f4c66] dark:text-sky-200">{r.title}</div>
                         <div className="text-xs text-slate-500">
                           {r.template_slug || r.template_id} ·{' '}
                           {r.created_at ? new Date(r.created_at).toLocaleString() : ''}
                         </div>
+                        {r.event_recorded ? (
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            Recorded in Events &amp; Info
+                          </div>
+                        ) : r.event_record_error ? (
+                          <div className="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5" title={r.event_record_error}>
+                            Not in Events &amp; Info
+                          </div>
+                        ) : null}
                       </button>
-                      <button
-                        type="button"
-                        className="text-xs text-rose-600 hover:underline"
-                        onClick={() => void deleteResult(r)}
-                      >
-                        Delete
-                      </button>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {!r.event_recorded ? (
+                          <button
+                            type="button"
+                            className="text-xs text-sky-700 dark:text-sky-300 hover:underline disabled:opacity-50"
+                            disabled={recordingId === r.id}
+                            onClick={() => void recordResultAsEvent(r)}
+                          >
+                            {recordingId === r.id
+                              ? 'Recording…'
+                              : r.event_record_error
+                                ? 'Retry Events & Info'
+                                : 'Record in Events & Info'}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="text-xs text-rose-600 hover:underline"
+                          onClick={() => void deleteResult(r)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </li>
                   ))
                 )}
@@ -508,7 +545,7 @@ export function SurveyBot() {
           <div className="overflow-auto rounded-xl border border-[#b7deee] dark:border-slate-700 bg-white/80 dark:bg-slate-900/50 p-3 space-y-3">
             <div className="flex flex-wrap gap-2">
               <button type="button" className={primaryBtn()} onClick={openNewTemplate}>
-                New survey
+                New sheet
               </button>
               <button
                 type="button"
@@ -531,7 +568,7 @@ export function SurveyBot() {
               />
             </div>
             <p className="text-xs text-slate-500">
-              Markdown and text open directly. PDFs and photos of a questionnaire are read by AI into a draft survey.
+              Markdown and text open directly. PDFs and photos of a questionnaire are read by AI into a draft info sheet.
             </p>
             {sourcePreview ? (
               <details className="rounded-lg border border-[#d8eef8] dark:border-slate-800 bg-[#f8fcff] dark:bg-slate-900/60 px-3 py-2">
@@ -547,7 +584,7 @@ export function SurveyBot() {
             <div className="flex gap-2">
               <input
                 className="flex-1 rounded-lg border border-[#b7deee] dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Describe a survey to draft with AI…"
+                placeholder="Describe an info sheet to draft with AI…"
                 value={aiQuery}
                 onChange={(e) => setAiQuery(e.target.value)}
               />

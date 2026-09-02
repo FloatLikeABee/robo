@@ -1,4 +1,4 @@
-/** Lightweight copy of platform-chat/aiProgress for Morph AI (CRA). */
+/** Progress ticker for Morph AI (CRA). */
 
 function truncate(text, max = 56) {
   const t = String(text ?? '').trim().replace(/\s+/g, ' ');
@@ -29,6 +29,10 @@ export function inferMorphProgressSteps(ctx = {}) {
 
   if (ctx.analyzeFile || ctx.hasFile) steps.push('Parsing uploaded file…');
   if (ctx.hasHybridContext) steps.push('Checking hybrid context…');
+  const workers = Array.isArray(ctx.subAgents) ? ctx.subAgents.filter(Boolean) : [];
+  for (const w of workers) {
+    steps.push(`Sub-agent: ${w}…`);
+  }
 
   const web = ctx.webSearch ?? mentionsWebSearch(text);
   if (web) {

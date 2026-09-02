@@ -19,17 +19,26 @@ import {
   Link,
   Tooltip,
   Stack,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
-  PlayArrow as RunIcon,
   Add as AddIcon,
   SmartToy as AssistantIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import ModuleShell from '../components/ModuleShell';
 import api from '../services/api';
+import {
+  APPLIED_ASSISTANT_MSG,
+  isFramedInParent,
+  parseAppliedAssistantMessage,
+  postToMorph,
+  subscribeAppliedAssistantChannel,
+  waitForAppliedState,
+} from '../lib/appliedAssistantChannel';
 
 const EMPTY_FORM = {
   name: '',
@@ -53,10 +62,8 @@ const AssistantManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [runDialogOpen, setRunDialogOpen] = useState(false);
-  const [runQuery, setRunQuery] = useState('');
-  const [runResult, setRunResult] = useState('');
-  const [running, setRunning] = useState(false);
+  const [appliedAssistant, setAppliedAssistant] = useState(null);
+  const [toast, setToast] = useState('');
 
   const fetchAssistants = async () => {
     setLoading(true);
@@ -83,6 +90,24 @@ const AssistantManager = () => {
   useEffect(() => {
     fetchAssistants();
     fetchCollections();
+  }, []);
+
+  useEffect(() => {
+    const applyState = (assistant) => setAppliedAssistant(assistant);
+    const onWindow = (event) => {
+      const parsed = parseAppliedAssistantMessage(event.data);
+      if (parsed?.type === APPLIED_ASSISTANT_MSG.STATE) applyState(parsed.assistant);
+    };
+    window.addEventListener('message', onWindow);
+    const unsub = subscribeAppliedAssistantChannel((data) => {
+      const parsed = parseAppliedAssistantMessage(data);
+      if (parsed?.type === APPLIED_ASSISTANT_MSG.STATE) applyState(parsed.assistant);
+    });
+    postToMorph({ type: APPLIED_ASSISTANT_MSG.REQUEST });
+    return () => {
+      window.removeEventListener('message', onWindow);
+      unsub();
+    };
   }, []);
 
   const handleSave = async () => {
@@ -134,30 +159,34 @@ const AssistantManager = () => {
     }
   };
 
-  const handleRun = (a) => {
-    setEditingId(a.id);
-    setRunDialogOpen(true);
-    setRunQuery('');
-    setRunResult('');
+  const handleApply = async (a) => {
+    const assistant = { id: a.id, name: a.name };
+    postToMorph({ type: APPLIED_ASSISTANT_MSG.APPLY, assistant });
+    const got = await waitForAppliedState((next) => next && next.id === String(a.id).trim());
+    if (got === undefined) {
+      setAppliedAssistant(null);
+      setToast('Open Morph AI to apply this assistant to chat.');
+      return;
+    }
+    setAppliedAssistant(got);
   };
 
-  const submitRun = async () => {
-    if (!runQuery.trim()) return;
-    setRunning(true);
-    try {
-      const data = await api.runAssistant(editingId, runQuery);
-      setRunResult(data?.response || JSON.stringify(data));
-    } catch (e) {
-      setRunResult(`Error: ${e.message}`);
-    } finally {
-      setRunning(false);
+  const handleDismiss = async () => {
+    postToMorph({ type: APPLIED_ASSISTANT_MSG.DISMISS });
+    const got = await waitForAppliedState((next) => next == null);
+    if (got === undefined) {
+      if (!isFramedInParent()) {
+        setToast('Open Morph AI to dismiss this assistant from chat.');
+      }
+      return;
     }
+    setAppliedAssistant(null);
   };
 
   return (
     <ModuleShell
       title="Assistants"
-      helpText="Each assistant has a system prompt and can use one or more RAG collections. Collect RAG data under RAG (file upload or API request). Morph AI can select these assistants for chat."
+      helpText="Each assistant has a system prompt and can use one or more RAG collections. Apply an assistant to Morph chat; dismiss it to return to default chat. Collect RAG data under RAG (file upload or API request)."
     >
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>
@@ -229,6 +258,7 @@ const AssistantManager = () => {
             >
               {assistants.map((a) => {
                 const rags = Array.isArray(a.rag_collections) ? a.rag_collections : [];
+                const isApplied = appliedAssistant && String(appliedAssistant.id) === String(a.id);
                 return (
                   <Paper
                     key={a.id}
@@ -243,7 +273,7 @@ const AssistantManager = () => {
                       borderRadius: 2.5,
                       overflow: 'hidden',
                       border: '1px solid',
-                      borderColor: 'rgba(56, 189, 248, 0.18)',
+                      borderColor: isApplied ? 'rgba(52, 211, 153, 0.55)' : 'rgba(56, 189, 248, 0.18)',
                       background:
                         'linear-gradient(155deg, rgba(6,10,18,0.98) 0%, rgba(26,45,74,0.42) 55%, rgba(10,15,26,0.95) 100%)',
                       transition: 'transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
@@ -369,11 +399,20 @@ const AssistantManager = () => {
                         borderTop: '1px solid rgba(148, 163, 184, 0.12)',
                       }}
                     >
-                      <Tooltip title="Run">
-                        <IconButton size="small" onClick={() => handleRun(a)} aria-label={`Run ${a.name}`}>
-                          <RunIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {isApplied ? (
+                        <Button size="small" color="inherit" onClick={handleDismiss} aria-label={`Dismiss ${a.name}`}>
+                          Dismiss
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleApply(a)}
+                          aria-label={`Apply ${a.name}`}
+                        >
+                          Apply
+                        </Button>
+                      )}
                       <Tooltip title="Edit">
                         <IconButton size="small" onClick={() => handleEdit(a)} aria-label={`Edit ${a.name}`}>
                           <EditIcon fontSize="small" />
@@ -485,38 +524,16 @@ const AssistantManager = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={runDialogOpen} onClose={() => setRunDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Run Assistant</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Query"
-              value={runQuery}
-              onChange={(e) => setRunQuery(e.target.value)}
-              multiline
-              rows={3}
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              onClick={submitRun}
-              disabled={running || !runQuery.trim()}
-              startIcon={running ? <CircularProgress size={16} /> : <RunIcon />}
-            >
-              Run
-            </Button>
-            {runResult && (
-              <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-                <Typography variant="subtitle2">Result</Typography>
-                <Typography sx={{ whiteSpace: 'pre-wrap' }}>{runResult}</Typography>
-              </Paper>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRunDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={5000}
+        onClose={() => setToast('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="info" variant="filled" onClose={() => setToast('')}>
+          {toast}
+        </Alert>
+      </Snackbar>
     </ModuleShell>
   );
 };

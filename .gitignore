@@ -81,3 +81,6 @@ SharpReport/backend/plugins/
 # Local Claude / agent state
 .claude/settings.local.json
 .qwen/tmp/
+
+# Webwright autotest workspaces
+webwright-runs/

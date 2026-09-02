@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
 import {
   EventInfoSubmitCard,
@@ -35,6 +35,9 @@ export function EventsInfo() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drawerEvent, setDrawerEvent] = useState<EventInfo | null>(null);
+  const [titleQuery, setTitleQuery] = useState('');
+  const [titleQueryDebounced, setTitleQueryDebounced] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [formValues, setFormValues] = useState<EventInfoSubmitValues>(() => ({
@@ -194,10 +197,15 @@ export function EventsInfo() {
     }
   };
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setTitleQueryDebounced(titleQuery.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [titleQuery]);
+
   const load = useCallback(() => {
     setLoading(true);
     api.eventsInfo
-      .list(1, 200)
+      .list(1, 200, titleQueryDebounced)
       .then((r) => {
         setEvents(r.events);
         setTotal(r.total);
@@ -205,11 +213,22 @@ export function EventsInfo() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [titleQueryDebounced]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const ids = new Set(events.map((ev) => ev.id));
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (ids.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [events]);
 
   useEffect(() => {
     if (!addModalOpen) return;
@@ -313,17 +332,76 @@ export function EventsInfo() {
     }
   };
 
+  const removeSelected = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const ok = await confirm({
+      title: 'Delete events',
+      message: `Remove ${ids.length} Events & Info record${ids.length === 1 ? '' : 's'}? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.eventsInfo.batchDelete(ids);
+      if (drawerEvent && ids.includes(drawerEvent.id)) closeDrawer();
+      setSelectedIds(new Set());
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Delete failed');
+    }
+  };
+
+  const allVisibleSelected = useMemo(
+    () => events.length > 0 && events.every((ev) => selectedIds.has(ev.id)),
+    [events, selectedIds]
+  );
+
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) events.forEach((ev) => next.add(ev.id));
+      else events.forEach((ev) => next.delete(ev.id));
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-shrink-0 mb-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
           <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Events &amp; Info</h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-            Operational notes. Import from files, a URL, or paste — AI extracts drafts you confirm. Or add an entry by
-            hand. Open a row for full detail.
-          </p>
+          <label className="sr-only" htmlFor="events-info-title-search">
+            Search titles
+          </label>
+          <input
+            id="events-info-title-search"
+            type="search"
+            value={titleQuery}
+            onChange={(e) => setTitleQuery(e.target.value)}
+            placeholder="Search titles"
+            className="w-full sm:max-w-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-[#f0ece4] dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100"
+          />
         </div>
         <div className="shrink-0 flex flex-wrap gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => void removeSelected()}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium"
+            >
+              Delete selected ({selectedIds.size})
+            </button>
+          )}
           <button
             type="button"
             onClick={openIngestModal}
@@ -354,19 +432,30 @@ export function EventsInfo() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900/20">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700/50 bg-[#f0ece4] dark:bg-slate-900/20">
         {loading ? (
           <div className="p-6 text-slate-500 dark:text-slate-400 text-sm">Loading…</div>
         ) : events.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-sm">No events yet.</div>
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-sm">
+            {titleQueryDebounced ? 'No matching titles.' : 'No events yet.'}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700">
                 <tr>
+                  <th className="px-3 py-2 w-10">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible events"
+                      checked={allVisibleSelected}
+                      onChange={(e) => toggleSelectAllVisible(e.target.checked)}
+                    />
+                  </th>
                   <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">Title</th>
                   <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300 w-40">Reporter</th>
                   <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300 w-44">Time</th>
+                  <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300 w-24"> </th>
                 </tr>
               </thead>
               <tbody>
@@ -384,6 +473,14 @@ export function EventsInfo() {
                     }}
                     className="border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   >
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${ev.title}`}
+                        checked={selectedIds.has(ev.id)}
+                        onChange={(e) => toggleSelected(ev.id, e.target.checked)}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-slate-900 dark:text-slate-100">
                       <div className="line-clamp-2 font-medium">{ev.title}</div>
                     </td>
@@ -392,6 +489,15 @@ export function EventsInfo() {
                     </td>
                     <td className="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {formatDisplayTime(ev.time)}
+                    </td>
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="text-red-700 dark:text-red-400 hover:underline text-sm"
+                        onClick={() => void remove(ev)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -420,16 +526,16 @@ export function EventsInfo() {
             <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
               <h2 className="text-base font-semibold text-slate-900 dark:text-white">Import Events &amp; Info</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Upload TXT/MD/PDF, paste a URL, and/or paste text. At least one source is required. Nothing is saved
+                Upload TXT/MD/JSON/PDF, paste a URL, and/or paste text. At least one source is required. Nothing is saved
                 until you confirm.
               </p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 text-sm">
               <label className="block text-xs text-slate-500 dark:text-slate-400">
-                Files (TXT, MD, PDF)
+                Files (TXT, MD, JSON, PDF)
                 <input
                   type="file"
-                  accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
+                  accept=".txt,.md,.markdown,.json,.pdf,text/plain,text/markdown,application/json,application/pdf"
                   multiple
                   disabled={ingestBusy || ingestSaving}
                   className="mt-1 block w-full text-sm text-slate-700 dark:text-slate-200"

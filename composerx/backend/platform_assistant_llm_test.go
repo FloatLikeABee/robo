@@ -28,7 +28,7 @@ func TestInt64ArgAcceptsStrings(t *testing.T) {
 
 func TestGetTemplateRequiresID(t *testing.T) {
 	a := &App{}
-	_, _, err := a.execTranMailTool(context.Background(), "", &tranMailToolCall{
+	_, _, err := a.execTranMailTool(context.Background(), &tranMailToolCall{
 		Tool: "get_template",
 		Args: map[string]interface{}{},
 	})
@@ -39,7 +39,7 @@ func TestGetTemplateRequiresID(t *testing.T) {
 
 func TestSearchReferenceDocsRequiresQuery(t *testing.T) {
 	a := &App{}
-	_, _, err := a.execTranMailTool(context.Background(), "", &tranMailToolCall{
+	_, _, err := a.execTranMailTool(context.Background(), &tranMailToolCall{
 		Tool: "search_reference_docs",
 		Args: map[string]interface{}{},
 	})

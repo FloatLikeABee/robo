@@ -11,7 +11,6 @@ export default function LoginPage() {
   const from = location.state?.from?.pathname || '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await loginMorph(API_BASE_URL, { email: email.trim(), password });
-      setMorphToken(data.token, remember);
+      setMorphToken(data.token);
       setMorphAuthSnapshot({ user: data.user, permissions: data.permissions });
       releaseStuckOverlays();
       navigate(from === '/login' ? '/' : from, { replace: true });
@@ -76,7 +75,7 @@ export default function LoginPage() {
           <div>
             <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf4fb' }}>Morph AI</h1>
             <p style={{ margin: 0, fontSize: 12, color: '#93adc4' }}>
-              Sign in once — Morph Data and Morph Utils use this session
+              Sign in once — MorphNotes and MorphUtils use this session
             </p>
           </div>
         </div>
@@ -102,10 +101,6 @@ export default function LoginPage() {
               required
               style={inputStyle}
             />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#b8cfe0', cursor: 'pointer' }}>
-            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            Remember me on this device
           </label>
           {error ? (
             <div

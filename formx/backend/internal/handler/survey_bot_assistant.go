@@ -331,6 +331,7 @@ func (h *Handler) finalizeSurvey(ctx context.Context, st assistantConversation, 
 	}
 	if h.SurveyBotResultRepo != nil {
 		_ = h.SurveyBotResultRepo.Insert(ctx, res)
+		h.recordInfoSheetResultAsEvent(ctx, res)
 	}
 	if h.FormRepo != nil && res.ID != "" {
 		h.FormRepo.EnqueueGraphSync(ctx, "formsx", "survey_result", res.ID, "upsert")

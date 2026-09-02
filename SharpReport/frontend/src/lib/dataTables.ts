@@ -1,4 +1,4 @@
-import { apiJson } from '$lib/api';
+import { apiJson, apiUrl, authHeaders } from '$lib/api';
 import {
 	columnKeys,
 	parseCsv,
@@ -114,6 +114,32 @@ export async function analyzeTextFile(
 			content_text: contentText
 		})
 	});
+}
+
+export async function requestTableAiAnalysis(
+	id: string,
+	signal?: AbortSignal
+): Promise<{ markdown: string }> {
+	const res = await fetch(apiUrl(`/api/v1/data-tables/${id}/ai-analysis`), {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...authHeaders()
+		},
+		body: '{}',
+		signal
+	});
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) {
+		throw new Error(
+			(data as { error?: string }).error || res.statusText || 'Could not generate analysis.'
+		);
+	}
+	const markdown = (data as { markdown?: unknown }).markdown;
+	if (typeof markdown !== 'string' || !markdown.trim()) {
+		throw new Error('Could not generate analysis.');
+	}
+	return { markdown };
 }
 
 export type ImportDataTableResult = DataTableSummary & {

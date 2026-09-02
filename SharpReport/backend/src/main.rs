@@ -28,7 +28,7 @@ async fn main() {
     let settings = config::Settings::new().expect("Failed to load settings");
     let morph_cfg = morphai::Config::from_env();
     info!("Starting DataPulse backend...");
-    info!("UsersPanel auth: {}", settings.users_panel.base_url);
+    info!("Morph auth: {}", settings.users_panel.base_url);
     if morph_cfg.configured() {
         if morph_cfg.uses_openai_compatible() {
             info!(
@@ -124,6 +124,10 @@ async fn main() {
         .route(
             "/api/v1/data-tables/:id/query",
             post(api::data_tables::query_table),
+        )
+        .route(
+            "/api/v1/data-tables/:id/ai-analysis",
+            post(api::data_tables::ai_analysis),
         )
         .route(
             "/api/v1/data-tables/:id/rows/:row_index",

@@ -5,8 +5,6 @@
 	import { initTheme } from '$lib/stores/theme.svelte';
 	import { auth, checkAuth } from '$lib/stores/auth.svelte';
 	import { setAuthToken } from '$lib/api';
-	import { startBackendHealthMonitor } from '$lib/backendHealth';
-	import BackendStatusBanner from '$lib/components/ui/BackendStatusBanner.svelte';
 	import '../app.css';
 
 	let { children }: { children: Snippet } = $props();
@@ -14,7 +12,6 @@
 	onMount(() => {
 		if (!browser) return;
 		initTheme();
-		const stopHealth = startBackendHealthMonitor();
 
 		try {
 			const params = new URLSearchParams(window.location.search);
@@ -53,14 +50,12 @@
 		document.addEventListener('visibilitychange', onVisible);
 
 		return () => {
-			stopHealth();
 			document.removeEventListener('visibilitychange', onVisible);
 		};
 	});
 </script>
 
 <div class="flex h-full min-h-0 w-full flex-col">
-	<BackendStatusBanner />
 	<div class="min-h-0 flex-1">
 		{@render children()}
 	</div>

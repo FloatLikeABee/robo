@@ -17,6 +17,31 @@ async function skillsFetch(path, opts = {}) {
   return data;
 }
 
+/** First `# heading` → name, else filename stem. Remainder → instructions. */
+export function parseSkillMarkdown(text, filename = '') {
+  const raw = String(text ?? '').replace(/^\uFEFF/, '');
+  const lines = raw.split(/\r?\n/);
+  let name = '';
+  let bodyStart = 0;
+  for (let i = 0; i < lines.length; i += 1) {
+    const m = lines[i].match(/^#\s+(.+)/);
+    if (m) {
+      name = m[1].trim();
+      bodyStart = i + 1;
+      break;
+    }
+  }
+  if (!name) {
+    name = String(filename || '')
+      .replace(/^.*[/\\]/, '')
+      .replace(/\.md$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+  }
+  const instructions = lines.slice(bodyStart).join('\n').replace(/^\s+/, '');
+  return { name, instructions };
+}
+
 /** Skills catalog body — used inside the modal and the /skills fallback page. */
 export function SkillsPanel({ onClose, embedded = false }) {
   const [skills, setSkills] = useState([]);
@@ -26,6 +51,7 @@ export function SkillsPanel({ onClose, embedded = false }) {
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
   const [saving, setSaving] = useState(false);
+  const [improving, setImproving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,6 +95,49 @@ export function SkillsPanel({ onClose, embedded = false }) {
     }
   }
 
+  function onMdFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseSkillMarkdown(String(reader.result || ''), file.name);
+      if (parsed.name) setName(parsed.name);
+      setInstructions(parsed.instructions);
+      setError('');
+    };
+    reader.onerror = () => setError('Could not read that markdown file');
+    reader.readAsText(file);
+  }
+
+  async function onImprove() {
+    const n = name.trim();
+    const instr = instructions.trim();
+    if (!n || !instr) {
+      setError('Name and instructions are required before Improve with AI');
+      return;
+    }
+    setImproving(true);
+    setError('');
+    try {
+      const data = await skillsFetch('/api/skills/improve', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: n,
+          description: description.trim(),
+          instructions: instr,
+        }),
+      });
+      if (data.name) setName(String(data.name));
+      if (data.description != null) setDescription(String(data.description));
+      if (data.instructions) setInstructions(String(data.instructions));
+    } catch (err) {
+      setError(err.message || 'Improve with AI failed');
+    } finally {
+      setImproving(false);
+    }
+  }
+
   async function toggleEnabled(skill) {
     try {
       await skillsFetch(`/api/skills/${encodeURIComponent(skill.id)}`, {
@@ -98,9 +167,6 @@ export function SkillsPanel({ onClose, embedded = false }) {
           <h2 id="skills-modal-title" className="skills-panel-title">
             Skills
           </h2>
-          <p className="skills-panel-hint">
-            Upload skills for Morph AI assistants. Syncs to Neo4j asynchronously when configured.
-          </p>
         </div>
         {onClose ? (
           <button type="button" className="skills-panel-close" onClick={onClose} aria-label="Close skills">
@@ -118,6 +184,10 @@ export function SkillsPanel({ onClose, embedded = false }) {
       <form className="skills-panel-form" onSubmit={onUpload}>
         <strong className="skills-panel-form-title">Upload skill</strong>
         <label className="skills-panel-field">
+          Markdown file
+          <input type="file" accept=".md,text/markdown" onChange={onMdFile} />
+        </label>
+        <label className="skills-panel-field">
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
@@ -125,18 +195,28 @@ export function SkillsPanel({ onClose, embedded = false }) {
           Description
           <input value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
-        <label className="skills-panel-field">
+        <label className="skills-panel-field skills-panel-field--instructions">
           Instructions
           <textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             required
-            rows={5}
+            rows={4}
           />
         </label>
-        <button type="submit" className="skills-panel-primary" disabled={saving}>
-          {saving ? 'Uploading…' : 'Upload'}
-        </button>
+        <div className="skills-panel-form-actions">
+          <button type="submit" className="skills-panel-primary" disabled={saving || improving}>
+            {saving ? 'Uploading…' : 'Upload'}
+          </button>
+          <button
+            type="button"
+            className="skills-panel-secondary"
+            disabled={saving || improving}
+            onClick={() => void onImprove()}
+          >
+            {improving ? 'Improving…' : 'Improve with AI'}
+          </button>
+        </div>
       </form>
 
       <section className="skills-panel-catalog">

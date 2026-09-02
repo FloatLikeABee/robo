@@ -8,11 +8,12 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
-	github.com/joho/godotenv v1.5.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/phpdave11/gofpdf v1.4.3
+	github.com/robo/docextract v0.0.0
 	github.com/robo/morphai v0.0.0
 	github.com/robo/morphgraph v0.0.0
+	github.com/robo/repoenv v0.0.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.2
@@ -22,9 +23,13 @@ require (
 	modernc.org/sqlite v1.56.0
 )
 
+replace github.com/robo/docextract => ../pkg/docextract
+
 replace github.com/robo/morphai => ../pkg/morphai
 
 replace github.com/robo/morphgraph => ../pkg/morphgraph
+
+replace github.com/robo/repoenv => ../pkg/repoenv
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -53,6 +58,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect

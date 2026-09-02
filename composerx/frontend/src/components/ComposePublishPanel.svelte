@@ -1,9 +1,9 @@
 <script>
   import ButtonLeadingIcon from '../lib/ButtonLeadingIcon.svelte'
-  import { runAiProgress } from '@robo/platform-chat/aiProgress'
+  import { runAiProgress } from '../lib/aiProgress'
 
   /** @type {{ apiBase: string, getAuthHeaders: (extra?: Record<string, string>) => Record<string, string>, notify?: (kind?: string, msg?: string) => void, theme?: 'light' | 'dark' }} */
-  let { apiBase, getAuthHeaders, notify = () => {}, theme = 'light' } = $props()
+  let { apiBase, getAuthHeaders, notify = () => {}, theme = 'dark' } = $props()
 
   let publishName = $state('')
   let publishTheme = $state('')

@@ -27,7 +27,6 @@ uuid = { version = "1.4", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 async-trait = "0.1"
-dotenvy = "0.15"
 aes-gcm = "0.10"
 base64 = "0.21"
 morphai = { path = "../../pkg/morphai-rs" }

@@ -4,7 +4,15 @@ import { tranApi } from './api/tranClient';
 /**
  * Right-side drawer: session HybridContext (files + notes) and durable Knowledge Library.
  */
-export default function HybridContextDrawer({ open, onClose, sessionId, onBringToConversation, onAttachmentChange }) {
+export default function HybridContextDrawer({
+  open,
+  onClose,
+  sessionId,
+  onBringToConversation,
+  onAttachmentChange,
+  variant = 'drawer',
+}) {
+  const isPanel = variant === 'panel';
   const [panel, setPanel] = useState('session'); // session | knowledge
   const [chunkCount, setChunkCount] = useState(0);
   const [sources, setSources] = useState([]);
@@ -38,13 +46,13 @@ export default function HybridContextDrawer({ open, onClose, sessionId, onBringT
   }, [sessionId, onAttachmentChange]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !isPanel) return;
     refreshMeta();
     setStatus('');
     if (panel === 'knowledge') {
       void refreshKnowledge();
     }
-  }, [open, refreshMeta, panel]);
+  }, [open, isPanel, refreshMeta, panel]);
 
   const refreshKnowledge = useCallback(async () => {
     try {
@@ -166,7 +174,7 @@ export default function HybridContextDrawer({ open, onClose, sessionId, onBringT
     setStatus('');
     try {
       await onBringToConversation();
-      onClose?.();
+      if (!isPanel) onClose?.();
     } catch (e) {
       setStatus(e.response?.data?.error || e.message || 'Could not add to conversation.');
     } finally {
@@ -174,16 +182,14 @@ export default function HybridContextDrawer({ open, onClose, sessionId, onBringT
     }
   };
 
-  if (!open) return null;
+  if (!open && !isPanel) return null;
 
   const overlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget) onClose?.();
   };
 
-
-  return (
-    <div className="hybrid-drawer-overlay" role="presentation" onMouseDown={overlayClick}>
-      <aside className="hybrid-drawer" aria-labelledby="hybrid-drawer-title" onMouseDown={(e) => e.stopPropagation()}>
+  const inner = (
+    <>
         <div className="hybrid-drawer-head">
           <div>
             <h2 id="hybrid-drawer-title" className="hybrid-drawer-title">
@@ -193,9 +199,11 @@ export default function HybridContextDrawer({ open, onClose, sessionId, onBringT
               Session HybridContext is temporary. Knowledge Library is durable GraphRAG for Morph AI.
             </p>
           </div>
-          <button type="button" className="hybrid-drawer-close" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          {isPanel ? null : (
+            <button type="button" className="hybrid-drawer-close" onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+          )}
         </div>
 
         <div className="hybrid-drawer-toolbar" style={{ gap: 8 }}>
@@ -343,6 +351,21 @@ export default function HybridContextDrawer({ open, onClose, sessionId, onBringT
         </div>
           </>
         )}
+    </>
+  );
+
+  if (isPanel) {
+    return (
+      <div className="hybrid-drawer hybrid-drawer--panel" aria-labelledby="hybrid-drawer-title">
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <div className="hybrid-drawer-overlay" role="presentation" onMouseDown={overlayClick}>
+      <aside className="hybrid-drawer" aria-labelledby="hybrid-drawer-title" onMouseDown={(e) => e.stopPropagation()}>
+        {inner}
       </aside>
     </div>
   );

@@ -26,7 +26,7 @@ export default function ChatNotesTodosDrawer({ open, onClose }) {
               <EventNoteOutlinedIcon style={{ fontSize: 22, opacity: 0.9 }} />
               Notes &amp; TODOs
             </h2>
-            <p className="hybrid-drawer-sub">Synced with MorphData — AI assist uses the same items as the admin toolbar.</p>
+            <p className="hybrid-drawer-sub">Synced with MorphNotes — AI assist uses the same items as the admin toolbar.</p>
           </div>
           <button type="button" className="hybrid-drawer-close" onClick={onClose} aria-label="Close notes">
             ✕

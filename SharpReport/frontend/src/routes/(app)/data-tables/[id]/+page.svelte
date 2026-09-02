@@ -8,12 +8,8 @@
 		updateDataTableRow,
 		type DataTableSummary
 	} from '$lib/dataTables';
-	import {
-		assistantCtx,
-		attachDataTable,
-		requestAssistantOpen
-	} from '$lib/stores/assistantContext.svelte';
 	import { whenSessionReady } from '$lib/stores/auth.svelte';
+	import DataTableAiAnalysisModal from '$lib/components/data-tables/DataTableAiAnalysisModal.svelte';
 	import {
 		ArrowDown,
 		ArrowUp,
@@ -44,11 +40,9 @@
 	let sortBy = $state('');
 	let sortDir = $state<'asc' | 'desc'>('asc');
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	let analysisOpen = $state(false);
 
 	const tableId = $derived($page.params.id ?? '');
-	const isAttached = $derived(
-		table ? assistantCtx.attachedDataTables.some((t) => t.id === table.id) : false
-	);
 
 	function loadPage() {
 		if (!tableId) return;
@@ -177,12 +171,6 @@
 		}
 	}
 
-	function addToAssistant() {
-		if (!table) return;
-		attachDataTable({ id: table.id, name: table.name });
-		requestAssistantOpen();
-		success = `Added "${table.name}" to AI conversation`;
-	}
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
@@ -200,6 +188,15 @@
 			{/if}
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+				disabled={!tableId || loading}
+				onclick={() => (analysisOpen = true)}
+			>
+				<Sparkles class="h-4 w-4" />
+				AI analysis
+			</button>
 			<a
 				href="/data-tables/{tableId}/publish"
 				class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
@@ -208,18 +205,6 @@
 				<Globe class="h-4 w-4" />
 				Build & publish page
 			</a>
-			<button
-				type="button"
-				class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors {isAttached
-					? 'border-accent-primary/50 bg-accent-primary/10 text-accent-primary'
-					: 'border-border text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'}"
-				disabled={!table}
-				title="Add this table to the AI assistant conversation"
-				onclick={addToAssistant}
-			>
-				<Sparkles class="h-4 w-4" />
-				{isAttached ? 'In AI chat' : 'Add to AI'}
-			</button>
 			<DataTablesImportButton label="Import data" />
 			<div class="flex items-center gap-2 text-sm text-text-secondary">
 				<button
@@ -356,3 +341,11 @@
 		</div>
 	{/if}
 </div>
+
+{#if analysisOpen && tableId}
+	<DataTableAiAnalysisModal
+		{tableId}
+		tableName={table?.name ?? 'Data table'}
+		onClose={() => (analysisOpen = false)}
+	/>
+{/if}

@@ -21,15 +21,18 @@ type SurveyBotTemplate struct {
 
 // SurveyBotResult is a completed survey run saved as themed HTML + answers.
 type SurveyBotResult struct {
-	ID           string            `json:"id"`
-	TemplateID   string            `json:"template_id"`
-	TemplateSlug string            `json:"template_slug,omitempty"`
-	Title        string            `json:"title"`
-	Answers      map[string]string `json:"answers"`
-	HTML         string            `json:"html,omitempty"`
-	SessionID    string            `json:"session_id,omitempty"`
-	CreatedBy    string            `json:"created_by,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
+	ID               string            `json:"id"`
+	TemplateID       string            `json:"template_id"`
+	TemplateSlug     string            `json:"template_slug,omitempty"`
+	Title            string            `json:"title"`
+	Answers          map[string]string `json:"answers"`
+	HTML             string            `json:"html,omitempty"`
+	SessionID        string            `json:"session_id,omitempty"`
+	CreatedBy        string            `json:"created_by,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	EventRecorded    bool              `json:"event_recorded"`
+	EventID          string            `json:"event_id,omitempty"`
+	EventRecordError string            `json:"event_record_error,omitempty"`
 }
 
 func SurveyBotTemplateToMap(t *SurveyBotTemplate) map[string]interface{} {
@@ -59,14 +62,21 @@ func SurveyBotResultToMap(r *SurveyBotResult, includeHTML bool) map[string]inter
 		return nil
 	}
 	m := map[string]interface{}{
-		"id":            r.ID,
-		"template_id":   r.TemplateID,
-		"template_slug": r.TemplateSlug,
-		"title":         r.Title,
-		"answers":       r.Answers,
-		"session_id":    r.SessionID,
-		"created_by":    r.CreatedBy,
-		"created_at":    r.CreatedAt,
+		"id":             r.ID,
+		"template_id":    r.TemplateID,
+		"template_slug":  r.TemplateSlug,
+		"title":          r.Title,
+		"answers":        r.Answers,
+		"session_id":     r.SessionID,
+		"created_by":     r.CreatedBy,
+		"created_at":     r.CreatedAt,
+		"event_recorded": r.EventRecorded,
+	}
+	if r.EventID != "" {
+		m["event_id"] = r.EventID
+	}
+	if r.EventRecordError != "" {
+		m["event_record_error"] = r.EventRecordError
 	}
 	if includeHTML {
 		m["html"] = r.HTML

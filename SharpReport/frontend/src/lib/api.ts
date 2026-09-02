@@ -6,8 +6,8 @@ const AUTH_REMEMBER_KEY = 'datax_auth_remember';
 const LEGACY_AUTH_TOKEN_KEY = 'sharpreport_auth_token';
 const LEGACY_AUTH_REMEMBER_KEY = 'sharpreport_auth_remember';
 const SHARED_SESSION_COOKIE_KEY = 'userspanel_session_token';
-/** Match UsersPanel default JWT expiry (see JWT_EXPIRY_HOURS). */
-const SESSION_COOKIE_MAX_AGE_SECONDS = 48 * 3600;
+/** Match Morph AI session cookie (cleared only on Sign out). */
+const SESSION_COOKIE_MAX_AGE_SECONDS = 100 * 365 * 24 * 3600;
 
 /**
  * API origin without trailing slash. Empty means same-origin (relative `/api/...` paths).
@@ -20,6 +20,17 @@ export function getApiOrigin(): string {
 	return '';
 }
 
+/** Morph AI origin — Data Access has no separate login; this is where sessions start. */
+export function morphAiOrigin(): string {
+	const fromEnv = (
+		(import.meta.env.PUBLIC_MORPH_AI_URL as string | undefined) ||
+		(import.meta.env.VITE_MORPH_AI_URL as string | undefined) ||
+		''
+	).trim();
+	if (fromEnv) return fromEnv.replace(/\/$/, '');
+	return 'http://localhost:3031';
+}
+
 /** Full URL for `fetch()` — use for all `/api/v1/...` calls. */
 export function apiUrl(path: string): string {
 	const origin = getApiOrigin();
@@ -29,7 +40,7 @@ export function apiUrl(path: string): string {
 }
 
 /**
- * UsersPanel API origin. Empty = same-origin — Vite proxies `/api/messages` to UsersPanel (no CORS).
+ * Legacy messaging API origin. Empty = same-origin — Vite proxies `/api/messages` to the Morph stub (no CORS).
  */
 export function usersPanelOrigin(): string {
 	if (usersPanelViteConfigured !== undefined && usersPanelViteConfigured !== '') {

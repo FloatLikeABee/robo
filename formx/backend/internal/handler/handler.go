@@ -83,6 +83,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	protected.GET("/survey-bot/results", h.ListSurveyBotResults)
 	protected.GET("/survey-bot/results/:id", h.GetSurveyBotResult)
 	protected.GET("/survey-bot/results/:id/html", h.GetSurveyBotResultHTML)
+	protected.POST("/survey-bot/results/:id/record-event", h.RecordSurveyBotResultAsEvent)
 	protected.DELETE("/survey-bot/results/:id", h.DeleteSurveyBotResult)
 	// Forms
 	protected.POST("/forms", h.CreateForm)
@@ -98,6 +99,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	protected.POST("/events-info/ai-ingest", h.IngestEventInfoAI)
 	protected.GET("/events-info/collection-info", h.GetEventInfoCollectionInfo)
 	protected.POST("/events-info/share/email", h.SendEventInfoCollectionEmail)
+	protected.POST("/events-info/batch-delete", h.BatchDeleteEventInfo)
 	protected.GET("/events-info/:id/ai-context", h.GetEventInfoAIContext)
 	protected.GET("/events-info/:id", h.GetEventInfo)
 	protected.DELETE("/events-info/:id", h.DeleteEventInfo)

@@ -6,10 +6,10 @@ require (
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.11.0
-	github.com/joho/godotenv v1.5.1
 	github.com/robo/assistmd v0.0.0
 	github.com/robo/docextract v0.0.0
 	github.com/robo/morphai v0.0.0
+	github.com/robo/repoenv v0.0.0
 	github.com/robo/webresearch v0.0.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
@@ -24,6 +24,8 @@ replace github.com/robo/assistmd => ../../pkg/assistmd
 replace github.com/robo/docextract => ../../pkg/docextract
 
 replace github.com/robo/webresearch => ../../pkg/webresearch
+
+replace github.com/robo/repoenv => ../../pkg/repoenv
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
@@ -54,6 +56,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect

@@ -330,6 +330,9 @@ export interface SurveyBotResult {
   session_id?: string;
   created_by?: string;
   created_at?: string;
+  event_recorded?: boolean;
+  event_id?: string;
+  event_record_error?: string;
 }
 
 export interface EventInfoListResponse {
@@ -392,8 +395,11 @@ export const api = {
     delete: (id: number) => request<void>(`/api/v1/forms/${id}`, { method: 'DELETE' }),
   },
   eventsInfo: {
-    list: (page = 1, limit = 100) =>
-      request<EventInfoListResponse>(`/api/v1/events-info?page=${page}&limit=${limit}`),
+    list: (page = 1, limit = 100, q = '') => {
+      const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (q.trim()) qs.set('q', q.trim());
+      return request<EventInfoListResponse>(`/api/v1/events-info?${qs.toString()}`);
+    },
     create: (body: { title: string; detail?: string; reporter?: string; time: string }) =>
       request<EventInfo>('/api/v1/events-info', { method: 'POST', body: JSON.stringify(body) }),
     aiDraft: (body: { prompt: string }) =>
@@ -429,6 +435,11 @@ export const api = {
       return payload;
     },
     delete: (id: string) => request<void>(`/api/v1/events-info/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    batchDelete: (ids: string[]) =>
+      request<{ deleted: number }>('/api/v1/events-info/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      }),
     collectionInfo: () => request<EventInfoCollectionInfo>('/api/v1/events-info/collection-info'),
     shareEmail: (body: { to: string[]; kind: 'page' | 'api'; message?: string }) =>
       request<{ ok: boolean; sent_to: string[] }>('/api/v1/events-info/share/email', {
@@ -522,6 +533,11 @@ export const api = {
       ),
     getResult: (id: string) => request<SurveyBotResult>(`/api/v1/survey-bot/results/${encodeURIComponent(id)}`),
     resultHtmlUrl: (id: string) => `${API_BASE}/api/v1/survey-bot/results/${encodeURIComponent(id)}/html`,
+    recordResultAsEvent: (id: string) =>
+      request<SurveyBotResult>(`/api/v1/survey-bot/results/${encodeURIComponent(id)}/record-event`, {
+        method: 'POST',
+        body: '{}',
+      }),
     deleteResult: (id: string) =>
       request<{ ok: boolean }>(`/api/v1/survey-bot/results/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },

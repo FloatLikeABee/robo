@@ -9,7 +9,19 @@ type ChatRequest struct {
 	// AgentID selects a Morph AI assistant persona (e.g. general, image-generator).
 	AgentID string `json:"agent_id,omitempty"`
 	// SkillIDs optionally loads full skill bodies into the assistant system context.
-	SkillIDs []string `json:"skill_ids,omitempty"`
+	SkillIDs         []string          `json:"skill_ids,omitempty"`
+	IncludeFiles     *bool             `json:"include_files,omitempty"`
+	IncludeNotes     *bool             `json:"include_notes,omitempty"`
+	IncludeKnowledge *bool             `json:"include_knowledge,omitempty"`
+	ContextCacheKey  string            `json:"context_cache_key,omitempty"`
+	PinnedFiles      []AgentPinnedFile `json:"pinned_files,omitempty"`
+}
+
+// AgentPinnedFile is a workspace file the client pinned for prompt context.
+type AgentPinnedFile struct {
+	Path    string `json:"path"`
+	Hash    string `json:"hash"`
+	Content string `json:"content,omitempty"`
 }
 
 // MorphAIAgent is a selectable chat assistant persona stored in Badger.
@@ -61,6 +73,7 @@ type ChatResponse struct {
 	ProposedForm     *ProposedFormCard             `json:"proposed_form,omitempty"`
 	ResearchContent  string                        `json:"research_content,omitempty"`
 	Images           []ChatImage                   `json:"images,omitempty"`
+	SubAgents        []string                      `json:"sub_agents,omitempty"`
 }
 
 // ProposedFormCard is sent when a form is generated from document upload; user must confirm before saving.

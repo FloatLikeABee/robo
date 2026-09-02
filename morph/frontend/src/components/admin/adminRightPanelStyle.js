@@ -19,9 +19,9 @@ export const adminRightPanelPaperSx = {
   borderRadius: 0,
   borderLeft: { xs: 0, sm: 1 },
   borderBottom: 1,
-  borderColor: 'divider',
+  borderColor: 'rgba(37, 99, 235, 0.3)',
   overflow: 'hidden',
-  bgcolor: 'background.paper',
+  bgcolor: '#0c1220',
 };
 
 export const adminRightPanelHeaderSx = {
@@ -31,11 +31,8 @@ export const adminRightPanelHeaderSx = {
   px: 1.5,
   py: 0.75,
   borderBottom: 1,
-  borderColor: 'divider',
+  borderColor: 'rgba(37, 99, 235, 0.3)',
   minHeight: 48,
   flexShrink: 0,
-  background: (theme) =>
-    theme.palette.mode === 'dark'
-      ? 'linear-gradient(90deg, rgba(156,39,176,0.15) 0%, rgba(33,150,243,0.08) 100%)'
-      : 'linear-gradient(90deg, rgba(156,39,176,0.12) 0%, rgba(33,150,243,0.06) 100%)',
+  background: 'linear-gradient(90deg, rgba(37, 99, 235, 0.22) 0%, rgba(12, 18, 32, 0.55) 100%)',
 };

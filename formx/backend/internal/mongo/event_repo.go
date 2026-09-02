@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -68,7 +69,7 @@ func (r *EventInfoRepo) Delete(ctx context.Context, id string) error {
 	})
 }
 
-func (r *EventInfoRepo) List(ctx context.Context, page, limit int) ([]models.EventInfo, int64, error) {
+func (r *EventInfoRepo) List(ctx context.Context, page, limit int, titleQuery string) ([]models.EventInfo, int64, error) {
 	_ = ctx
 	if page < 1 {
 		page = 1
@@ -76,10 +77,14 @@ func (r *EventInfoRepo) List(ctx context.Context, page, limit int) ([]models.Eve
 	if limit < 1 || limit > 200 {
 		limit = 50
 	}
+	q := strings.ToLower(strings.TrimSpace(titleQuery))
 	var all []models.EventInfo
 	err := scanPrefix(r.store.db, []byte(eventKeyPrefix), func(_, val []byte) error {
 		var ev models.EventInfo
 		if err := json.Unmarshal(val, &ev); err != nil {
+			return nil
+		}
+		if q != "" && !strings.Contains(strings.ToLower(ev.Title), q) {
 			return nil
 		}
 		all = append(all, ev)
@@ -104,4 +109,34 @@ func (r *EventInfoRepo) List(ctx context.Context, page, limit int) ([]models.Eve
 		end = len(all)
 	}
 	return all[start:end], total, nil
+}
+
+func (r *EventInfoRepo) FindBySourceResultID(ctx context.Context, resultID string) (*models.EventInfo, error) {
+	_ = ctx
+	resultID = strings.TrimSpace(resultID)
+	if resultID == "" {
+		return nil, ErrNoDocuments
+	}
+	var found *models.EventInfo
+	err := scanPrefix(r.store.db, []byte(eventKeyPrefix), func(_, val []byte) error {
+		if found != nil {
+			return nil
+		}
+		var ev models.EventInfo
+		if err := json.Unmarshal(val, &ev); err != nil {
+			return nil
+		}
+		if ev.SourceResultID == resultID {
+			cp := ev
+			found = &cp
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if found == nil {
+		return nil, ErrNoDocuments
+	}
+	return found, nil
 }

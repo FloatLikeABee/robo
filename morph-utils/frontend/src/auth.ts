@@ -1,5 +1,6 @@
-/** Shared Morph JWT cookie used across Morph AI / Morph Utils / embedded apps. */
+/** Shared Morph JWT cookie used across Morph AI / MorphUtils / embedded apps. */
 export const SHARED_SESSION_COOKIE = 'userspanel_session_token';
+const AUTH_TOKEN_KEY = 'morph_auth_token';
 /** Persist signed-in sessions without a short logout TTL (~100 years). Cleared only on Sign out. */
 const SESSION_MAX_AGE_SECONDS = 100 * 365 * 24 * 3600;
 
@@ -31,9 +32,23 @@ function writeCookie(name: string, value: string, maxAgeSeconds: number): void {
   document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
 }
 
-function writeSessionCookie(name: string, value: string): void {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax`;
+function readLocalToken(): string {
+  if (typeof localStorage === 'undefined') return '';
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeLocalToken(token: string): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+    else localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function isJwtExpired(token: string, skewMs = 60_000): boolean {
@@ -52,7 +67,7 @@ export function isJwtExpired(token: string, skewMs = 60_000): boolean {
 }
 
 export function getSharedToken(): string {
-  const t = readCookie(SHARED_SESSION_COOKIE);
+  const t = readCookie(SHARED_SESSION_COOKIE) || readLocalToken();
   if (!t) return '';
   if (isJwtExpired(t)) {
     clearSharedToken();
@@ -61,17 +76,18 @@ export function getSharedToken(): string {
   return t;
 }
 
-export function setSharedToken(token: string, rememberMe = true): void {
+export function setSharedToken(token: string, _rememberMe = true): void {
   if (!token) {
     clearSharedToken();
     return;
   }
-  if (rememberMe) writeCookie(SHARED_SESSION_COOKIE, token, SESSION_MAX_AGE_SECONDS);
-  else writeSessionCookie(SHARED_SESSION_COOKIE, token);
+  writeLocalToken(token);
+  writeCookie(SHARED_SESSION_COOKIE, token, SESSION_MAX_AGE_SECONDS);
 }
 
 export function clearSharedToken(): void {
   writeCookie(SHARED_SESSION_COOKIE, '', 0);
+  writeLocalToken('');
 }
 
 /** Pull MorphAI / launcher handoff token into the shared cookie, then strip it from the URL. */
@@ -142,13 +158,13 @@ export async function ensureSharedSession(): Promise<{ ok: boolean; reason: stri
     const res = await fetch(morphAuthUrl('/api/auth/user'), {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
       clearSharedToken();
       return { ok: false, reason: 'Morph AI session expired.' };
     }
+    // 5xx / unexpected statuses: keep the token so a proxy blip does not sign the user out.
     return { ok: true, reason: '' };
   } catch {
-    // Network blip — keep cookie so embeds can still try.
     return { ok: true, reason: '' };
   }
 }

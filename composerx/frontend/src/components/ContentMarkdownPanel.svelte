@@ -1,6 +1,6 @@
 <script>
   import { renderMarkdownHtml } from '../lib/contentMarkdown'
-  import '@robo/platform-chat/message-body.css'
+  import '../lib/message-body.css'
 
   /** @type {{ markdown?: string, mode?: 'preview' | 'source' }} */
   let { markdown = '', mode = 'preview' } = $props()

@@ -126,7 +126,7 @@ func (h *Handler) AssistantChat(c *gin.Context) {
 		})
 		return
 	case "list_events":
-		list, total, err := h.EventInfoRepo.List(context.Background(), 1, 30)
+		list, total, err := h.EventInfoRepo.List(context.Background(), 1, 30, "")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

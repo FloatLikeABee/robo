@@ -1,13 +1,17 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Shown to AI when creating artifacts.
+context: |
+  Supported stack is start-all.sh: Morph AI/MorphNotes (morph, Go+CRA, :9090/:3031),
+  MorphUtils (morph-utils, Vite, :3040), Event Logs (formx, :29909/:19909, embed id sheetx, /events-info),
+  Content Maker (composerx, :8043/:8044), Data Access (SharpReport, UI :5178, API SHARPREPORT_PORT),
+  Project (morph-engi, :9096/:5179), AI tools (bk, :8000/:3000).
+  User-facing names: Morph AI, MorphNotes, MorphUtils (no space), Event Logs, Content Maker, Data Access, Project, AI tools.
+  Auth: Morph JWT; env USERS_PANEL_BASE_URL → http://127.0.0.1:9090; cookie userspanel_session_token.
+  Chat: Morph AI only — no platform-chat drawers. Product UIs dark-only.
+  Local data: one repo-root .env; SQLite + Badger under ./data/ (cwd-relative). No MySQL/Mongo/Redis required.
+  Not in the supported stack: Booki, Academi, standalone UsersPanel, landing/, Survey Maker as a product name.
+  GraphRAG/Neo4j is optional. deploy/ tree is currently absent; do not document Render/Alibaba as a complete path.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

@@ -205,6 +205,7 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
         const { data } = await tranApi.post(tranEndpoints.textAssist, {
           mode: 'improve',
           kind,
+          seed: title,
           text: bodyTrim,
         });
         const t = typeof data?.text === 'string' ? data.text : '';

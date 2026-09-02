@@ -30,7 +30,6 @@ type Handlers struct {
 	db                *db.DB
 	aiService         *ai.AIService
 	externalAPIBase   string
-	usersPanelBaseURL string // deprecated: messaging stub only; auth is local
 	jwtCfg            auth.TokenConfig
 	TranMySQL         *db.TranSQL
 	EntityDetails     db.EntityDetailStore
@@ -50,7 +49,7 @@ type Handlers struct {
 }
 
 // New creates a new Handlers instance.
-func New(database *db.DB, aiService *ai.AIService, externalAPIBase, usersPanelBaseURL string, tranSQL *db.TranSQL, entityDetails db.EntityDetailStore, sharpReportBaseURL, tranFormBaseURL, tranMailBaseURL, bookiBaseURL string, entityAttachmentMax int, entityAttachmentDir string) *Handlers {
+func New(database *db.DB, aiService *ai.AIService, externalAPIBase string, tranSQL *db.TranSQL, entityDetails db.EntityDetailStore, sharpReportBaseURL, tranFormBaseURL, tranMailBaseURL, bookiBaseURL string, entityAttachmentMax int, entityAttachmentDir string) *Handlers {
 	var legacyMongo *db.TranMongo
 	if m, ok := entityDetails.(*db.TranMongo); ok {
 		legacyMongo = m
@@ -59,7 +58,6 @@ func New(database *db.DB, aiService *ai.AIService, externalAPIBase, usersPanelBa
 		db:                      database,
 		aiService:               aiService,
 		externalAPIBase:         externalAPIBase,
-		usersPanelBaseURL:       usersPanelBaseURL,
 		jwtCfg:                  auth.LoadTokenConfig(),
 		TranMySQL:               tranSQL,
 		EntityDetails:           entityDetails,

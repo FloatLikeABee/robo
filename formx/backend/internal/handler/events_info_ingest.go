@@ -47,7 +47,7 @@ Rules:
 - Cap at 25 items; prioritize the most concrete operational items.`
 
 var (
-	eventIngestHTMLTagStripper = regexp.MustCompile(`(?is)<(script|style)[^>]*>.*?</(script|style)>|<[^>]+>`)
+	eventIngestHTMLTagStripper    = regexp.MustCompile(`(?is)<(script|style)[^>]*>.*?</(script|style)>|<[^>]+>`)
 	eventIngestHTMLEntityReplacer = strings.NewReplacer(
 		"&nbsp;", " ", "&amp;", "&", "&lt;", "<", "&gt;", ">", "&quot;", `"`, "&#39;", "'",
 	)
@@ -62,7 +62,7 @@ type eventInfoIngestDraft struct {
 
 // IngestEventInfoAI POST /events-info/ai-ingest
 //
-// Accepts multipart fields: file/files (txt/md/pdf), url, paste/text. Requires at
+// Accepts multipart fields: file/files (txt/md/json/pdf), url, paste/text. Requires at
 // least one source. Returns draft records only — nothing is persisted.
 func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 	if err := c.Request.ParseMultipartForm(maxEventIngestFileBytes * maxEventIngestFiles); err != nil {
@@ -91,14 +91,7 @@ func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 
 	if paste == "" && rawURL == "" && len(files) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "provide at least one source: a txt/md/pdf file, a URL, or pasted text",
-		})
-		return
-	}
-
-	if h.AI == nil || !h.AI.Configured() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "AI is not configured — set MORPH_AI_API_KEY to extract Events & Info from sources",
+			"error": "provide at least one source: a txt/md/json/pdf file, a URL, or pasted text",
 		})
 		return
 	}
@@ -116,7 +109,7 @@ func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 		mime := fh.Header.Get("Content-Type")
 		if !isAllowedEventIngestFile(name, mime) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": fmt.Sprintf("unsupported file type %q; accepted: TXT, MD, PDF", name),
+				"error": fmt.Sprintf("unsupported file type %q; accepted: TXT, MD, JSON, PDF", name),
 			})
 			return
 		}
@@ -169,6 +162,13 @@ func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 	}
 	if strings.TrimSpace(corpus) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "sources produced no readable text"})
+		return
+	}
+
+	if h.AI == nil || !h.AI.Configured() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "AI is not configured — set MORPH_AI_API_KEY to extract Events & Info from sources",
+		})
 		return
 	}
 
@@ -227,7 +227,7 @@ func firstNonEmptyForm(vals ...string) string {
 func isAllowedEventIngestFile(name, mime string) bool {
 	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(name)))
 	switch ext {
-	case ".txt", ".md", ".markdown", ".pdf":
+	case ".txt", ".md", ".markdown", ".json", ".pdf":
 		return true
 	}
 	m := strings.ToLower(strings.TrimSpace(mime))
@@ -235,10 +235,35 @@ func isAllowedEventIngestFile(name, mime string) bool {
 		m = strings.TrimSpace(m[:i])
 	}
 	switch m {
-	case "application/pdf", "text/plain", "text/markdown":
+	case "application/pdf", "text/plain", "text/markdown", "application/json":
 		return true
 	}
 	return false
+}
+
+func isJSONEventIngestFile(name, mime string) bool {
+	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(name)))
+	if ext == ".json" {
+		return true
+	}
+	m := strings.ToLower(strings.TrimSpace(mime))
+	if i := strings.Index(m, ";"); i >= 0 {
+		m = strings.TrimSpace(m[:i])
+	}
+	return m == "application/json"
+}
+
+func eventIngestTextFromBytes(name, mime string, raw []byte) string {
+	if isJSONEventIngestFile(name, mime) {
+		var v any
+		if err := json.Unmarshal(raw, &v); err == nil {
+			if pretty, err := json.MarshalIndent(v, "", "  "); err == nil {
+				return string(pretty)
+			}
+		}
+		return string(raw)
+	}
+	return docextract.ExtractText(raw)
 }
 
 func (h *Handler) readEventIngestFile(c *gin.Context, fh *multipart.FileHeader, name, mime string) (string, error) {
@@ -271,7 +296,7 @@ func (h *Handler) readEventIngestFile(c *gin.Context, fh *multipart.FileHeader, 
 	if len(raw) > maxEventIngestFileBytes {
 		return "", fmt.Errorf("file %q is too large", name)
 	}
-	return docextract.ExtractText(raw), nil
+	return eventIngestTextFromBytes(name, mime, raw), nil
 }
 
 func fetchEventIngestURLText(ctx context.Context, rawURL string) (string, error) {

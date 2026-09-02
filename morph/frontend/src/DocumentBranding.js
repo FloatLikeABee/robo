@@ -12,7 +12,7 @@ const AI = {
 };
 
 const DATA = {
-  title: 'Morph Data',
+  title: 'MorphNotes',
   iconSvg: `${PREFIX}/icons/morph-data-icon.svg`,
   iconPng: `${PREFIX}/icons/morph-data-192.png`,
   themeColor: '#0a0413',
@@ -39,7 +39,7 @@ export default function DocumentBranding() {
     const isLogin = pathname === '/login';
     const brand = isMorphData ? DATA : AI;
 
-    document.title = isLogin ? 'Sign in · Morph AI & Morph Data' : brand.title;
+    document.title = isLogin ? 'Sign in · Morph AI & MorphNotes' : brand.title;
 
     setHref('link#morph-favicon-svg', brand.iconSvg);
     setHref('link#morph-apple-touch', brand.iconPng);
