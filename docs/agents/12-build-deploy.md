@@ -111,11 +111,11 @@ python3 openspec/check_files_workspace_archive.py
 ( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
 ```
 
-The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image.
+The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image. That workflow also validates `render.yaml` against the Render Blueprint schema. It does not add a check name to `ci.yml`.
 
 ## Production / cloud
 
-Morph API and the Morph AI UI ship as one image. The runbook is [`deploy/README.md`](../../deploy/README.md) (build, `docker compose` up, `/data` volume, env file, backup, upgrade). No host is selected. `scripts/deploy.sh` still talks about Render and Alibaba and still lists removed apps. Do not follow that script.
+Morph API and the Morph AI UI ship as one image. The runbook is [`deploy/README.md`](../../deploy/README.md): local `docker compose`, and **Deploy on Render** for the hosted service (`render.yaml` at the repo root). The product owner creates that service from the Blueprint after merge. `scripts/deploy.sh` still talks about Alibaba and removed apps. Do not follow that script.
 
 ### What does exist
 

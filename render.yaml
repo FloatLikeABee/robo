@@ -1,0 +1,92 @@
+# Morph API + Morph AI UI. Attach this file to the existing Render project.
+# Secrets are dashboard prompts. Do not put values on those keys.
+services:
+  - type: web
+    runtime: docker
+    name: morph
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - morph/**
+        - pkg/**
+        - Dockerfile
+        - .dockerignore
+        - scripts/with-root-env.cjs
+        - deploy/docker-entrypoint.sh
+        - render.yaml
+    disk:
+      name: morph-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: MORPH_ENV
+        value: production
+      - key: PORT
+        value: "9090"
+      - key: GIN_MODE
+        value: release
+      - key: MORPH_AI_PROVIDER
+        value: dashscope
+      - key: ADMIN_USERNAME
+        value: morphadmin
+      - key: ADMIN_EMAIL
+        value: morphadmin@local.com
+      - key: DB_PATH
+        value: /data/badger
+      - key: TRAN_SQLITE_PATH
+        value: /data/tran.sqlite
+      - key: ENTITY_DETAILS_BADGER
+        value: /data/entity_details
+      - key: MORPH_KNOWLEDGE_DIR
+        value: /data/knowledge
+      - key: TRAN_ENTITY_ATTACHMENT_DIR
+        value: /data/uploads/entity_attachments
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: MORPH_AI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TRAN_QWEN_API_KEY
+        sync: false
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_COMPATIBLE_API_KEY
+        sync: false
+      - key: MORPH_IMAGE_API_KEY
+        sync: false
+      - key: POLLINATIONS_API_KEY
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: TRAN_MYSQL_DSN
+        sync: false
+      - key: TRAN_MONGO_URI
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: TRAN_OPENAI_API_KEY
+        sync: false

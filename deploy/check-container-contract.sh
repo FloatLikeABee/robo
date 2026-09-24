@@ -66,4 +66,134 @@ expected="  go:
 [ "$jobs" = "$expected" ] || fail "ci.yml jobs changed; image build must not add a required check name
 $jobs"
 
+yaml="$root/render.yaml"
+[ -f "$yaml" ] || fail "missing render.yaml"
+python3 - "$yaml" <<'PY' || fail "render.yaml does not match the Morph Blueprint"
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+lines = text.splitlines()
+errors = []
+
+def need(needle):
+    if needle not in text:
+        errors.append("missing " + needle)
+
+if any(line.startswith("projects:") for line in lines):
+    errors.append("must not declare projects")
+if "numInstances:" in text:
+    errors.append("must not set numInstances")
+if "generateValue:" in text:
+    errors.append("must not generate secret values")
+
+for needle in (
+    "type: web",
+    "runtime: docker",
+    "name: morph",
+    "region: singapore",
+    "plan: starter",
+    "branch: main",
+    "dockerfilePath: ./Dockerfile",
+    "dockerContext: .",
+    "healthCheckPath: /health",
+    "autoDeployTrigger: checksPass",
+    "name: morph-data",
+    "mountPath: /data",
+    "sizeGB: 1",
+    "maxShutdownDelaySeconds: 120",
+):
+    need(needle)
+
+for path in (
+    "morph/**",
+    "pkg/**",
+    "Dockerfile",
+    ".dockerignore",
+    "scripts/with-root-env.cjs",
+    "deploy/docker-entrypoint.sh",
+    "render.yaml",
+):
+    if path not in text:
+        errors.append("buildFilter missing " + path)
+
+# Env entries sit under the service: "      - key:" then "        " fields.
+blocks = []
+current = None
+for line in lines:
+    if line.startswith("      - key:"):
+        if current:
+            blocks.append(current)
+        current = [line]
+    elif current is not None:
+        if line.startswith("        "):
+            current.append(line)
+        else:
+            blocks.append(current)
+            current = None
+if current:
+    blocks.append(current)
+
+parsed = {}
+for block in blocks:
+    key = block[0].split(":", 1)[1].strip()
+    parsed[key] = "\n".join(block[1:])
+
+plain = {
+    "MORPH_ENV": "production",
+    "PORT": "9090",
+    "GIN_MODE": "release",
+    "MORPH_AI_PROVIDER": "dashscope",
+    "ADMIN_USERNAME": "morphadmin",
+    "ADMIN_EMAIL": "morphadmin@local.com",
+    "DB_PATH": "/data/badger",
+    "TRAN_SQLITE_PATH": "/data/tran.sqlite",
+    "ENTITY_DETAILS_BADGER": "/data/entity_details",
+    "MORPH_KNOWLEDGE_DIR": "/data/knowledge",
+    "TRAN_ENTITY_ATTACHMENT_DIR": "/data/uploads/entity_attachments",
+}
+for key, value in plain.items():
+    body = parsed.get(key)
+    if body is None:
+        errors.append("missing env " + key)
+    elif "value: " + value not in body and 'value: "' + value + '"' not in body:
+        errors.append(key + " must be " + value)
+
+secrets = (
+    "JWT_SECRET",
+    "ADMIN_PASSWORD",
+    "BOOTSTRAP_ADMIN_PASSWORD",
+    "MORPH_AI_API_KEY",
+    "GEMINI_API_KEY",
+    "TRAN_QWEN_API_KEY",
+    "DASHSCOPE_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "XAI_API_KEY",
+    "OPENROUTER_API_KEY",
+    "MISTRAL_API_KEY",
+    "GROQ_API_KEY",
+    "OPENAI_COMPATIBLE_API_KEY",
+    "MORPH_IMAGE_API_KEY",
+    "POLLINATIONS_API_KEY",
+    "SMTP_PASS",
+    "TRAN_MYSQL_DSN",
+    "TRAN_MONGO_URI",
+    "NEO4J_PASSWORD",
+    "TRAN_OPENAI_API_KEY",
+)
+for key in secrets:
+    body = parsed.get(key)
+    if body is None:
+        errors.append("missing secret " + key)
+        continue
+    if "sync: false" not in body:
+        errors.append(key + " must set sync: false")
+    if "value:" in body:
+        errors.append(key + " must not have a value")
+
+if errors:
+    print("\n".join(errors), file=sys.stderr)
+    sys.exit(1)
+PY
+
 echo "container contract ok"
