@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"idongivaflyinfa/auth"
 	"idongivaflyinfa/mcp"
 )
 
@@ -22,7 +24,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	server, err := mcp.NewServer(id, nil)
+	server, err := mcp.NewServer(id, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,11 +57,12 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 1 || listed.Tools[0].Name != "whoami" {
+	if len(listed.Tools) != 3 || !toolNamed(listed.Tools, "whoami") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
-	if listed.Tools[0].Annotations == nil || !listed.Tools[0].Annotations.ReadOnlyHint {
-		t.Fatalf("whoami annotations = %+v", listed.Tools[0].Annotations)
+	who := toolByName(t, listed.Tools, "whoami")
+	if who.Annotations == nil || !who.Annotations.ReadOnlyHint {
+		t.Fatalf("whoami annotations = %+v", who.Annotations)
 	}
 
 	res, err := session.CallTool(context.Background(), &sdkmcp.CallToolParams{Name: "whoami"})
@@ -95,7 +98,7 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := mcp.NewServer(id, nil)
+	server, err := mcp.NewServer(id, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,13 +114,108 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 1 || listed.Tools[0].Name != "whoami" {
+	if len(listed.Tools) != 3 || !toolNamed(listed.Tools, "whoami") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
 
+func toolNamed(tools []*sdkmcp.Tool, name string) bool {
+	for _, tool := range tools {
+		if tool.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func toolByName(t *testing.T, tools []*sdkmcp.Tool, name string) *sdkmcp.Tool {
+	t.Helper()
+	for _, tool := range tools {
+		if tool.Name == name {
+			return tool
+		}
+	}
+	t.Fatalf("missing tool %s", name)
+	return nil
+}
+
+func TestToolsAreWhoamiListAndGet(t *testing.T) {
+	cfg := testTokenConfig()
+	tok := signToken(t, cfg, "user-1", "ada@example.com", "ada", nil)
+	id, err := mcp.ResolveIdentity(tok, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := mcp.NewServer(id, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := connectInMemory(t, server, "2025-06-18")
+	listed, err := session.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, tool := range listed.Tools {
+		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+			t.Fatalf("%s annotations = %+v", tool.Name, tool.Annotations)
+		}
+		got[tool.Name] = true
+	}
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {
+		if !got[name] {
+			t.Fatalf("missing %s in %+v", name, listed.Tools)
+		}
+	}
+	if len(listed.Tools) != 3 {
+		t.Fatalf("tools = %+v", listed.Tools)
+	}
+}
+
+func TestExpiredTokenIsAToolError(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok := signToken(t, cfg, "user-1", "ada@example.com", "ada", nil)
+	t.Setenv("JWT_SECRET", secret)
+	t.Setenv(mcp.TokenEnv, tok)
+	id, err := mcp.ResolveIdentity(tok, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recheck := func() error {
+		return mcp.RecheckToken(os.Getenv(mcp.TokenEnv), auth.LoadTokenConfig())
+	}
+	server, err := mcp.NewServer(id, nil, recheck, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := connectInMemory(t, server, "2025-06-18")
+	ctx := context.Background()
+	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{Name: "whoami"})
+	if err != nil || res.IsError {
+		t.Fatalf("whoami err=%v res=%+v", err, res)
+	}
+	expired, err := auth.EncodeToken(auth.TokenConfig{Secret: []byte(secret), ExpiryHours: -1}, "user-1", "ada@example.com", "ada", nil, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(mcp.TokenEnv, expired)
+	for _, name := range []string{"whoami", "list_my_tasks"} {
+		res, err = session.CallTool(ctx, &sdkmcp.CallToolParams{Name: name})
+		if err != nil {
+			t.Fatalf("%s protocol error: %v", name, err)
+		}
+		if !res.IsError {
+			t.Fatalf("%s succeeded with an expired token", name)
+		}
+		if strings.Contains(toolText(t, res), expired) {
+			t.Fatalf("%s leaked the token", name)
+		}
+	}
+}
+
 func TestNewServerRequiresUser(t *testing.T) {
-	_, err := mcp.NewServer(mcp.Identity{}, nil)
+	_, err := mcp.NewServer(mcp.Identity{}, nil, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -134,7 +232,7 @@ func TestProtocolBytesStayOffTheLog(t *testing.T) {
 	var protocol lockedBuf
 	var logs lockedBuf
 	logger := slog.New(slog.NewTextHandler(&logs, nil))
-	server, err := mcp.NewServer(id, logger)
+	server, err := mcp.NewServer(id, nil, nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

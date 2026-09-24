@@ -45,7 +45,7 @@ func ValidateStartup(cfg Config, production bool) error {
 		return nil
 	}
 	var problems []string
-	if msg := jwtSecretProblem(cfg.JWTSecret); msg != "" {
+	if msg := JWTSecretProblem(cfg.JWTSecret); msg != "" {
 		problems = append(problems, msg)
 	}
 	if msg := adminPasswordProblem(cfg.AdminPassword); msg != "" {
@@ -68,7 +68,9 @@ func resolvedJWTSecret() string {
 	return secret
 }
 
-func jwtSecretProblem(secret string) string {
+// JWTSecretProblem reports why a JWT secret is unsafe to host.
+// An empty string means the secret passes. The text does not include the secret.
+func JWTSecretProblem(secret string) string {
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
 		return fmt.Sprintf("JWT_SECRET is empty. Set JWT_SECRET to a unique random string of at least %d characters", MinJWTSecretLength)
@@ -156,7 +158,7 @@ func DevelopmentWarnings(cfg Config, production bool) []string {
 		return nil
 	}
 	var out []string
-	if jwtSecretProblem(cfg.JWTSecret) != "" {
+	if JWTSecretProblem(cfg.JWTSecret) != "" {
 		out = append(out, "JWT_SECRET is a development default, placeholder, or shorter than 32 characters. Morph will still start because MORPH_ENV is not production. Set a unique secret before hosting. See docs/security-hosting-checklist.md")
 	}
 	if adminPasswordProblem(cfg.AdminPassword) != "" {

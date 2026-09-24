@@ -75,4 +75,4 @@ http://localhost:9090/swagger/index.html
 
 ## MCP
 
-`cmd/morph-mcp` is a local stdio MCP server (`whoami` only in this build). It does not open Badger, so it can run beside this API. HTTP `/ai/mcp-tools` catalogs are not MCP. See [`docs/agents/14-morph-mcp.md`](../docs/agents/14-morph-mcp.md).
+`cmd/morph-mcp` is a local stdio MCP server (`whoami`, `list_my_tasks`, `get_task`). It does not open Badger, so it can run beside this API. It reads `TRAN_SQLITE_PATH` read-only. HTTP `/ai/mcp-tools` catalogs are not MCP. See [`docs/agents/14-morph-mcp.md`](../docs/agents/14-morph-mcp.md).

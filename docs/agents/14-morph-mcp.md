@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools and resources. The only tool in this build is `whoami` (read-only). `resources/list` is empty. MorphNotes tools and `morph://` resources are a later story.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools and resources. This build has three read-only tools: `whoami`, `list_my_tasks`, and `get_task`. `resources/list` is empty. There are no write tools, prompts, or `morph://` resources.
 
 ## Build
 
@@ -27,11 +27,11 @@ Missing or invalid tokens fail at startup with a message on stderr. The process 
 
 There is no separate API token yet. Do not commit the JWT. Pass it in the client config, not in git.
 
-Identity is claims-only. The server trusts the verified claims (`sub`, email, username, roles) and does not look up `plat_users`. The token is checked once, when the process starts. A running morph-mcp never re-reads `JWT_SECRET` and never re-checks expiry or whether the account still exists. A deleted or disabled user keeps working for as long as that process stays up, including after the token's expiry time has passed.
+`JWT_SECRET` must be set to the same non-default value the API used to sign the token. An empty secret, or the built-in development default `morph-dev-jwt-secret-change-me`, refuses startup. The API substitutes that default when the variable is unset; morph-mcp does not. Startup verifies the token with `auth.DecodeToken` (signature and `exp`) before it checks `plat_users`. When `MORPH_ENV` is `production`, morph-mcp also applies the API's production JWT secret rules and the 168-hour token lifetime cap. A short local secret is refused in that mode.
 
-Rotating `JWT_SECRET` or letting the token expire only blocks new launches. It does not stop a morph-mcp that is already running. To revoke access immediately, stop or restart the running morph-mcp processes. The MCP client relaunches them, and the new process checks the token again. There is no per-user revoke list in this build.
+On startup, after the token verifies, the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again, including the production lifetime cap. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
 
-MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). This build does not read MorphNotes or other private stores. Do not add a tool that returns a record without calling `ExposeRecord`.
+MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). It returns true for any verified user on any record, so it is not an owner check. `list_my_tasks` and `get_task` do not call it. They run only after the token verifies and the subject exists in `plat_users`, and `ownerClause` limits the SQL to that user's own Notes & TODOs.
 
 On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config.
 
@@ -47,9 +47,19 @@ curl -s -X POST http://127.0.0.1:9090/api/auth/login \
 
 `morph-api` opens Badger at `DB_PATH` (default `./data/badger`) and `ENTITY_DETAILS_BADGER` (default `./data/entity_details`). Badger takes an exclusive directory lock. A second process that opens either directory fails with a directory-lock error and must not be pointed at those paths while the API is up.
 
-`morph-mcp` does not open Badger or SQLite, so it can start beside a running API and does not take those locks.
+`morph-mcp` does not open Badger, so it can start beside a running API and does not take those locks.
 
-The API opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`) in WAL mode. Later read-only tools should open that file with `mode=ro` and `query_only=1`. They must not call `db.NewTranSQL`: that helper sets the journal mode and runs schema writes. `db.New` and `db.NewBadgerEntityDetails` stay in the API process.
+It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as the API) read-only: a `file:` URI with `mode=ro` and `query_only`. Set an absolute path in the client config. The process does not call `db.NewTranSQL`, does not set the journal mode, and does not run migrations. The API already opens that file in WAL mode; the read-only connection works while the API holds it. A missing file fails startup. `db.New` and `db.NewBadgerEntityDetails` stay in the API process.
+
+## Tools
+
+| Tool | Purpose |
+|------|---------|
+| `whoami` | Verified JWT claims: id, email, username, roles. |
+| `list_my_tasks` | The signed-in user's own Notes & TODOs (`user_note_todo`). Optional `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), and `limit` (default 50, capped at 100). |
+| `get_task` | One of those rows by integer `id`. |
+
+`list_my_tasks` and `get_task` are not the shared MorphNotes Tasks board (`CaseTask`). That board has no per-user owner. These tools scope every query by the token subject (`plat_users.id`), joined to that user's active Tran `User`, and return only that user's notes and todos. The text body is the SQLite column. Another user's id is not found. The tools do not say the row is forbidden, and they do not create a user row.
 
 ## Cursor
 
@@ -62,7 +72,8 @@ Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
       "command": "/absolute/path/to/morph-mcp",
       "env": {
         "MORPH_MCP_TOKEN": "<session JWT>",
-        "JWT_SECRET": "<same secret as the Morph API>"
+        "JWT_SECRET": "<same non-default secret as the Morph API>",
+        "TRAN_SQLITE_PATH": "/absolute/path/to/tran.sqlite"
       }
     }
   }
@@ -80,7 +91,8 @@ The same `mcpServers` object goes in Claude Desktop's config file (`claude_deskt
       "command": "/absolute/path/to/morph-mcp",
       "env": {
         "MORPH_MCP_TOKEN": "<session JWT>",
-        "JWT_SECRET": "<same secret as the Morph API>"
+        "JWT_SECRET": "<same non-default secret as the Morph API>",
+        "TRAN_SQLITE_PATH": "/absolute/path/to/tran.sqlite"
       }
     }
   }
@@ -92,6 +104,7 @@ The same `mcpServers` object goes in Claude Desktop's config file (`claude_deskt
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `MORPH_MCP_TOKEN` | yes | Morph session JWT. Never log it. |
-| `JWT_SECRET` | yes, unless the dev default matches the API | HMAC secret for that JWT. Must match morph-api. |
+| `JWT_SECRET` | yes | HMAC secret for that JWT. Must match morph-api. Empty and the development default are refused. |
+| `TRAN_SQLITE_PATH` | yes for task tools | SQLite file the API already uses. Default `./data/tran.sqlite` if unset. Opened read-only. |
 
-`DB_PATH`, `ENTITY_DETAILS_BADGER`, and `TRAN_SQLITE_PATH` are not read by this build.
+`DB_PATH` and `ENTITY_DETAILS_BADGER` are not read by this build.
