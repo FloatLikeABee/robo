@@ -32,7 +32,7 @@ The system MUST reject `POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/
 - **AND** the research row count is unchanged
 
 ### Requirement: A valid Morph JWT allows the same mutations
-When the request carries a valid Morph JWT for an existing user, the same mutating routes MUST proceed to their handlers and succeed as they do for a signed-in caller today. Identity headers sent with that token MUST NOT change the user id or role taken from the token.
+When the request carries a valid Morph JWT for an existing user, the same mutating routes MUST proceed to their handlers and succeed as they do for a signed-in caller today, except `POST /api/tran/users`, `PUT /api/tran/users/:id`, and `DELETE /api/tran/users/:id`. Those three routes MUST still reach their handlers for a valid session, and a non-admin session MUST then be rejected with 403 as specified by tran-user-admin. Identity headers sent with that token MUST NOT change the user id or role taken from the token.
 
 #### Scenario: Signed-in Research create and publish succeed
 - **WHEN** a client with a valid Morph JWT creates a Research job and then publishes it
@@ -57,6 +57,10 @@ When the request carries a valid Morph JWT for an existing user, the same mutati
 - **WHEN** a client sends a mutating Morph data request with a valid Morph JWT for one user and `X-User-ID` plus `X-User-Role: admin` for a different user
 - **THEN** the middleware does not respond with 401
 - **AND** the attached user id and role are the token user's, not the header values
+
+#### Scenario: A signed-in non-admin does not succeed at Tran user administration
+- **WHEN** a client with a valid Morph JWT for a non-admin sends `POST /api/tran/users`
+- **THEN** the response status is 403
 
 ### Requirement: Published HTML pages stay public
 `GET` and `HEAD` of `/api/tran/public/{kind}/{slug}` MUST succeed without a session when `kind` is exactly `big-notes`, `timelines`, or `research`, `slug` is one non-empty path segment that does not contain `/`, is not `.` or `..`, and is not empty, and the stored record for that slug is published. A record is published only when its published slug is non-empty after trimming. The match is case-sensitive and ignores the query string. Any other shape under `/api/tran/public/` that reaches the session middleware, including an empty segment (`//`), a `%2F` that decodes to an extra segment, a dot segment, a different kind case, or a method other than `GET` or `HEAD`, MUST return 401 without a session. A trailing slash is not a public match; the router may redirect it to the exact slug instead of returning the published HTML. An unpublished record MUST NOT be returned for a guessed slug.
