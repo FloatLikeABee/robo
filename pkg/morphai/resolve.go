@@ -167,6 +167,9 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 	}
 
 	model := cfg.Model
+	if cfg.legacyDefaultModel && model == DefaultModel && spec.Info.ID != ProviderDashScope && len(spec.Info.SuggestedModels) > 0 {
+		model = ""
+	}
 	if model == "" && spec.Info.ID == ProviderDashScope {
 		model = firstNonEmpty(os.Getenv("MORPH_AI_MODEL"), os.Getenv("TRAN_QWEN_MODEL"))
 		if model == "" {

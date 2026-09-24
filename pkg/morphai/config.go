@@ -31,22 +31,28 @@ type Config struct {
 	// A named provider ignores a public field that still equals its snapshot.
 	legacyKey  string
 	legacyBase string
+	// legacyDefaultModel is set when MORPH_AI_PROVIDER selects a non-DashScope
+	// provider and the chat model is still the DashScope default. Resolution
+	// uses that provider's own default model instead, including when a caller
+	// writes qwen3-max back onto Config after load.
+	legacyDefaultModel bool
 }
 
 // LoadFromEnv reads unified MorphAI settings from the environment.
 //
 // Primary variables:
+//   - MORPH_AI_PROVIDER (optional named provider id)
 //   - MORPH_AI_API_KEY
-//   - MORPH_AI_MODEL (default qwen3-max)
+//   - MORPH_AI_MODEL (default qwen3-max on the legacy path)
 //   - MORPH_AI_API_URL (optional native endpoint override)
 //   - MORPH_AI_BASE_URL (optional compatible-mode base URL)
 //   - MORPH_AI_VISION_MODEL (optional; default qwen-vl-max)
 //
 // Legacy fallbacks: GEMINI_API_KEY, GEMINI_MODEL, TRAN_QWEN_*.
 //
-// Provider is left empty. Per-provider variables (OPENAI_API_KEY,
-// ANTHROPIC_API_KEY, and the rest) are not consulted here and do not change
-// which backend this config talks to.
+// MORPH_AI_PROVIDER empty leaves Provider empty. The legacy key and base URL
+// are snapshotted either way, and a named provider does not send them. An
+// unknown id is stored and the first call returns ErrUnknownProvider.
 func LoadFromEnv() Config {
 	apiKey := firstNonEmpty(
 		os.Getenv("MORPH_AI_API_KEY"),
@@ -91,7 +97,7 @@ func LoadFromEnv() Config {
 
 	key := strings.TrimSpace(apiKey)
 	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	return Config{
+	cfg := Config{
 		APIKey:       key,
 		Model:        strings.TrimSpace(model),
 		VisionModel:  strings.TrimSpace(visionModel),
@@ -101,6 +107,20 @@ func LoadFromEnv() Config {
 		legacyKey:    key,
 		legacyBase:   base,
 	}
+	provider := normalizeProviderID(ProviderID(os.Getenv("MORPH_AI_PROVIDER")))
+	if provider == "" {
+		return cfg
+	}
+	cfg.Provider = provider
+	// GEMINI_MODEL and TRAN_QWEN_MODEL belong to the empty-provider path.
+	cfg.Model = strings.TrimSpace(os.Getenv("MORPH_AI_MODEL"))
+	if spec, ok := providerByID(provider); ok && spec.Info.ID != ProviderDashScope && len(spec.Info.SuggestedModels) > 0 {
+		if cfg.Model == "" || cfg.Model == DefaultModel {
+			cfg.legacyDefaultModel = true
+			cfg.Model = ""
+		}
+	}
+	return cfg
 }
 
 // VisionModelOrDefault returns the configured multimodal model, falling back to

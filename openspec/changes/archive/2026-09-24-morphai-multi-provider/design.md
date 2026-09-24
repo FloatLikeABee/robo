@@ -115,6 +115,12 @@ Delivery order is the opposite of that precedence: the first stored source to bu
 
 No caller edits. Deploy is a library update. Rollback is reverting the module. Env files gain empty `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_BASE_URL`, `DASHSCOPE_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, and `OPENAI_COMPATIBLE_API_KEY` (plus optional `*_BASE_URL`s). Unset, they do not change the legacy client.
 
+## MORPH_AI_PROVIDER
+
+v1 chooses the provider from the server environment. `LoadFromEnv` reads `MORPH_AI_PROVIDER`. A known id is trimmed and lowercased into `Config.Provider`. Empty or whitespace leaves the legacy client byte-for-byte as before. The legacy key and base URL stay snapshotted and are not sent for that named provider; the provider's own env vars are used, and a missing key is `ErrProviderNotConfigured`. `LoadFromEnv` still returns `Config`, so an unknown id is stored and the first call returns `ErrUnknownProvider` instead of falling back to DashScope.
+
+`.env.example` ships `MORPH_AI_MODEL=qwen3-max`. Someone who only sets `MORPH_AI_PROVIDER=xai` would otherwise send a Qwen model id to xAI. Morph also writes that default back onto the loaded config when the env model is unset. The loader marks that case. Resolution then uses the provider's first suggested model when the selected provider is not DashScope, has a suggested model, and the chat model is still `qwen3-max` or empty. A different `MORPH_AI_MODEL` is sent as written. DashScope keeps `qwen3-max`. `GEMINI_MODEL` and `TRAN_QWEN_MODEL` are not copied onto a named provider. A `Config` value built in code with `Model: qwen3-max` is still sent, because it was not loaded as the legacy default.
+
 ## Open Questions
 
 None that change the spec or the task breakdown. Model ids in the suggested lists are labels for a settings UI, not a pinned contract.
