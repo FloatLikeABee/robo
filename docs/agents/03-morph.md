@@ -28,6 +28,8 @@ This is **not** a Transfinder / school / SQL Server product. MorphNotes UI lives
 5. Gin: CORS, `AuthzMiddleware`, Swagger, API, static SPA
 6. Listen on `PORT` (default `9090`)
 
+Sealed provider API keys use `morph/internal/secretbox` and `MORPH_SECRETS_KEY` (not `JWT_SECRET`; generate with `openssl rand -base64 32`). After `NewTranSQL` creates the data directory, `openSecretsBox` passes the bool from `config.ParseMorphEnv` into `secretbox.Resolve`. `MORPH_ENV=production` or `prod` refuses a missing or invalid `MORPH_SECRETS_KEY`; the error names the variable and does not print the value. Local mode (unset, `development`, `dev`, `local`, `test`) uses or creates `<data dir>/morph-secrets.key` at mode `0600` and logs a warning with the path only. `MORPH_SECRETS_KEY_PREVIOUS` is loaded when it is set. See [`14-secrets-key.md`](14-secrets-key.md).
+
 On macOS, `start-all.sh` **builds** the binary before run (Badger `LC_UUID`).
 
 ## MorphNotes nav
