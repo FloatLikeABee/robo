@@ -1,8 +1,20 @@
 # CI for the Morph platform monorepo.
 #
+# Check names are a required-check contract. Do not rename them without
+# updating branch protection and the platform-ci spec:
+#   Go / Morph API
+#   Go / Event Logs
+#   Go / Content Maker
+#   Go / morphai
+#   Morph frontend
+#
 # Modules are independent (no go.work). Each Go job reads its own go.mod
-# for the toolchain version. MORPH_AI_API_KEY is unset; tests must pass
+# for the toolchain version. Every check runs on every pull request and
+# push to main (no path filters): replace directives mean a pkg/morphai
+# edit can break the apps. MORPH_AI_API_KEY is unset; tests must pass
 # without an AI provider.
+#
+# Actions are pinned by commit SHA. The tag is only a comment.
 name: CI
 
 on:
@@ -21,7 +33,7 @@ concurrency:
 jobs:
   go:
     name: Go / ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -41,8 +53,10 @@ jobs:
             # No third-party requirements, so there is no go.sum.
             cache-deps: pkg/morphai/go.mod
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: ${{ matrix.dir }}/go.mod
           cache-dependency-path: ${{ matrix.cache-deps }}
@@ -59,14 +73,16 @@ jobs:
 
   morph-frontend:
     name: Morph frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
         working-directory: morph/frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
