@@ -52,7 +52,7 @@ Frontend (optional):
 
 ## AI
 
-Event Logs uses [`pkg/morphai`](../pkg/morphai) for optional LLM-backed APIs. Platform chat is **Morph AI** (`:3031`), not a satellite drawer.
+Event Logs uses [`pkg/morphai`](../pkg/morphai) for optional LLM-backed APIs. The default is DashScope via `MORPH_AI_*`. Named providers are available on that same client. Platform chat is **Morph AI** (`:3031`), not a satellite drawer.
 
 ```bash
 MORPH_AI_API_KEY=sk-your-dashscope-key

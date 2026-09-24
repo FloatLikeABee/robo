@@ -4,7 +4,7 @@ Go modules use `replace` in `go.mod`. Rust uses a path dependency on `pkg/morpha
 
 ```
 pkg/
-├── morphai/          Go DashScope client
+├── morphai/          Go multi-provider client (DashScope by default)
 ├── morphai-rs/       Rust DashScope client
 ├── repoenv/          Load repo-root `.env` (walk up to start-all.sh)
 ├── assistmd/         Markdown helpers
@@ -24,7 +24,7 @@ client := morphai.NewClientFromEnv()
 response, err := client.ChatCompletion(ctx, messages)
 ```
 
-Env: `MORPH_AI_API_KEY`, `MORPH_AI_MODEL` (default `qwen3-max`), `MORPH_AI_API_URL` / `MORPH_AI_BASE_URL`. See [`pkg/morphai/README.md`](../../pkg/morphai/README.md).
+Env: `MORPH_AI_API_KEY`, `MORPH_AI_MODEL` (default `qwen3-max`), `MORPH_AI_API_URL` / `MORPH_AI_BASE_URL`. Named providers and their env keys are listed in [`pkg/morphai/README.md`](../../pkg/morphai/README.md). A missing named-provider key is an error, not a silent fallback.
 
 ## `pkg/morphai-rs` (Rust)
 
