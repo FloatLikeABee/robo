@@ -27,7 +27,11 @@ Missing or invalid tokens fail at startup with a message on stderr. The process 
 
 There is no separate API token yet. Do not commit the JWT. Pass it in the client config, not in git.
 
-The server trusts the verified claims (`sub`, email, username, roles). It does not look up `plat_users`. A later story should confirm the subject still exists.
+Identity is claims-only. The server trusts the verified claims (`sub`, email, username, roles) and does not look up `plat_users`. The token is checked once, when the process starts. A running morph-mcp never re-reads `JWT_SECRET` and never re-checks expiry or whether the account still exists. A deleted or disabled user keeps working for as long as that process stays up, including after the token's expiry time has passed.
+
+Rotating `JWT_SECRET` or letting the token expire only blocks new launches. It does not stop a morph-mcp that is already running. To revoke access immediately, stop or restart the running morph-mcp processes. The MCP client relaunches them, and the new process checks the token again. There is no per-user revoke list in this build.
+
+MCP never exposes private data to unauthenticated callers. This skeleton does not read MorphNotes or other private stores. Do not add a tool that returns private data before the caller has a verified token.
 
 On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config.
 

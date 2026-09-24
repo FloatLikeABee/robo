@@ -28,7 +28,7 @@ func NewServer(id Identity, logger *slog.Logger) (*sdkmcp.Server, error) {
 	if strings.TrimSpace(id.UserID) == "" {
 		return nil, errors.New("morph user id is required")
 	}
-	logger.Info("morph-mcp server ready", "user_id", id.UserID)
+	logger.Info("morph-mcp server ready")
 
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{
 		Name:    ServerName,
@@ -40,8 +40,9 @@ func NewServer(id Identity, logger *slog.Logger) (*sdkmcp.Server, error) {
 		// A non-nil capabilities value suppresses the SDK's historical logging
 		// capability. Tools are inferred when whoami is registered. Resources
 		// are advertised with an empty list until a later story registers URIs.
+		// ListChanged stays false: this process never emits list_changed.
 		Capabilities: &sdkmcp.ServerCapabilities{
-			Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
+			Resources: &sdkmcp.ResourceCapabilities{ListChanged: false},
 		},
 	})
 	closedWorld := false

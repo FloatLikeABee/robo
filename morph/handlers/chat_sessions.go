@@ -13,9 +13,9 @@ import (
 
 // ListChatSessionsHandler returns all chat sessions for the current user (newest first).
 // @Summary      List chat sessions
+// @Description  Requires a Morph JWT. The user id comes from that session, not from a client header.
 // @Tags         Chat
 // @Produce      json
-// @Header       200      {string}  X-User-ID  "User ID"
 // @Success      200      {array}   models.ChatSession
 // @Router       /api/chat/sessions [get]
 func (h *Handlers) ListChatSessionsHandler(c *gin.Context) {
