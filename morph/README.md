@@ -57,6 +57,16 @@ Published pages are an allowlist, not the whole `/api/tran/public/` prefix. With
 
 The SPA sends `Authorization: Bearer` from the Morph cookie when the user is signed in. Details: [`docs/agents/01-auth-flow.md`](../docs/agents/01-auth-flow.md).
 
+## Agent lessons
+
+Significant chats distill one lesson per user and session into SQLite `agent_lesson`. Prompts and `GET /api/skills` include only the current user's enabled lessons. Operators manage the full set (including disabled) with the same auth as other `/api` routes:
+
+- `GET /api/agent-lessons` → `{ "lessons": [...], "total": N }`
+- `PATCH /api/agent-lessons/:id` with `{ "enabled": true|false }`
+- `DELETE /api/agent-lessons/:id` → `{ "ok": true }`
+
+Another user's lesson is 404. Rows that existed before ownership are enabled by default. A database with exactly one `plat_users` account claims those rows for that account; with several accounts they stay unowned and hidden. Details: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
+
 ## Swagger
 
 http://localhost:9090/swagger/index.html

@@ -310,7 +310,7 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 
 	hist := h.toolChatHistory(userID, sessionID)
 	first := managementToolInstructions
-	if skillsBlock := h.agentSkillsAndLessonsContext(skillIDs); skillsBlock != "" {
+	if skillsBlock := h.agentSkillsAndLessonsContext(userID, skillIDs); skillsBlock != "" {
 		first += "\n\n" + skillsBlock
 	}
 	if strings.TrimSpace(agentInstructions) != "" {

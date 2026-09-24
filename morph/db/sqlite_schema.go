@@ -412,9 +412,10 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			trigger TEXT NOT NULL,
 			rule TEXT NOT NULL,
 			source_session_id TEXT NOT NULL DEFAULT '',
-			created_at TEXT NOT NULL
+			created_at TEXT NOT NULL,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			owner_user_id TEXT NOT NULL DEFAULT ''
 		)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_session ON agent_lesson(source_session_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_agent_lesson_created ON agent_lesson(created_at)`,
 		`CREATE TABLE IF NOT EXISTS morph_agent_context_cache (
 			user_id TEXT NOT NULL,
@@ -473,5 +474,38 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 	_ = sqliteAddColumnIfMissing(db, "user_note_todo", "DeadlineAt", "TEXT NULL")
 	_ = sqliteAddColumnIfMissing(db, "research", "round_target", "INTEGER NOT NULL DEFAULT 5")
 	_, _ = db.Exec(`UPDATE research SET round_target = 20 WHERE current_round > 5 OR id IN (SELECT research_id FROM research_piece GROUP BY research_id HAVING COUNT(*) > 5)`)
+	if err := migrateAgentLessonColumns(db); err != nil {
+		return err
+	}
 	return nil
+}
+
+// migrateAgentLessonColumns adds per-user ownership and the enabled flag.
+// Existing rows default to enabled=1. Lessons predate ownership, so
+// owner_user_id starts as ”. When plat_users has exactly one account, those
+// legacy rows are assigned to that account (a single-operator database keeps
+// its lessons). When more than one account already exists, legacy rows stay
+// unowned and are not listed, injected, or mutable — copying them to every
+// user would leak another operator's rules. Distillation records the owner
+// for lessons created after this migration. Uniqueness is per owner and
+// source session so two users can each keep a lesson from session id "default".
+func migrateAgentLessonColumns(db *sql.DB) error {
+	if err := sqliteAddColumnIfMissing(db, "agent_lesson", "enabled", "INTEGER NOT NULL DEFAULT 1"); err != nil {
+		return err
+	}
+	if err := sqliteAddColumnIfMissing(db, "agent_lesson", "owner_user_id", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_agent_lesson_session`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_owner_session ON agent_lesson(owner_user_id, source_session_id)`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`
+		UPDATE agent_lesson
+		SET owner_user_id = (SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1)
+		WHERE owner_user_id = ''
+		  AND (SELECT COUNT(*) FROM plat_users) = 1`)
+	return err
 }

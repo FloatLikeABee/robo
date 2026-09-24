@@ -33,9 +33,11 @@ func openHarnessSQL(t *testing.T) *sql.DB {
 			trigger TEXT NOT NULL,
 			rule TEXT NOT NULL,
 			source_session_id TEXT NOT NULL DEFAULT '',
-			created_at TEXT NOT NULL
+			created_at TEXT NOT NULL,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			owner_user_id TEXT NOT NULL DEFAULT ''
 		)`,
-		`CREATE UNIQUE INDEX idx_agent_lesson_session ON agent_lesson(source_session_id)`,
+		`CREATE UNIQUE INDEX idx_agent_lesson_owner_session ON agent_lesson(owner_user_id, source_session_id)`,
 	}
 	for _, s := range stmts {
 		if _, err := db.Exec(s); err != nil {

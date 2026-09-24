@@ -51,11 +51,11 @@ func countUserTurns(h *Handlers, userID, sessionID string) int {
 	return n
 }
 
-func (h *Handlers) buildAgentLessonsContext() string {
+func (h *Handlers) buildAgentLessonsContext(userID string) string {
 	if h == nil || h.TranMySQL == nil {
 		return ""
 	}
-	rows, err := h.TranMySQL.ListRecentAgentLessons(context.Background(), agentLessonPromptCap)
+	rows, err := h.TranMySQL.ListAgentLessons(context.Background(), userID, true, agentLessonPromptCap)
 	if err != nil || len(rows) == 0 {
 		return ""
 	}
@@ -72,8 +72,9 @@ func (h *Handlers) maybeHarvestSession(userID, sessionID, lastUserPrompt string,
 	if h == nil || h.TranMySQL == nil {
 		return
 	}
+	userID = strings.TrimSpace(userID)
 	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
+	if userID == "" || sessionID == "" {
 		return
 	}
 	if isLowContextGreeting(lastUserPrompt) && !sessionIsSignificant(userTurns, toolRounds, hasDocs) {
@@ -83,7 +84,7 @@ func (h *Handlers) maybeHarvestSession(userID, sessionID, lastUserPrompt string,
 		return
 	}
 	ctx := context.Background()
-	existing, err := h.TranMySQL.GetAgentLessonBySession(ctx, sessionID)
+	existing, err := h.TranMySQL.GetAgentLessonBySession(ctx, userID, sessionID)
 	if err != nil || existing != nil {
 		return
 	}
@@ -104,6 +105,8 @@ func (h *Handlers) maybeHarvestSession(userID, sessionID, lastUserPrompt string,
 			Rule:            rule,
 			SourceSessionID: sessionID,
 			CreatedAt:       time.Now().UTC().Format(time.RFC3339),
+			Enabled:         true,
+			OwnerUserID:     userID,
 		})
 	}
 	if h.distillLesson != nil {

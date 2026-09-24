@@ -220,7 +220,7 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 	if h.ginEngine != nil {
 		chatResponse, toolLog, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
 	} else {
-		skillsCtx := h.agentSkillsAndLessonsContext(req.SkillIDs)
+		skillsCtx := h.agentSkillsAndLessonsContext(userID, req.SkillIDs)
 		agentExtra := agentInstructions
 		if skillsCtx != "" {
 			if agentExtra != "" {

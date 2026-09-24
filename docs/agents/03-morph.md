@@ -53,7 +53,24 @@ Case tasks require `start_at` / `end_at`. Do not add Morph AI / Notes header sho
 | `/api/chat` | Morph AI sessions and messages |
 | `/api/tran/*` | MorphNotes entities (tasks, timelines, research, generic data, …) |
 | `/api/forms/*`, `/api/knowledge/*`, `/api/graph/*` | Quick sheets, knowledge files, graph search/health |
-| `/api/skills` | Skills catalog / markdown upload |
+| `/api/skills` | Skills catalog / markdown upload. Also embeds up to 8 **enabled** agent lessons for the caller |
+| `/api/agent-lessons` | Caller-owned session lessons (list, enable/disable, delete) |
+
+## Agent lessons
+
+After a significant Morph AI session, distillation stores one lesson in SQLite `agent_lesson` (`morph/db/agent_lesson.go`, harvest in `morph/handlers/agent_lesson.go`). Lessons are **per user** (`owner_user_id`). Chat prompts (`buildAgentLessonsContext`) and the Skills catalog include only that user's **enabled** lessons. The Settings UI (later) should use these routes, which sit behind the same `AuthzMiddleware` as other `/api/*` operator routes:
+
+| Method | Path | Body | Result |
+|--------|------|------|--------|
+| `GET` | `/api/agent-lessons` | | `{ "lessons": [ ... ], "total": N }` — every lesson the caller owns, including disabled |
+| `PATCH` | `/api/agent-lessons/:id` | `{ "enabled": true }` or `{ "enabled": false }` | the updated lesson |
+| `DELETE` | `/api/agent-lessons/:id` | | `{ "ok": true }` |
+
+A missing lesson and another user's lesson both return **404** `{ "error": "lesson not found" }` so callers cannot tell those cases apart. `enabled` is required on PATCH (400 if omitted).
+
+Lesson object fields: `id`, `trigger`, `rule`, `source_session_id`, `created_at`, `enabled`, `owner_user_id`.
+
+**Existing rows.** Lessons written before this ownership column were global. Migration (`migrateAgentLessonColumns` in `morph/db/sqlite_schema.go`, same idempotent `ADD COLUMN` path as other SQLite columns) adds `enabled INTEGER NOT NULL DEFAULT 1` so existing rows stay enabled, and `owner_user_id TEXT NOT NULL DEFAULT ''`. If `plat_users` has exactly one account, unowned rows are assigned to that account on startup (a single-operator database keeps its lessons). If more than one account already exists, unowned rows stay blank and are not listed, injected, updated, or deleted. New lessons store the chatting user's id. Uniqueness is `(owner_user_id, source_session_id)`, so each user can have their own lesson for the shared `"default"` session id.
 
 `POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` require a Morph JWT. `GET` and `HEAD` on those prefixes stay available without a session, including list and detail calls the MorphNotes UI makes before login. Published HTML is a separate allowlist (GET/HEAD only):
 

@@ -81,15 +81,9 @@ func (h *Handlers) ListSkills(c *gin.Context) {
 		out = append(out, h.skillJSON(c, &list[i], false))
 	}
 	lessons := make([]gin.H, 0)
-	if rows, err := h.TranMySQL.ListRecentAgentLessons(c.Request.Context(), 8); err == nil {
+	if rows, err := h.TranMySQL.ListAgentLessons(c.Request.Context(), requestUserID(c), true, agentLessonPromptCap); err == nil {
 		for _, l := range rows {
-			lessons = append(lessons, gin.H{
-				"id":                l.ID,
-				"trigger":           l.Trigger,
-				"rule":              l.Rule,
-				"source_session_id": l.SourceSessionID,
-				"created_at":        l.CreatedAt,
-			})
+			lessons = append(lessons, agentLessonJSON(l))
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"skills": out, "lessons": lessons, "total": len(out)})
@@ -417,8 +411,8 @@ func (h *Handlers) buildEnabledSkillsContext(skillIDs []string) string {
 	return strings.TrimSpace(b.String())
 }
 
-func (h *Handlers) agentSkillsAndLessonsContext(skillIDs []string) string {
+func (h *Handlers) agentSkillsAndLessonsContext(userID string, skillIDs []string) string {
 	a := h.buildEnabledSkillsContext(skillIDs)
-	b := h.buildAgentLessonsContext()
+	b := h.buildAgentLessonsContext(userID)
 	return strings.TrimSpace(strings.TrimSpace(a) + "\n\n" + b)
 }
