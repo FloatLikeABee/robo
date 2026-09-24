@@ -49,6 +49,8 @@ type Handlers struct {
 	ginEngine *gin.Engine
 	// distillLesson, if set, replaces the LLM when harvesting a session lesson (tests).
 	distillLesson func(ctx context.Context, transcript string) (trigger, rule string, err error)
+	// managementReply, if set, replaces the model inside chatWithManagementTools (tests).
+	managementReply func(ctx context.Context, prompt string) (string, error)
 }
 
 // New creates a new Handlers instance.

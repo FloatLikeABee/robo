@@ -59,6 +59,16 @@ Published pages are an allowlist, not the whole `/api/tran/public/` prefix. With
 
 Those three routes are the only anonymous data reads on this API. The SPA sends `Authorization: Bearer` from the Morph cookie when the user is signed in. Details: [`docs/agents/01-auth-flow.md`](../docs/agents/01-auth-flow.md).
 
+## Agent lessons
+
+Significant chats distill one lesson per user and session into SQLite `agent_lesson`. Prompts and `GET /api/skills` include only the current user's enabled lessons. Callers need a verified Morph bearer token. A client `X-User-ID` header does not authenticate these routes:
+
+- `GET /api/agent-lessons` → `{ "lessons": [...], "total": N }`
+- `PATCH /api/agent-lessons/:id` with `{ "enabled": true|false }`
+- `DELETE /api/agent-lessons/:id` → `{ "ok": true }`
+
+Another user's lesson is 404. PATCH accepts only `enabled`. Rows that existed before ownership are enabled by default. The ownership claim runs once: a single `plat_users` account at that decision receives the unowned rows, and several accounts leave them unowned even if only one account remains later. If that account already has a lesson for the same session, the claim keeps it and deletes the conflicting legacy row. Details: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
+
 ## Swagger
 
 http://localhost:9090/swagger/index.html
