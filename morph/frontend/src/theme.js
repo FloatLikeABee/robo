@@ -95,6 +95,9 @@ export function getAdminTheme(mode) {
           root: {
             textTransform: 'none',
             minHeight: 40,
+            '@media (max-width:768px)': {
+              minHeight: 44,
+            },
             ...(isDark && {
               '&.MuiButton-textPrimary': {
                 color: '#60a5fa',

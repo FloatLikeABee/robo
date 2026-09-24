@@ -46,6 +46,10 @@ test('phone error dismiss controls are at least 44px', () => {
   const theme = read('theme.js');
   expect(theme).toMatch(/MuiAlert:[\s\S]*minHeight: 44/);
   expect(theme).toMatch(/MuiSnackbar:[\s\S]*safe-area-inset-bottom/);
+  const button = theme.slice(theme.indexOf('MuiButton:'), theme.indexOf('MuiAlert:'));
+  const root = button.slice(button.indexOf('root:'), button.indexOf('containedPrimary:'));
+  expect(root).toMatch(/@media \(max-width:768px\)/);
+  expect(root).toMatch(/minHeight: 44/);
   expect(theme).toMatch(/sizeSmall:[\s\S]*minHeight: 44/);
 });
 
