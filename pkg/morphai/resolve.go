@@ -111,10 +111,7 @@ func resolveLegacy(cfg Config) (resolved, error) {
 	if model == "" {
 		model = DefaultModel
 	}
-	base := cfg.BaseURL
-	if base == "" {
-		base = DefaultBaseURL
-	}
+	base := resolveLegacyBase(cfg)
 	api := cfg.APIURL
 	if api == "" {
 		api = DefaultAPIURL
@@ -132,20 +129,21 @@ func resolveLegacy(cfg Config) (resolved, error) {
 	} else if !isDashScopeBase(base) {
 		provider = ProviderOpenAICompatible
 	}
+	key := resolveLegacyKey(cfg)
 	rc := resolved{
 		Provider:          provider,
 		Model:             model,
 		VisionModel:       vision,
 		BaseURL:           base,
 		APIURL:            api,
-		APIKey:            cfg.APIKey,
+		APIKey:            key,
 		Native:            cfg.UseNativeAPI,
 		Legacy:            true,
 		Kind:              kind,
 		Caps:              caps,
 		EnableThinkingOff: !cfg.UseNativeAPI,
 	}
-	if cfg.APIKey == "" {
+	if key == "" {
 		return rc, legacyKeyError{}
 	}
 	return rc, nil
@@ -157,7 +155,7 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 		key = spec.lookupEnv(spec.Info.APIKeyEnv, spec.ExtraKeyEnvs)
 	}
 
-	base := explicitBaseOverride(spec.Info.ID, cfg.BaseURL)
+	base := namedProviderBase(cfg)
 	if base == "" {
 		base = spec.lookupEnv(spec.Info.BaseURLEnv, spec.ExtraBaseEnvs)
 	}
@@ -244,26 +242,51 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 	return rc, nil
 }
 
-// namedProviderKey returns a key the caller set on Config. A key that
-// LoadFromEnv copied from the legacy env vars is not one of those: it belongs
-// to the empty-provider DashScope path only.
+// namedProviderKey returns a key the caller set on Config. The snapshot
+// LoadFromEnv stored is not one of those, even if the env var later changes.
 func namedProviderKey(cfg Config) string {
 	key := strings.TrimSpace(cfg.APIKey)
-	if key == "" || !cfg.legacyEnvKey {
-		return key
+	loaded := strings.TrimSpace(cfg.legacyKey)
+	if loaded != "" && key == loaded {
+		return ""
 	}
-	if key != legacyEnvAPIKey() {
-		return key
-	}
-	return ""
+	return key
 }
 
-func legacyEnvAPIKey() string {
-	return strings.TrimSpace(firstNonEmpty(
-		os.Getenv("MORPH_AI_API_KEY"),
-		os.Getenv("GEMINI_API_KEY"),
-		os.Getenv("TRAN_QWEN_API_KEY"),
-	))
+func resolveLegacyKey(cfg Config) string {
+	key := strings.TrimSpace(cfg.APIKey)
+	loaded := strings.TrimSpace(cfg.legacyKey)
+	if key != loaded {
+		return key
+	}
+	return loaded
+}
+
+// namedProviderBase returns a base URL the caller set. A URL LoadFromEnv copied
+// from MORPH_AI_BASE_URL, TRAN_QWEN_BASE_URL, or a compatible MORPH_AI_API_URL
+// belongs to the empty-provider path only.
+func namedProviderBase(cfg Config) string {
+	base := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	loaded := strings.TrimRight(strings.TrimSpace(cfg.legacyBase), "/")
+	if loaded != "" && base == loaded {
+		return ""
+	}
+	return base
+}
+
+func resolveLegacyBase(cfg Config) string {
+	base := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	loaded := strings.TrimRight(strings.TrimSpace(cfg.legacyBase), "/")
+	if base != loaded {
+		if base != "" {
+			return base
+		}
+		return DefaultBaseURL
+	}
+	if loaded != "" {
+		return loaded
+	}
+	return DefaultBaseURL
 }
 
 func (s providerSpec) lookupEnv(primary string, extra []string) string {
@@ -277,21 +300,6 @@ func (s providerSpec) lookupEnv(primary string, extra []string) string {
 		}
 	}
 	return firstNonEmpty(vals...)
-}
-
-// explicitBaseOverride returns base when the caller set a real endpoint.
-// The DashScope compatible-mode default is treated as unset for every provider
-// except DashScope and OpenAI-compatible, so a LoadFromEnv config (which always
-// fills that default) can be pointed at another provider without clearing BaseURL.
-func explicitBaseOverride(provider ProviderID, base string) string {
-	base = strings.TrimRight(strings.TrimSpace(base), "/")
-	if base == "" {
-		return ""
-	}
-	if base == DefaultBaseURL && provider != ProviderDashScope && provider != ProviderOpenAICompatible {
-		return ""
-	}
-	return base
 }
 
 func isDashScopeBase(u string) bool {
@@ -333,10 +341,11 @@ func (c Config) applyCall(req CompletionRequest) Config {
 	}
 	if s := strings.TrimSpace(req.APIKey); s != "" {
 		out.APIKey = s
-		out.legacyEnvKey = false
+		out.legacyKey = ""
 	}
 	if s := strings.TrimSpace(req.BaseURL); s != "" {
-		out.BaseURL = s
+		out.BaseURL = strings.TrimRight(s, "/")
+		out.legacyBase = ""
 	}
 	if s := strings.TrimSpace(req.Model); s != "" {
 		out.Model = s

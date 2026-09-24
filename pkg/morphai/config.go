@@ -26,11 +26,11 @@ type Config struct {
 	APIURL       string // native DashScope text-generation endpoint
 	BaseURL      string // OpenAI-compatible endpoint (chat + TranMail composer)
 	UseNativeAPI bool   // true when MORPH_AI_API_URL is explicitly set
-	// legacyEnvKey is true when APIKey was copied from MORPH_AI_API_KEY,
-	// GEMINI_API_KEY, or TRAN_QWEN_API_KEY by LoadFromEnv. That value is only
-	// valid for the empty-provider DashScope path. A named provider ignores it
-	// and reads that provider's own env var instead.
-	legacyEnvKey bool
+	// legacyKey and legacyBase are the values LoadFromEnv copied from the
+	// legacy env vars. resolveLegacy is the only caller that sends them.
+	// A named provider ignores a public field that still equals its snapshot.
+	legacyKey  string
+	legacyBase string
 }
 
 // LoadFromEnv reads unified MorphAI settings from the environment.
@@ -90,14 +90,16 @@ func LoadFromEnv() Config {
 	)
 
 	key := strings.TrimSpace(apiKey)
+	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	return Config{
 		APIKey:       key,
 		Model:        strings.TrimSpace(model),
 		VisionModel:  strings.TrimSpace(visionModel),
 		APIURL:       strings.TrimRight(strings.TrimSpace(apiURL), "/"),
-		BaseURL:      strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		BaseURL:      base,
 		UseNativeAPI: useNative,
-		legacyEnvKey: key != "",
+		legacyKey:    key,
+		legacyBase:   base,
 	}
 }
 

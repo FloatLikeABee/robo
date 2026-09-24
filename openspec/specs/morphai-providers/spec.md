@@ -35,7 +35,7 @@ Callers that construct the client from `MORPH_AI_*` (and the legacy `GEMINI_API_
 - **AND** no image payload is sent
 
 ### Requirement: Config resolution without cross-provider fallback
-A call SHALL resolve settings in this order: per-call provider, model, API key, and base URL when set; otherwise the client config; otherwise that provider's own environment variables; otherwise the provider default model and base URL. A key or base URL that belongs to a different provider SHALL NOT be used. A key copied by the legacy env loader (`MORPH_AI_API_KEY`, `GEMINI_API_KEY`, or `TRAN_QWEN_API_KEY`) SHALL be valid only while no provider is selected. Selecting a named provider SHALL drop that copied key and SHALL use a caller-set key or that provider's own env var. If the provider still has no key, the call SHALL fail with the not-configured error. When the selected provider still has no key (or, for Ollama, no base URL), the call SHALL fail with an error that unwraps to the not-configured error, and SHALL NOT contact another provider. Ollama SHALL be configured when a base URL resolves, including its localhost default, with no key.
+A call SHALL resolve settings in this order: per-call provider, model, API key, and base URL when set; otherwise the client config; otherwise that provider's own environment variables; otherwise the provider default model and base URL. A key or base URL that belongs to a different provider SHALL NOT be used. A key copied by the legacy env loader (`MORPH_AI_API_KEY`, `GEMINI_API_KEY`, or `TRAN_QWEN_API_KEY`) SHALL be valid only while no provider is selected. Selecting a named provider SHALL drop that copied key and SHALL use a caller-set key or that provider's own env var. The loader SHALL remember the key it copied. A later change to those env vars SHALL NOT make the copied key look caller-set. A base URL filled by the same loader (`MORPH_AI_BASE_URL`, `TRAN_QWEN_BASE_URL`, a compatible-mode `MORPH_AI_API_URL`, or the DashScope default used when those are unset) SHALL be valid only while no provider is selected. Selecting a named provider SHALL drop that loaded base URL and SHALL use a base URL the caller set on the config or on the call, or that provider's own env var, or the provider default. If the provider still has no key, the call SHALL fail with the not-configured error. When the selected provider still has no key (or, for Ollama, no base URL), the call SHALL fail with an error that unwraps to the not-configured error, and SHALL NOT contact another provider. Ollama SHALL be configured when a base URL resolves, including its localhost default, with no key.
 
 #### Scenario: Explicit OpenAI key beats the OpenAI env var
 - **WHEN** the caller passes an API key and `OPENAI_API_KEY` is also set
@@ -73,6 +73,29 @@ A call SHALL resolve settings in this order: per-call provider, model, API key, 
 #### Scenario: A caller-set key still wins
 - **WHEN** a client is loaded from the legacy env and the caller then sets a different API key for the selected provider
 - **THEN** the request uses that caller key
+
+#### Scenario: A custom legacy base URL is not used for OpenAI
+- **WHEN** `MORPH_AI_BASE_URL` points at one server, the client is loaded from the environment, the provider is then set to openai, and `OPENAI_BASE_URL` points at a different server
+- **THEN** the request is sent only to the OpenAI server
+- **AND** the OpenAI key is not sent to the legacy server
+
+#### Scenario: A custom legacy base URL is not used for Ollama
+- **WHEN** `MORPH_AI_BASE_URL` points at one server, the client is loaded from the environment, the provider is then set to ollama, and Ollama's base URL points at a different server
+- **THEN** the request is sent only to the Ollama server
+- **AND** the request omits the Authorization header
+
+#### Scenario: A compatible-mode legacy API URL is not used for OpenAI
+- **WHEN** `MORPH_AI_API_URL` is an OpenAI-compatible URL for one server, the client is loaded from the environment, the provider is then set to openai, and `OPENAI_BASE_URL` points at a different server
+- **THEN** the request is sent only to the OpenAI server
+
+#### Scenario: An explicit base URL still wins
+- **WHEN** a client is loaded from a legacy base URL and the caller then sets a different base URL for the selected provider
+- **THEN** the request is sent to that caller base URL
+
+#### Scenario: Rotating the legacy env key after load does not authorize another provider
+- **WHEN** a client is loaded from `MORPH_AI_API_KEY` and that env var is then changed, and the provider is set to openai with no OpenAI key
+- **THEN** the call fails with the not-configured error
+- **AND** no HTTP request is sent
 
 ### Requirement: Chat, stream, tools, vision, and JSON mode
 Chat completions, streaming, tool calls, vision, and JSON mode SHALL work through the selected provider when that provider's protocol supports them. Cancelling a stream SHALL return the reader goroutine and close the response body. A stream that ends before its terminal marker SHALL be an error. Anthropic SHALL use its Messages API, including its tool-use content blocks. Providers that share the OpenAI chat-completions protocol SHALL use that protocol. A request for a capability the selected provider lacks SHALL fail with an error that unwraps to the capability-unsupported error and SHALL NOT be sent. Provider HTTP errors SHALL surface status, code, and message.

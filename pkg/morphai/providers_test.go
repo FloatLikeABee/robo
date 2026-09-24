@@ -176,15 +176,38 @@ func TestResolveExplicitOrder(t *testing.T) {
 		}
 	})
 
-	t.Run("dashscope default base is not an openai override", func(t *testing.T) {
+	t.Run("env loaded dashscope default is not an openai override", func(t *testing.T) {
 		t.Setenv("OPENAI_API_KEY", "env-key")
 		t.Setenv("OPENAI_BASE_URL", "")
-		rc, err := resolve(Config{Provider: ProviderOpenAI, BaseURL: DefaultBaseURL, APIKey: "k"})
+		t.Setenv("MORPH_AI_API_KEY", "morph-key")
+		t.Setenv("MORPH_AI_BASE_URL", "")
+		t.Setenv("MORPH_AI_API_URL", "")
+		cfg := LoadFromEnv()
+		cfg.Provider = ProviderOpenAI
+		rc, err := resolve(cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if rc.BaseURL != "https://api.openai.com/v1" {
 			t.Fatalf("base = %s", rc.BaseURL)
+		}
+		if rc.APIKey != "env-key" {
+			t.Fatal("openai did not use its own env key")
+		}
+	})
+
+	t.Run("explicit dashscope base on a named provider is honored", func(t *testing.T) {
+		t.Setenv("OPENAI_API_KEY", "env-key")
+		t.Setenv("OPENAI_BASE_URL", "")
+		rc, err := resolve(Config{Provider: ProviderOpenAI, BaseURL: DefaultBaseURL, APIKey: "caller-key"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rc.BaseURL != DefaultBaseURL {
+			t.Fatalf("base = %s", rc.BaseURL)
+		}
+		if rc.APIKey != "caller-key" {
+			t.Fatal("caller key was replaced")
 		}
 	})
 

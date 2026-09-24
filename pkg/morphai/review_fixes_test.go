@@ -383,6 +383,171 @@ func TestRateLimitHonorsCancel(t *testing.T) {
 	}
 }
 
+func TestLegacyBaseURLStaysOffNamedProviders(t *testing.T) {
+	const openaiKey = "openai-key-for-base-provenance"
+
+	t.Run("custom morph base is not openai", func(t *testing.T) {
+		clearProviderEnv(t)
+		var hitsA, hitsB int
+		var authA string
+		srvA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsA++
+			authA = r.Header.Get("Authorization")
+			writeJSON(w, http.StatusOK, openAIText("legacy"))
+		}))
+		defer srvA.Close()
+		srvB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsB++
+			if r.Header.Get("Authorization") != "Bearer "+openaiKey {
+				t.Error("server B did not receive the openai key")
+			}
+			writeJSON(w, http.StatusOK, openAIText("openai"))
+		}))
+		defer srvB.Close()
+		t.Setenv("MORPH_AI_API_KEY", "legacy-key-for-base-provenance")
+		t.Setenv("MORPH_AI_BASE_URL", srvA.URL)
+		t.Setenv("OPENAI_API_KEY", openaiKey)
+		t.Setenv("OPENAI_BASE_URL", srvB.URL)
+		cfg := LoadFromEnv()
+		cfg.Provider = ProviderOpenAI
+		c := newHTTPClient(t, cfg)
+		if _, err := c.ChatCompletion(context.Background(), []Message{{Role: "user", Content: "hi"}}); err != nil {
+			t.Fatal(err)
+		}
+		if hitsA != 0 || strings.Contains(authA, openaiKey) {
+			t.Fatal("legacy base received the openai call")
+		}
+		if hitsB != 1 {
+			t.Fatalf("openai base hits = %d", hitsB)
+		}
+	})
+
+	t.Run("custom morph base is not ollama", func(t *testing.T) {
+		clearProviderEnv(t)
+		var hitsA, hitsB int
+		var authB string
+		srvA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsA++
+			writeJSON(w, http.StatusOK, openAIText("legacy"))
+		}))
+		defer srvA.Close()
+		srvB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsB++
+			authB = r.Header.Get("Authorization")
+			writeJSON(w, http.StatusOK, openAIText("ollama"))
+		}))
+		defer srvB.Close()
+		t.Setenv("MORPH_AI_API_KEY", "legacy-key-for-base-provenance")
+		t.Setenv("MORPH_AI_BASE_URL", srvA.URL)
+		t.Setenv("OLLAMA_BASE_URL", srvB.URL)
+		cfg := LoadFromEnv()
+		cfg.Provider = ProviderOllama
+		c := newHTTPClient(t, cfg)
+		if _, err := c.ChatCompletion(context.Background(), []Message{{Role: "user", Content: "hi"}}); err != nil {
+			t.Fatal(err)
+		}
+		if hitsA != 0 {
+			t.Fatal("legacy base received the ollama call")
+		}
+		if hitsB != 1 || authB != "" {
+			t.Fatal("ollama did not use its own base without a legacy key")
+		}
+	})
+
+	t.Run("compatible mode morph api url is not openai", func(t *testing.T) {
+		clearProviderEnv(t)
+		var hitsA, hitsB int
+		srvA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsA++
+			if strings.Contains(r.Header.Get("Authorization"), openaiKey) {
+				t.Error("openai key reached the compatible-mode legacy url")
+			}
+			writeJSON(w, http.StatusOK, openAIText("legacy"))
+		}))
+		defer srvA.Close()
+		srvB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsB++
+			writeJSON(w, http.StatusOK, openAIText("openai"))
+		}))
+		defer srvB.Close()
+		t.Setenv("MORPH_AI_API_KEY", "legacy-key-for-base-provenance")
+		t.Setenv("MORPH_AI_API_URL", srvA.URL+"/v1")
+		t.Setenv("OPENAI_API_KEY", openaiKey)
+		t.Setenv("OPENAI_BASE_URL", srvB.URL)
+		cfg := LoadFromEnv()
+		cfg.Provider = ProviderOpenAI
+		c := newHTTPClient(t, cfg)
+		if _, err := c.ChatCompletion(context.Background(), []Message{{Role: "user", Content: "hi"}}); err != nil {
+			t.Fatal(err)
+		}
+		if hitsA != 0 {
+			t.Fatal("compatible-mode legacy url received the openai call")
+		}
+		if hitsB != 1 {
+			t.Fatalf("openai base hits = %d", hitsB)
+		}
+	})
+
+	t.Run("explicit config base url is honored", func(t *testing.T) {
+		clearProviderEnv(t)
+		var hitsLegacy, hitsExplicit int
+		srvLegacy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsLegacy++
+			writeJSON(w, http.StatusOK, openAIText("legacy"))
+		}))
+		defer srvLegacy.Close()
+		srvExplicit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hitsExplicit++
+			writeJSON(w, http.StatusOK, openAIText("explicit"))
+		}))
+		defer srvExplicit.Close()
+		t.Setenv("MORPH_AI_API_KEY", "legacy-key-for-base-provenance")
+		t.Setenv("MORPH_AI_BASE_URL", srvLegacy.URL)
+		t.Setenv("OPENAI_API_KEY", openaiKey)
+		t.Setenv("OPENAI_BASE_URL", "https://openai.example/v1")
+		cfg := LoadFromEnv()
+		cfg.Provider = ProviderOpenAI
+		cfg.BaseURL = srvExplicit.URL
+		c := newHTTPClient(t, cfg)
+		got, err := c.ChatCompletion(context.Background(), []Message{{Role: "user", Content: "hi"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != "explicit" || hitsExplicit != 1 || hitsLegacy != 0 {
+			t.Fatalf("explicit hits %d legacy hits %d reply %q", hitsExplicit, hitsLegacy, got)
+		}
+	})
+}
+
+func TestRotatedEnvKeyIsNotTreatedAsCallerKey(t *testing.T) {
+	clearProviderEnv(t)
+	const loaded = "loaded-legacy-key-value"
+	const rotated = "rotated-legacy-key-value"
+	t.Setenv("MORPH_AI_API_KEY", loaded)
+	cfg := LoadFromEnv()
+	t.Setenv("MORPH_AI_API_KEY", rotated)
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		auth := r.Header.Get("Authorization")
+		if strings.Contains(auth, loaded) || strings.Contains(auth, rotated) {
+			t.Error("named provider received a legacy env key after rotation")
+		}
+		writeJSON(w, http.StatusOK, openAIText("nope"))
+	}))
+	defer srv.Close()
+	cfg.Provider = ProviderOpenAI
+	cfg.BaseURL = srv.URL
+	c := newHTTPClient(t, cfg)
+	_, err := c.ChatCompletion(context.Background(), []Message{{Role: "user", Content: "hi"}})
+	if !errors.Is(err, ErrProviderNotConfigured) {
+		t.Fatalf("err = %v", err)
+	}
+	if hits != 0 {
+		t.Fatalf("hits = %d", hits)
+	}
+}
+
 func TestGroqHasNoRetiredVisionDefault(t *testing.T) {
 	info, ok := LookupProvider(ProviderGroq)
 	if !ok {
