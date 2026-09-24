@@ -50,7 +50,8 @@
 
 .login-brand p {
   margin: 0;
-  font-size: 12px;
+  font-size: 16px;
+  line-height: 1.5;
   color: #93adc4;
   overflow-wrap: anywhere;
 }
@@ -63,9 +64,10 @@
 
 .login-field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  font-size: 12px;
+  font-size: 16px;
+  line-height: 1.5;
   font-weight: 500;
   color: #b8cfe0;
 }
@@ -84,15 +86,39 @@
 }
 
 .login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   max-width: 100%;
   box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid rgba(248, 113, 113, 0.45);
   background: rgba(88, 28, 28, 0.35);
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: 8px 8px 8px 12px;
+  font-size: 16px;
+  line-height: 1.5;
   color: #fecaca;
   overflow-wrap: anywhere;
+}
+
+.login-error-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.login-error-dismiss {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #fecaca;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .login-submit {

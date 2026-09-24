@@ -157,7 +157,15 @@ export default function LoginPage() {
           </label>
           {error ? (
             <div className="login-error" role="alert">
-              {error}
+              <span className="login-error-text">{error}</span>
+              <button
+                type="button"
+                className="login-error-dismiss"
+                aria-label="Dismiss error"
+                onClick={() => setError('')}
+              >
+                ×
+              </button>
             </div>
           ) : null}
           <button className="login-submit" type="submit" disabled={loading}>
