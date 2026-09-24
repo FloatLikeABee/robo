@@ -16,6 +16,7 @@ import (
 
 	"idongivaflyinfa/ai"
 	"idongivaflyinfa/internal/htmldoc"
+	"idongivaflyinfa/publish"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yuin/goldmark"
@@ -61,13 +62,13 @@ type bigNoteAIResult struct {
 }
 
 type bigNoteResponse struct {
-	ID                int       `json:"id"`
-	BigNoteID         int       `json:"big_note_id"`
-	AnswersJSON       string    `json:"answers_json"`
-	Answers           any       `json:"answers,omitempty"`
-	AnalysisMarkdown  *string   `json:"analysis_markdown,omitempty"`
-	CreatedOn         time.Time `json:"created_on"`
-	LastUpdated       time.Time `json:"last_updated"`
+	ID               int       `json:"id"`
+	BigNoteID        int       `json:"big_note_id"`
+	AnswersJSON      string    `json:"answers_json"`
+	Answers          any       `json:"answers,omitempty"`
+	AnalysisMarkdown *string   `json:"analysis_markdown,omitempty"`
+	CreatedOn        time.Time `json:"created_on"`
+	LastUpdated      time.Time `json:"last_updated"`
 }
 
 func (h *Handlers) bigNoteOwnerKey(c *gin.Context) string {
@@ -946,16 +947,20 @@ func (h *Handlers) ServePublicBigNote(c *gin.Context) {
 		return
 	}
 	slug := strings.TrimSpace(c.Param("slug"))
-	if slug == "" {
+	if !publish.Visible(slug) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "slug required"})
 		return
 	}
-	var title, markdown, kind, theme string
+	var title, markdown, kind, theme, storedSlug string
 	var questions sql.NullString
 	err := h.TranMySQL.DB.QueryRow(
-		`SELECT title, markdown_content, note_kind, theme, questions_json FROM big_note WHERE published_slug = ? LIMIT 1`,
+		`SELECT title, markdown_content, note_kind, theme, questions_json, COALESCE(published_slug, '') FROM big_note WHERE published_slug = ? LIMIT 1`,
 		slug,
-	).Scan(&title, &markdown, &kind, &theme, &questions)
+	).Scan(&title, &markdown, &kind, &theme, &questions, &storedSlug)
+	if err == nil && !publish.Visible(storedSlug) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "published note not found"})
+		return
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "published note not found"})
 		return
@@ -1200,10 +1205,10 @@ Answers JSON:
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"id":                 respID,
-		"big_note_id":        noteID,
-		"analysis_markdown":  out,
-		"answers_json":       answersJSON,
+		"id":                respID,
+		"big_note_id":       noteID,
+		"analysis_markdown": out,
+		"answers_json":      answersJSON,
 	})
 }
 

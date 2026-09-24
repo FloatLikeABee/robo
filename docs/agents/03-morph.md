@@ -74,7 +74,7 @@ The signed-in user changes their own username or password in MorphUtils **Your a
 | `/api/forms/*`, `/api/knowledge/*`, `/api/graph/*` | Quick sheets, knowledge files, graph search/health |
 | `/api/skills` | Skills catalog / markdown upload |
 
-`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` require a Morph JWT. Chat (`/api/chat`) and admin (`/api/admin`) require one too. `X-User-ID` / `X-User-Role` are not a session and are not a fallback. `GET` and `HEAD` on those prefixes stay available without a session, including list and detail calls the MorphNotes UI makes before login. Published HTML is a separate allowlist (GET/HEAD of exactly `{kind}/{slug}`):
+Every method on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` requires a Morph JWT, including `GET` and `HEAD`. Chat (`/api/chat`) and admin (`/api/admin`) require one too. `X-User-ID` / `X-User-Role` are not a session and are not a fallback. Opening `/morphdata` without a session sends the browser to `/login` and back to that path after sign-in. Published HTML is a separate allowlist (GET and HEAD of one slug, and only when that record's published slug is set):
 
 - `GET /api/tran/public/big-notes/:slug`
 - `GET /api/tran/public/timelines/:slug`
