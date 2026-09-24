@@ -26,7 +26,7 @@ docker compose -f deploy/docker-compose.yml up --build
 
 The process listens on port 9090 inside the container. The container `PORT` must stay 9090. Leave it unset so the image default is used. The healthcheck follows `PORT`, and compose always maps the host port (`MORPH_PUBLISH_PORT`, default 9090) to container port 9090.
 
-The `tls` profile still publishes 9090 on the host as well as 80 and 443. Bind that host port to `127.0.0.1`, or firewall it. Issue #53 will finalize TLS and that publish.
+The `tls` profile still publishes 9090 on the host as well as 80 and 443. Bind that host port to `127.0.0.1`, or firewall it. Render terminates TLS for the hosted service. The compose TLS profile is not that deploy.
 
 `GET /health` is the container healthcheck. `GET /` is the Morph AI UI. The API and the UI are the same origin.
 
@@ -85,3 +85,36 @@ docker compose -f deploy/docker-compose.yml up --build -d
 ```
 
 `docker compose down` keeps the volume. `docker compose down -v` deletes it.
+
+## Deploy on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in the existing Render project, create a Blueprint and point it at `render.yaml` on `main`. Render builds the root `Dockerfile` (context `.`) as the web service `morph` in Singapore on the starter plan. Deploys from `main` run only after CI checks pass (`autoDeployTrigger: checksPass`). Branch protection should require the five platform checks and `Build image`, so a red image build does not go out.
+
+### Secrets
+
+The Blueprint lists every secret with `sync: false` and no value. Fill these in the dashboard before the first boot. Startup in `MORPH_ENV=production` exits before it listens when a required secret is missing or is a development default.
+
+| Key | Rule |
+|-----|------|
+| `JWT_SECRET` | At least 32 random characters. Not `morph-dev-jwt-secret-change-me`, not a repeated character, and not a `change-me` / `replace-me` placeholder. |
+| `ADMIN_PASSWORD` | At least 12 characters. Not `admin123`. |
+| `MORPH_AI_API_KEY` | DashScope key. The service sets `MORPH_AI_PROVIDER=dashscope`, which reads this key. The process starts without it; chat fails until it is set. |
+| Other `sync: false` keys | Leave blank unless you use that integration (`GEMINI_API_KEY`, `SMTP_PASS`, `NEO4J_PASSWORD`, and the rest). Do not paste them into git. |
+
+`PORT` is `9090` in the Blueprint. Render would otherwise inject its own port, and the image healthcheck calls `http://127.0.0.1:${PORT}/health`.
+
+Leave `JWT_EXPIRY_HOURS` unset. Production uses 24 hours. `876000` is refused.
+
+### Disk
+
+`morph-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service cannot do a zero-downtime deploy and must stay a single instance. Do not scale it out. During a deploy Render stops the old instance before the new one can mount the disk.
+
+The image entrypoint starts as root, gives `/data` to uid 65532, and then runs the server as that user. Render disks mount as root. That chown is what makes the first boot writable.
+
+### Backup
+
+Use Render disk snapshots of `morph-data`. Take a snapshot before an upgrade you may need to undo. A snapshot is a point-in-time copy of `/data` (Badger, `tran.sqlite` and its WAL, knowledge, and uploads). Restoring a snapshot replaces the disk contents. Do not `docker compose down -v` against this disk; that command is only for the local compose volume.
+
+### After a deploy
+
+Open `https://<the service host>/health`. It must return HTTP 200 and a JSON body with `"status": "healthy"`. The same path is the container healthcheck. `GET /` is the Morph AI UI.
