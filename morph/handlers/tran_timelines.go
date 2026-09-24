@@ -19,6 +19,7 @@ import (
 
 	"idongivaflyinfa/ai"
 	"idongivaflyinfa/internal/htmldoc"
+	"idongivaflyinfa/publish"
 
 	"github.com/gin-gonic/gin"
 	"github.com/robo/morphgraph"
@@ -793,15 +794,19 @@ func (h *Handlers) ServePublicTimeline(c *gin.Context) {
 		return
 	}
 	slug := strings.TrimSpace(c.Param("slug"))
-	if slug == "" {
+	if !publish.Visible(slug) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "slug required"})
 		return
 	}
-	var title, markdown, htmlContent string
+	var title, markdown, htmlContent, storedSlug string
 	err := h.TranMySQL.DB.QueryRow(
-		`SELECT title, markdown_content, html_content FROM timeline WHERE published_slug = ? LIMIT 1`,
+		`SELECT title, markdown_content, html_content, COALESCE(published_slug, '') FROM timeline WHERE published_slug = ? LIMIT 1`,
 		slug,
-	).Scan(&title, &markdown, &htmlContent)
+	).Scan(&title, &markdown, &htmlContent, &storedSlug)
+	if err == nil && !publish.Visible(storedSlug) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "published timeline not found"})
+		return
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "published timeline not found"})

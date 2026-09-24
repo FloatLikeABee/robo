@@ -50,6 +50,11 @@ func authzEngine(h *Handlers) *gin.Engine {
 	r.GET("/api/knowledge/files", authzOK)
 	r.POST("/api/graph/search", authzOK)
 	r.GET("/api/graph/health", authzOK)
+	r.GET("/api/tran/users", authzOK)
+	r.GET("/api/tran/members", authzOK)
+	r.GET("/api/tran/employees", authzOK)
+	r.GET("/api/tran/contacts", authzOK)
+	r.GET("/api/tran/case-tasks/:id/attachments/:attachmentId/download", authzOK)
 	r.POST("/api/auth/login", authzOK)
 	r.POST("/api/chat", authzEcho)
 	r.GET("/api/admin/users", authzOK)
@@ -139,21 +144,67 @@ func TestAnonymousMorphDataMutationsReturn401(t *testing.T) {
 	}
 }
 
-func TestAnonymousPrivateReadsStayOpen(t *testing.T) {
+func TestAnonymousPrivateReadsReturn401(t *testing.T) {
 	_, r, _ := authzHandlers(t)
-	for _, path := range []string{
+	paths := []string{
 		"/api/tran/research",
 		"/api/forms/templates",
 		"/api/knowledge/files",
 		"/api/graph/health",
-	} {
-		w := doAuthz(r, http.MethodGet, path, "", "", nil)
-		if w.Code == http.StatusUnauthorized {
-			t.Errorf("GET %s should stay readable without a session, got 401 %s", path, w.Body.String())
+		"/api/tran/users",
+		"/api/tran/members",
+		"/api/tran/employees",
+		"/api/tran/contacts",
+		"/api/tran/case-tasks/1/attachments/2/download",
+	}
+	for _, path := range paths {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			w := doAuthz(r, method, path, "", "", nil)
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("%s %s status %d, want 401, body %s", method, path, w.Code, w.Body.String())
+			}
 		}
-		if w.Code != http.StatusOK {
-			t.Errorf("GET %s status %d, want 200, body %s", path, w.Code, w.Body.String())
-		}
+	}
+}
+
+func TestSignedInPrivateReadIsNot401(t *testing.T) {
+	h, r, user := authzHandlers(t)
+	token := bearerFor(t, h, user)
+	w := doAuthz(r, http.MethodGet, "/api/tran/research", "", token, nil)
+	if w.Code == http.StatusUnauthorized {
+		t.Fatalf("signed-in GET status 401, body %s", w.Body.String())
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("signed-in GET status %d, want 200, body %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnpublishedResearchIsNotReachableBySlug(t *testing.T) {
+	ts := openAuthzResearchDB(t)
+	if _, err := ts.DB.Exec(
+		`INSERT INTO research (user_id, owner_key, title, prompt, status, markdown_content, html_content)
+		 VALUES (1, 'anon', 'Secret Draft Title', 'p', 'complete', '# Secret Draft Title', '<p>Secret Draft Title</p>')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	var id int
+	if err := ts.DB.QueryRow(`SELECT id FROM research WHERE title = ?`, "Secret Draft Title").Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	hh := &Handlers{TranMySQL: ts, jwtCfg: auth.LoadTokenConfig()}
+	engine := authzEngine(hh)
+
+	bySlug := doAuthz(engine, http.MethodGet, "/api/tran/public/research/secret-draft-title", "", "", nil)
+	if bySlug.Code == http.StatusOK || strings.Contains(bySlug.Body.String(), "Secret Draft Title") {
+		t.Fatalf("unpublished slug status %d body %s", bySlug.Code, bySlug.Body.String())
+	}
+
+	byID := doAuthz(engine, http.MethodGet, "/api/tran/research/"+strconv.Itoa(id), "", "", nil)
+	if byID.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous detail status %d, want 401, body %s", byID.Code, byID.Body.String())
+	}
+	if strings.Contains(byID.Body.String(), "Secret Draft Title") {
+		t.Fatalf("anonymous detail leaked the draft: %s", byID.Body.String())
 	}
 }
 

@@ -73,12 +73,18 @@ func DecodeToken(cfg TokenConfig, token string) (*Claims, error) {
 	if strings.TrimSpace(token) == "" {
 		return nil, errors.New("empty token")
 	}
+	opts := []jwt.ParserOption{}
+	if cfg.Production {
+		// WithIssuedAt rejects iat in the future. One minute covers clock skew
+		// and also applies to exp and nbf.
+		opts = append(opts, jwt.WithIssuedAt(), jwt.WithLeeway(productionIssuedAtLeeway))
+	}
 	parsed, err := jwt.ParseWithClaims(token, &Claims{}, func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodHS256 {
 			return nil, errors.New("unexpected signing method")
 		}
 		return cfg.Secret, nil
-	})
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +100,9 @@ func DecodeToken(cfg TokenConfig, token string) (*Claims, error) {
 	return claims, nil
 }
 
+// productionIssuedAtLeeway is how far ahead of this process an iat may be.
+const productionIssuedAtLeeway = time.Minute
+
 // enforceProductionLifetime rejects tokens that cannot prove they were issued
 // inside the production ceiling. EncodeToken always sets iat and exp; tokens
 // from before that, or issued for the old 876000-hour lifetime, fail here.
@@ -107,15 +116,6 @@ func enforceProductionLifetime(claims *Claims) error {
 		return fmt.Errorf("token lifetime exceeds the production maximum of %d hours", config.ProductionMaxJWTExpiryHours)
 	}
 	return nil
-}
-
-func IsAdminRoles(roles []string) bool {
-	for _, r := range roles {
-		if strings.EqualFold(strings.TrimSpace(r), "Admin") {
-			return true
-		}
-	}
-	return false
 }
 
 // FullPermissions is returned for every authenticated user (compat with old clients).

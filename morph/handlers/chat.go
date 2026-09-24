@@ -24,9 +24,9 @@ import (
 // @Failure      500      {object}  map[string]string   "Internal server error"
 // @Router       /api/chat [post]
 func (h *Handlers) ChatHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 
 	var req models.ChatRequest

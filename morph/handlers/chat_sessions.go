@@ -19,9 +19,9 @@ import (
 // @Success      200      {array}   models.ChatSession
 // @Router       /api/chat/sessions [get]
 func (h *Handlers) ListChatSessionsHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	if err := h.db.EnsureDefaultChatSession(userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to ensure default session"})
@@ -44,9 +44,9 @@ func (h *Handlers) ListChatSessionsHandler(c *gin.Context) {
 // @Success      201   {object}  models.ChatSession
 // @Router       /api/chat/sessions [post]
 func (h *Handlers) CreateChatSessionHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	var body struct {
 		Title string `json:"title"`
@@ -80,9 +80,9 @@ func (h *Handlers) CreateChatSessionHandler(c *gin.Context) {
 // @Success      200  {object}  object  "{ \"session\": ChatSession, \"messages\": StoredChatMessage[] }"
 // @Router       /api/chat/sessions/{id} [get]
 func (h *Handlers) GetChatSessionHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	sessionID := c.Param("id")
 	if sessionID == "" {
@@ -114,9 +114,9 @@ func (h *Handlers) GetChatSessionHandler(c *gin.Context) {
 // @Success      200   {object}  models.ChatSession
 // @Router       /api/chat/sessions/{id} [put]
 func (h *Handlers) UpdateChatSessionHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	sessionID := c.Param("id")
 	if sessionID == "" {
@@ -150,9 +150,9 @@ func (h *Handlers) UpdateChatSessionHandler(c *gin.Context) {
 // @Success      204  "No Content"
 // @Router       /api/chat/sessions/{id} [delete]
 func (h *Handlers) DeleteChatSessionHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	sessionID := c.Param("id")
 	if sessionID == "" {
@@ -177,9 +177,9 @@ func (h *Handlers) DeleteChatSessionHandler(c *gin.Context) {
 // @Success      204  "No Content"
 // @Router       /api/chat/sessions/{id}/clear [post]
 func (h *Handlers) ClearChatSessionMessagesHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		userID = "admin"
+	userID, ok := requireSessionUserID(c)
+	if !ok {
+		return
 	}
 	sessionID := c.Param("id")
 	if sessionID == "" {

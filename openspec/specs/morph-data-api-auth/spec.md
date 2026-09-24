@@ -59,7 +59,7 @@ When the request carries a valid Morph JWT for an existing user, the same mutati
 - **AND** the attached user id and role are the token user's, not the header values
 
 ### Requirement: Published HTML pages stay public
-`GET` and `HEAD` of `/api/tran/public/{kind}/{slug}` MUST succeed without a session when `kind` is exactly `big-notes`, `timelines`, or `research` and `slug` is one non-empty path segment that does not contain `/`, is not `.` or `..`, and is not empty. The match is case-sensitive and ignores the query string. Any other shape under `/api/tran/public/` that reaches the session middleware, including an empty segment (`//`), a `%2F` that decodes to an extra segment, a dot segment, a different kind case, or a method other than `GET` or `HEAD`, MUST return 401 without a session. A trailing slash is not a public match; the router may redirect it to the exact slug instead of returning the published HTML.
+`GET` and `HEAD` of `/api/tran/public/{kind}/{slug}` MUST succeed without a session when `kind` is exactly `big-notes`, `timelines`, or `research`, `slug` is one non-empty path segment that does not contain `/`, is not `.` or `..`, and is not empty, and the stored record for that slug is published. A record is published only when its published slug is non-empty after trimming. The match is case-sensitive and ignores the query string. Any other shape under `/api/tran/public/` that reaches the session middleware, including an empty segment (`//`), a `%2F` that decodes to an extra segment, a dot segment, a different kind case, or a method other than `GET` or `HEAD`, MUST return 401 without a session. A trailing slash is not a public match; the router may redirect it to the exact slug instead of returning the published HTML. An unpublished record MUST NOT be returned for a guessed slug.
 
 #### Scenario: Anonymous GET of a published research page
 - **WHEN** a client with no session requests `GET /api/tran/public/research/:slug` for a published job
@@ -95,16 +95,38 @@ When the request carries a valid Morph JWT for an existing user, the same mutati
 - **WHEN** a client with no session requests `GET /api/tran/public/research/slug%2Fextra`
 - **THEN** the response status is 401
 
-### Requirement: Private reads on the former open prefixes stay available
-`GET` and `HEAD` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` MUST remain reachable without a session so MorphNotes can still list and open records without a login redirect. Paths under `/api/tran/public/` that are not on the published-page allowlist are not private reads; those follow the published-page requirement and MUST return 401.
+#### Scenario: Unpublished research is not reachable by slug
+- **WHEN** a client with no session requests `GET /api/tran/public/research/:slug` and no research row is published under that slug
+- **THEN** the response status is not 200
+- **AND** the body does not include the unpublished record
 
-#### Scenario: Anonymous list read is not rejected by the middleware
-- **WHEN** a client with no session sends `GET /api/tran/research`
+### Requirement: Private reads require a session
+The system MUST reject `GET` and `HEAD` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` with HTTP 401 when the request has no Morph session. That includes lists, details, downloads, graph health, graph search, and the personal-data lists `/api/tran/users`, `/api/tran/members`, `/api/tran/employees`, and `/api/tran/contacts`. Paths that match the published-page allowlist are not private reads.
+
+#### Scenario: Anonymous list and detail reads are rejected
+- **WHEN** a client with no session sends `GET` or `HEAD` to `/api/tran/research` or `GET /api/tran/research/:id`
+- **THEN** each response status is 401
+- **AND** the body does not include the record
+
+#### Scenario: Anonymous form, knowledge, and graph reads are rejected
+- **WHEN** a client with no session sends `GET /api/forms/templates`, `GET /api/knowledge/files`, or `GET /api/graph/health`
+- **THEN** each response status is 401
+
+#### Scenario: Anonymous personal-data lists are rejected
+- **WHEN** a client with no session sends `GET /api/tran/users`, `GET /api/tran/members`, `GET /api/tran/employees`, or `GET /api/tran/contacts`
+- **THEN** each response status is 401
+
+#### Scenario: Signed-in private read proceeds
+- **WHEN** a client with a valid Morph JWT sends `GET /api/tran/research`
 - **THEN** the response status is not 401
 
-#### Scenario: Anonymous form, knowledge, and graph reads are not rejected
-- **WHEN** a client with no session sends `GET /api/forms/templates`, `GET /api/knowledge/files`, or `GET /api/graph/health`
-- **THEN** each response status is not 401
+### Requirement: Graph health does not write or leak connection details
+`GET /api/graph/health` MUST NOT create or alter schema. It MUST NOT include the Neo4j URI or a raw connection error in the response body. Schema for the graph knowledge tables is created when the Tran store opens.
+
+#### Scenario: Health response omits the URI and the raw error
+- **WHEN** an authenticated client requests `GET /api/graph/health`
+- **THEN** the JSON body does not contain a Neo4j URI
+- **AND** the JSON body does not contain a raw driver or connection error string
 
 ### Requirement: Logged-in management tool calls keep working
 An internal Morph AI management call to a mutating `/api/tran/*` route MUST succeed when the outer request has a valid Morph JWT. The internal request MUST carry that same `Authorization` header value, exactly. The internal request MUST NOT authenticate by copying `X-User-ID` or `X-User-Role`.
