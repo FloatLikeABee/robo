@@ -1,5 +1,6 @@
-# Morph API + Morph AI UI. Attach this file to the existing Render project.
-# Secrets are dashboard prompts. Do not put values on those keys.
+# Morph API + Morph AI UI, and the MorphUtils shell. Attach this file to the
+# existing Render project. Secrets are dashboard prompts. Do not put values
+# on those keys. VITE_MORPH_API_URL is a public origin prompt, not a secret.
 services:
   - type: web
     runtime: docker
@@ -91,4 +92,30 @@ services:
       - key: NEO4J_PASSWORD
         sync: false
       - key: TRAN_OPENAI_API_KEY
+        sync: false
+
+  # MorphUtils shell only. No disk. Embed apps are not services here.
+  - type: web
+    runtime: docker
+    name: morph-utils
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./morph-utils/Dockerfile
+    dockerContext: ./morph-utils
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - morph-utils/frontend/**
+        - morph-utils/Dockerfile
+        - morph-utils/.dockerignore
+        - morph-utils/deploy/docker-entrypoint.sh
+        - morph-utils/deploy/nginx.conf.template
+        - render.yaml
+    envVars:
+      - key: PORT
+        value: "3040"
+      # Public Morph origin, filled in the dashboard. Not a secret.
+      - key: VITE_MORPH_API_URL
         sync: false

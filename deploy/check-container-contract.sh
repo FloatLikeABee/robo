@@ -75,10 +75,6 @@ text = open(sys.argv[1], encoding="utf-8").read()
 lines = text.splitlines()
 errors = []
 
-def need(needle):
-    if needle not in text:
-        errors.append("missing " + needle)
-
 if any(line.startswith("projects:") for line in lines):
     errors.append("must not declare projects")
 if "numInstances:" in text:
@@ -86,15 +82,38 @@ if "numInstances:" in text:
 if "generateValue:" in text:
     errors.append("must not generate secret values")
 
+# Service items are "  - ...". Disk name and a later service must not satisfy Morph.
+starts = [i for i, line in enumerate(lines) if line.startswith("  - ")]
+services = []
+for n, i in enumerate(starts):
+    j = starts[n + 1] if n + 1 < len(starts) else len(lines)
+    services.append(lines[i:j])
+
+def named(block):
+    for line in block:
+        if line.startswith("    name:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+morph = next((block for block in services if named(block) == "morph"), None)
+if morph is None:
+    errors.append("missing morph service")
+    morph = []
+morph_text = "\n".join(morph) + "\n"
+
+def need(needle):
+    if needle not in morph_text:
+        errors.append("missing " + needle)
+
 for needle in (
     "type: web",
     "runtime: docker",
-    "name: morph",
+    "\n    name: morph\n",
     "region: singapore",
     "plan: starter",
     "branch: main",
-    "dockerfilePath: ./Dockerfile",
-    "dockerContext: .",
+    "\n    dockerfilePath: ./Dockerfile\n",
+    "\n    dockerContext: .\n",
     "healthCheckPath: /health",
     "autoDeployTrigger: checksPass",
     "name: morph-data",
@@ -113,13 +132,13 @@ for path in (
     "deploy/docker-entrypoint.sh",
     "render.yaml",
 ):
-    if path not in text:
+    if "\n        - " + path + "\n" not in morph_text:
         errors.append("buildFilter missing " + path)
 
-# Env entries sit under the service: "      - key:" then "        " fields.
+# Env entries sit under the morph service: "      - key:" then "        " fields.
 blocks = []
 current = None
-for line in lines:
+for line in morph:
     if line.startswith("      - key:"):
         if current:
             blocks.append(current)

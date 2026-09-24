@@ -40,7 +40,7 @@ Embed ids stay `sheetx`, `composerx`, `datax`, `projects`. Event Logs iframe def
 
 ## Deploy
 
-The image is the MorphUtils shell only. It does not include Morph, Event Logs, Content Maker, Data Access, or Project, and it does not use the root `Dockerfile` or `render.yaml`.
+The image is the MorphUtils shell only. It does not include Morph, Event Logs, Content Maker, Data Access, or Project. The local commands below do not use the root `Dockerfile` or `render.yaml`.
 
 From the repo root:
 
@@ -64,3 +64,23 @@ Set the public URL variables when the container starts. A non-empty value is wri
 With the embed variables unset, the production shell does not point those modules at localhost. Set `VITE_SHEETX_URL`, `VITE_COMPOSERX_URL`, `VITE_DATAX_URL`, `VITE_PROJECTS_URL`, and `VITE_MORPH_AI_URL` (or the aliases `VITE_FORMSX_URL` and `VITE_MORPH_ENGI_URL`) to the origins you want to embed. Health does not call them.
 
 `sh morph-utils/deploy/check-container-contract.sh` checks the Dockerfile, entrypoint, and this section without a daemon.
+
+## Hosted on Render
+
+The product owner creates the shell. This repo does not call Render. After merge, sync `render.yaml` on `main` in Render project `prj-dahc33dbedkc73a1v8n0`. That adds the Docker web service `morph-utils`. The same steps are in `deploy/README.md`.
+
+`PORT` is `3040`. `VITE_MORPH_API_URL` is required and is not a secret: set it to `https://<morph public host>` (no path), then restart so `/config.js` is rewritten. `VITE_USERS_PANEL_API_URL` is the optional alias, used only when the primary is unset or blank. Leave these unset until those apps have public origins; they are not services in this Blueprint:
+
+| Variable | Module |
+|----------|--------|
+| `VITE_SHEETX_URL` | Event Logs (alias `VITE_FORMSX_URL`) |
+| `VITE_FORMSX_URL` | legacy alias of `VITE_SHEETX_URL` |
+| `VITE_COMPOSERX_URL` | Content Maker |
+| `VITE_DATAX_URL` | Data Access |
+| `VITE_PROJECTS_URL` | Project (alias `VITE_MORPH_ENGI_URL`) |
+| `VITE_MORPH_ENGI_URL` | legacy alias of `VITE_PROJECTS_URL` |
+| `VITE_MORPH_AI_URL` | Morph AI link |
+
+Morph already allows cross-origin `Authorization` for non-loopback origins. This change does not edit CORS. There is no disk and no secret on this service.
+
+When the deploy is live, copy the HTTPS URL Render shows. `GET /health` returns `ok`. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that origin as `REACT_APP_MORPH_UTILS_URL` on Morph. This change does not set `REACT_APP_MORPH_UTILS_URL`.

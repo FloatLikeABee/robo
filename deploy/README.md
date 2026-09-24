@@ -118,3 +118,32 @@ Use Render disk snapshots of `morph-data`. Take a snapshot before an upgrade you
 ### After a deploy
 
 Open `https://<the service host>/health`. It must return HTTP 200 and a JSON body with `"status": "healthy"`. The same path is the container healthcheck. `GET /` is the Morph AI UI.
+
+## MorphUtils on Render
+
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Do not add Event Logs, Content Maker, Data Access, or Project to this Blueprint.
+
+### Env
+
+| Key | Required | Value |
+|-----|----------|--------|
+| `PORT` | yes | `3040`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
+| `VITE_MORPH_API_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
+| `VITE_USERS_PANEL_API_URL` | no | Alias used only when `VITE_MORPH_API_URL` is unset or blank. Leave it unset. |
+| `VITE_SHEETX_URL` | no | Event Logs origin. Alias: `VITE_FORMSX_URL`. Not a service in this Blueprint. |
+| `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. |
+| `VITE_COMPOSERX_URL` | no | Content Maker origin. Not a service in this Blueprint. |
+| `VITE_DATAX_URL` | no | Data Access origin. Not a service in this Blueprint. |
+| `VITE_PROJECTS_URL` | no | Project origin. Alias: `VITE_MORPH_ENGI_URL`. Not a service in this Blueprint. |
+| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. |
+| `VITE_MORPH_AI_URL` | no | Morph AI origin, if the header link in the shell should leave MorphUtils. |
+
+Set `VITE_MORPH_API_URL` in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. With the embed variables unset, those modules stay blank. `GET /health` does not call them.
+
+Morph already allows cross-origin `Authorization` for non-loopback origins (`Access-Control-Allow-Origin: *`, credentials false). The shell sends `Authorization: Bearer` and does not send cookies cross-origin. This change does not edit CORS.
+
+No JWT, password, or API key is set on this service.
+
+### Public URL
+
+After the first deploy is live, open the URL Render shows for `morph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that value as `REACT_APP_MORPH_UTILS_URL` on the Morph service. This change does not set `REACT_APP_MORPH_UTILS_URL`. Do not guess an `onrender.com` host from the service name.
