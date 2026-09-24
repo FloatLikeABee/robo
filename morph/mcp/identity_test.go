@@ -150,3 +150,18 @@ func TestIdentityFromEnvMissing(t *testing.T) {
 		t.Fatalf("error = %q", err)
 	}
 }
+
+func TestExposeRecordHidesPrivateFromAnonymous(t *testing.T) {
+	if mcp.ExposeRecord(mcp.Identity{}, "") {
+		t.Fatal("anonymous caller must not see an unpublished record")
+	}
+	if mcp.ExposeRecord(mcp.Identity{}, "   ") {
+		t.Fatal("anonymous caller must not see a whitespace slug")
+	}
+	if !mcp.ExposeRecord(mcp.Identity{}, "public-topic") {
+		t.Fatal("anonymous caller may see a published slug")
+	}
+	if !mcp.ExposeRecord(mcp.Identity{UserID: "user-1"}, "") {
+		t.Fatal("a verified user keeps access to a private record")
+	}
+}

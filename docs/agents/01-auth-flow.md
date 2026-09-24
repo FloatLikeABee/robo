@@ -55,7 +55,7 @@ Every consuming app reads `USERS_PANEL_BASE_URL` (legacy name). Default: `http:/
 
 ### Which `/api/*` routes are public
 
-Most `/api/*` routes need a Morph session (`Authorization: Bearer`). Published HTML is an explicit allowlist, not a prefix: only `GET` and `HEAD` of a single slug under these paths work with no session.
+Most `/api/*` routes need a Morph session (`Authorization: Bearer`). The only anonymous data reads are published pages. A record is published when its published slug is non-empty. That check is `publish.Visible` in `morph/publish`, which the HTTP handlers and `morph/mcp` both call.
 
 | Method | Path | Why |
 |--------|------|-----|
@@ -65,15 +65,17 @@ Most `/api/*` routes need a Morph session (`Authorization: Bearer`). Published H
 | GET, HEAD | `/api/tran/public/timelines/:slug` | Published Timeline HTML |
 | GET, HEAD | `/api/tran/public/research/:slug` | Published Research HTML |
 
-`GET /api/auth/me`, `/api/auth/user`, and `/api/auth/permissions` are not rejected by the middleware; each handler checks the Bearer token itself.
+`GET /api/auth/me`, `/api/auth/user`, and `/api/auth/permissions` are not rejected by the middleware; each handler checks the Bearer token itself. `OPTIONS` is not rejected for lack of a session. `/health` is not under `/api`.
 
-`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*` (including Research create, patch, cancel, publish, and delete), `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` (including `POST /api/graph/search`) return 401 with no session. `GET` and `HEAD` on those prefixes still succeed without a session, so MorphNotes can list records before login. That read exposure is intentional for this rule. `POST` and unknown kinds under `/api/tran/public/` are 401.
+`GET`, `HEAD`, `POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` return 401 with no session. That includes lists, details, downloads, `GET /api/graph/health`, `POST /api/graph/search`, and `/api/tran/users`, `/members`, `/employees`, and `/contacts`. An unpublished research, big note, or timeline is not returned by a guessed public slug. `GET /api/graph/health` does not create schema and does not return the Neo4j URI or a raw connection error. Schema is created when the Tran store opens.
 
-The MorphNotes SPA and Morph AI attach the bearer token from `userspanel_session_token` (`tranApi`) when the user is signed in. MorphUtils copies the same token into iframes as `?userspanel_token=`. The API does not read that cookie. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls and does not send identity headers.
+There is no other published page route on the Morph API. Project's public project HTML is a different service.
 
-A new published page must be registered as GET and added to `publicMorphReadKinds` in `morph/handlers/authz_middleware.go`. The path must be exactly `/api/tran/public/{kind}/{slug}` with one non-empty slug segment.
+The MorphNotes SPA (`/morphdata`) sends a signed-out browser to `/login?returnTo=` and lands back on that path after login. The return path must be a same-origin relative path. A 401 from `tranApi`, including on Morph Data, does the same redirect. The SPA and Morph AI attach the bearer token from `userspanel_session_token` when the user is signed in. MorphUtils copies that token into iframes as `?userspanel_token=`. Event Logs, Content Maker, Data Access, and Project do not call these private GETs. The API does not read the session cookie. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls and does not send identity headers.
 
-`X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` are not a session. There is no header fallback. Chat (`/api/chat`), admin (`/api/admin`), and the mutating MorphNotes routes above require `Authorization: Bearer` with a Morph JWT. Spoofed identity headers do not replace the user or role in that token. Anonymous `GET` and `HEAD` on the former open prefixes stay unauthenticated (issue #69).
+A new published page must be registered as GET and added to `pageKinds` in `morph/publish/publish.go`. The path must be exactly `/api/tran/public/{kind}/{slug}` with one non-empty slug segment.
+
+`X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` are not a session. There is no header fallback. Chat (`/api/chat`), admin (`/api/admin`), and the Morph data routes above require `Authorization: Bearer` with a Morph JWT. Spoofed identity headers do not replace the user or role in that token. Chat does not treat a missing user id as `admin`.
 
 ### Admin bootstrap
 
