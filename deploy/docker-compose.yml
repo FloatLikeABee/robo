@@ -1,0 +1,38 @@
+# Morph API + Morph AI UI. From the repo root:
+#   cp deploy/.env.production.example deploy/.env.production
+#   docker compose -f deploy/docker-compose.yml up --build
+# Caddy is profile "tls" only (issue #53). It does not start by default.
+
+services:
+  morph:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: morph:local
+    env_file:
+      - .env.production
+    ports:
+      - "${MORPH_PUBLISH_PORT:-9090}:9090"
+    volumes:
+      - morph-data:/data
+    restart: unless-stopped
+
+  caddy:
+    profiles: ["tls"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      morph:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  morph-data:
+  caddy-data:
+  caddy-config:
