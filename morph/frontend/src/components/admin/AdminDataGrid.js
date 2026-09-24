@@ -619,7 +619,7 @@ export default function AdminDataGrid({
     return () => {
       alive = false;
     };
-  }, [facilityAsSelect, facilityIdAsSelect]);
+  }, [facilityAsSelect, facilityIdAsSelect, platformLabels?.term_facility]);
 
   useEffect(() => {
     if (!districtIdAsSelect) {

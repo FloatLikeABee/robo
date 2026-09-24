@@ -61,7 +61,7 @@ cp .env.example .env
 
 Set `MORPH_AI_API_KEY`, `USERS_PANEL_BASE_URL=http://127.0.0.1:9090`, and per-app data paths (`TRAN_SQLITE_PATH`, `COMPOSERX_SQLITE_PATH`, …) in that file. Relative `./data/...` paths stay relative to each app’s working directory.
 
-Default Morph login: **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`).
+Default Morph login for local/dev (`MORPH_ENV` unset): **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`). `./start-all.sh` needs no extra auth config. Hosting sets `MORPH_ENV=production` and the overrides in [`docs/security-hosting-checklist.md`](./docs/security-hosting-checklist.md). In that mode Morph refuses to start while the development JWT secret or admin password is still in use.
 
 **Minimum AI setup** (DashScope / Qwen by default):
 
