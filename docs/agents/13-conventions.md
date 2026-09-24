@@ -72,3 +72,4 @@ Operators copy **only** the root template: `cp .env.example .env`. Empty nested 
 | `09-morph-utils.md` | MorphUtils shell |
 | `10-shared-libraries.md` | `pkg/` |
 | `12-build-deploy.md` | `start-all.sh` and deploy honesty |
+| `14-secrets-key.md` | `MORPH_SECRETS_KEY`, `MORPH_SECRETS_KEY_PREVIOUS` (`openssl rand -base64 32`) |

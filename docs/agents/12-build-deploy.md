@@ -55,6 +55,7 @@ Start **Morph API** first when bringing apps up one by one (auth hub).
 - Local: one gitignored `.env` at the **repo root**
 - Nested leftover `.env` files are ignored
 - Production path remains `deploy/.env.production` **when that tree exists** (it is currently absent)
+- Sealed secrets: `MORPH_SECRETS_KEY`, generated with `openssl rand -base64 32`. Optional `MORPH_SECRETS_KEY_PREVIOUS` is decrypt-only during rotation. The key is not `JWT_SECRET`. Local dev can leave it unset. See [`14-secrets-key.md`](14-secrets-key.md).
 
 ## Per-app build (without the launcher)
 
