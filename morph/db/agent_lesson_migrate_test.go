@@ -187,6 +187,70 @@ func TestMigrateAgentLessonColumnsSkipsBackfillWhenPlatUsersMissing(t *testing.T
 	}
 }
 
+func TestAgentLessonClaimDoesNotRepeatForTheSameSingleAccount(t *testing.T) {
+	sqlDB := openMemorySQLite(t)
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	_, err := sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at)
+		VALUES ('legacy', 'when old', 'keep', 'sess-old', '2024-01-01T00:00:00Z')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertPlatUser(t, sqlDB, "only-user", "2024-06-01T00:00:00Z")
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	if _, owner := lessonEnabledOwner(t, sqlDB, "legacy"); owner != "only-user" {
+		t.Fatalf("first decision should claim, owner=%q", owner)
+	}
+	_, err = sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at, enabled, owner_user_id)
+		VALUES ('later', 'when later', 'do not adopt', 'sess-later', '2026-01-01T00:00:00Z', 1, '')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	enabled, owner := lessonEnabledOwner(t, sqlDB, "later")
+	if enabled != 1 || owner != "" {
+		t.Fatalf("later unowned row was claimed: enabled=%d owner=%q", enabled, owner)
+	}
+}
+
+func TestAgentLessonMultiUserDecisionStaysAfterAccountRemoved(t *testing.T) {
+	sqlDB := openMemorySQLite(t)
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	insertPlatUser(t, sqlDB, "user-a", "2024-01-01T00:00:00Z")
+	insertPlatUser(t, sqlDB, "user-b", "2024-02-01T00:00:00Z")
+	_, err := sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at, enabled, owner_user_id)
+		VALUES ('legacy', 'when old', 'hidden', 'sess-old', '2023-01-01T00:00:00Z', 1, '')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	if _, owner := lessonEnabledOwner(t, sqlDB, "legacy"); owner != "" {
+		t.Fatalf("multi-user decision claimed %q", owner)
+	}
+	if _, err := sqlDB.Exec(`DELETE FROM plat_users WHERE id = 'user-b'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	enabled, owner := lessonEnabledOwner(t, sqlDB, "legacy")
+	if enabled != 1 || owner != "" {
+		t.Fatalf("survivor received the legacy lesson: enabled=%d owner=%q", enabled, owner)
+	}
+}
+
 func lessonEnabledOwner(t *testing.T, db *sql.DB, id string) (int, string) {
 	t.Helper()
 	var enabled int

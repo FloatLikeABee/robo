@@ -65,7 +65,7 @@ Significant chats distill one lesson per user and session into SQLite `agent_les
 - `PATCH /api/agent-lessons/:id` with `{ "enabled": true|false }`
 - `DELETE /api/agent-lessons/:id` → `{ "ok": true }`
 
-Another user's lesson is 404. Rows that existed before ownership are enabled by default. A database with exactly one `plat_users` account claims those rows for that account; with several accounts they stay unowned and hidden. Details: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
+Another user's lesson is 404. Rows that existed before ownership are enabled by default. The ownership claim runs once: a single `plat_users` account at that decision receives the unowned rows, and several accounts leave them unowned even if only one account remains later. Details: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
 
 ## Swagger
 

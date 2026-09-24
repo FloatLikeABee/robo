@@ -482,13 +482,15 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 
 // migrateAgentLessonColumns adds per-user ownership and the enabled flag.
 // Existing rows default to enabled=1. Lessons predate ownership, so
-// owner_user_id starts as ”. When plat_users has exactly one account, those
-// legacy rows are assigned to that account (a single-operator database keeps
-// its lessons). When more than one account already exists, legacy rows stay
-// unowned and are not listed, injected, or mutable — copying them to every
-// user would leak another operator's rules. Distillation records the owner
-// for lessons created after this migration. Uniqueness is per owner and
-// source session so two users can each keep a lesson from session id "default".
+// owner_user_id starts as ”. The legacy claim is decided once
+// (agent_lesson_owner_backfill): zero accounts waits for a later startup,
+// exactly one account receives the unowned rows that exist at that moment,
+// and more than one account records a decision that never assigns. A later
+// drop to a single account must not pick up historical unowned lessons.
+// If plat_users is missing, the claim is skipped and startup continues.
+// Distillation records the owner for lessons created after this migration.
+// Uniqueness is per owner and source session so two users can each keep a
+// lesson from session id "default".
 func migrateAgentLessonColumns(db *sql.DB) error {
 	if err := sqliteAddColumnIfMissing(db, "agent_lesson", "enabled", "INTEGER NOT NULL DEFAULT 1"); err != nil {
 		return err
@@ -504,15 +506,60 @@ func migrateAgentLessonColumns(db *sql.DB) error {
 	}
 	// ensureTranSQLiteSchema creates plat_users before this runs, including on a
 	// brand-new database. Skip the claim when that table is absent so a partial
-	// SQLite file cannot fail startup.
+	// SQLite file cannot fail startup, and do not record a decision yet.
 	hasUsers, err := sqliteTableExists(db, "plat_users")
 	if err != nil || !hasUsers {
 		return err
 	}
-	_, err = db.Exec(`
-		UPDATE agent_lesson
-		SET owner_user_id = (SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1)
-		WHERE owner_user_id = ''
-		  AND (SELECT COUNT(*) FROM plat_users) = 1`)
-	return err
+	return claimLegacyAgentLessonOwners(db)
+}
+
+// claimLegacyAgentLessonOwners assigns pre-ownership lessons at most once.
+// A missing decision row with zero accounts returns without writing, so the
+// bootstrap admin created after the first schema pass can claim on a later start.
+func claimLegacyAgentLessonOwners(db *sql.DB) error {
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS agent_lesson_owner_backfill (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			decided_at TEXT NOT NULL,
+			claimed_user_id TEXT NOT NULL DEFAULT ''
+		)`); err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var decided int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM agent_lesson_owner_backfill WHERE id = 1`).Scan(&decided); err != nil {
+		return err
+	}
+	if decided > 0 {
+		return tx.Commit()
+	}
+	var n int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM plat_users`).Scan(&n); err != nil {
+		return err
+	}
+	if n == 0 {
+		return tx.Commit()
+	}
+	claimed := ""
+	if n == 1 {
+		if err := tx.QueryRow(`SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1`).Scan(&claimed); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`UPDATE agent_lesson SET owner_user_id = ? WHERE owner_user_id = ''`, claimed); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(
+		`INSERT INTO agent_lesson_owner_backfill (id, decided_at, claimed_user_id) VALUES (1, datetime('now'), ?)`,
+		claimed,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

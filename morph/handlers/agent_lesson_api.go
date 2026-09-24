@@ -39,6 +39,15 @@ func (h *Handlers) trustedLessonUserID(c *gin.Context) (string, bool) {
 }
 
 func (h *Handlers) requireLessonUser(c *gin.Context) (string, bool) {
+	if c == nil {
+		return "", false
+	}
+	// A header-only caller is unauthenticated even when the store is down.
+	// 503 is only for a presented bearer that cannot be checked.
+	if bearerToken(c.GetHeader("Authorization")) == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return "", false
+	}
 	if h == nil || h.TranMySQL == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sqlite not available"})
 		return "", false

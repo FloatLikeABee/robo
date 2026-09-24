@@ -273,6 +273,33 @@ func TestAgentLessonSpoofedHeaderIsRejected(t *testing.T) {
 	}
 }
 
+func TestAgentLessonMissingStoreWithoutBearerIsUnauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/agent-lessons", nil)
+	c.Request.Header.Set("X-User-ID", "someone-else")
+	h.ListAgentLessons(c)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("header-only request with no store: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAgentLessonBearerWithoutStoreIsUnavailable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/agent-lessons", nil)
+	c.Request.Header.Set("Authorization", "Bearer not-a-real-token")
+	c.Request.Header.Set("X-User-ID", "someone-else")
+	h.ListAgentLessons(c)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("bearer with no store: %d %s", w.Code, w.Body.String())
+	}
+}
+
 func TestAgentLessonsRequireSameAuthAsOperatorAPIs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := &Handlers{}
