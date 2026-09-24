@@ -14,6 +14,7 @@ import (
 	"github.com/formsx/backend/internal/models"
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/formsx/backend/internal/mysql"
+	"github.com/formsx/backend/internal/spa"
 	"github.com/gin-gonic/gin"
 	"github.com/robo/repoenv"
 	swaggerFiles "github.com/swaggo/files"
@@ -53,15 +54,26 @@ func main() {
 	r := gin.Default()
 	r.MaxMultipartMemory = models.MaxQuestionPromptVideoBytes + (1 << 20) // accommodate largest prompt video + overhead
 	r.Use(corsMiddleware())
+	r.GET("/health", handler.Health)
 	r.Static("/uploads", cfg.UploadDir)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	h.Register(r.Group("/"))
+	if !spa.Mount(r, frontendDir()) {
+		log.Printf("Event Logs UI build not found; serving API only")
+	}
 
 	addr := ":" + cfg.ServerPort
 	log.Printf("SheetX listening on %s (storage=embedded sqlite+badger)", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func frontendDir() string {
+	if d := os.Getenv("FRONTEND_DIR"); d != "" {
+		return d
+	}
+	return "frontend/dist"
 }
 
 func corsMiddleware() gin.HandlerFunc {

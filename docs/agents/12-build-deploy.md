@@ -115,7 +115,7 @@ The Morph image build is a separate workflow (`.github/workflows/docker-image.ym
 
 ## Production / cloud
 
-Morph API and the Morph AI UI ship as one image. The runbook is [`deploy/README.md`](../../deploy/README.md): local `docker compose`, and **Deploy on Render** for the hosted service (`render.yaml` at the repo root). The product owner creates that service from the Blueprint after merge. `scripts/deploy.sh` still talks about Alibaba and removed apps. Do not follow that script.
+Morph API and the Morph AI UI ship as one image. Content Maker ships as `composerx/Dockerfile` (API and UI on port 8043). The runbook is [`deploy/README.md`](../../deploy/README.md): local compose, and **Deploy on Render** for the hosted services (`render.yaml` at the repo root). Content Maker image details are in [`composerx/backend/README.md`](../../composerx/backend/README.md). The product owner creates services from the Blueprint after merge. `scripts/deploy.sh` still talks about Alibaba and removed apps. Do not follow that script.
 
 ### What does exist
 
