@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,7 +35,10 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(os.Args[0], "-test.run=^$")
+	// Cancel kills a child that is still running when the test returns or times out.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^$")
 	cmd.Dir = t.TempDir()
 	cmd.Env = childEnv(
 		"MORPH_MCP_STDIO_CHILD=1",
@@ -53,13 +58,14 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitDone := make(chan error, 1)
-	go func() { waitDone <- cmd.Wait() }()
-	defer func() {
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+	waited := false
+	t.Cleanup(func() {
+		if waited || cmd.Process == nil {
+			return
 		}
-	}()
+		cancel()
+		_ = cmd.Wait()
+	})
 
 	lines := startLineReader(stdout)
 	if err := writeLine(stdin, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"stdio-test","version":"0"}}}`); err != nil {
@@ -78,6 +84,13 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	caps, _ := initResult["capabilities"].(map[string]any)
 	if caps["tools"] == nil || caps["resources"] == nil {
 		t.Fatalf("capabilities = %#v", caps)
+	}
+	resourcesCap, _ := caps["resources"].(map[string]any)
+	if resourcesCap == nil {
+		t.Fatalf("capabilities.resources = %#v", caps["resources"])
+	}
+	if changed, ok := resourcesCap["listChanged"]; ok {
+		t.Fatalf("resources.listChanged = %#v; the server does not emit list_changed", changed)
 	}
 	if err := assertNotListening(t, cmd.Process.Pid); err != nil {
 		t.Fatal(err)
@@ -104,13 +117,6 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if !strings.Contains(callLine, "user-stdio") {
 		t.Fatalf("whoami result = %s", callLine)
 	}
-
-	if strings.Contains(stderr.String(), tok) {
-		t.Fatal("stderr included the token")
-	}
-	if !strings.Contains(stderr.String(), "user-stdio") {
-		t.Fatalf("stderr = %q", stderr.String())
-	}
 	if strings.Contains(initLine+listLine+callLine, "server ready") {
 		t.Fatal("stdout included a log line")
 	}
@@ -118,13 +124,46 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if err := stdin.Close(); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case err := <-waitDone:
-		if err != nil {
-			t.Fatalf("exit: %v\nstderr: %s", err, stderr.String())
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("process did not exit after stdin closed")
+	// StdoutPipe's read end is closed by Wait. Drain to EOF first, and keep
+	// Scanner.Err, or a close can look like a clean EOF and drop trailing lines.
+	// A full pipe can also stall the child so Wait never returns.
+	drainErr := drainLines(lines, tok, 5*time.Second)
+	if drainErr != nil {
+		cancel()
+	}
+	waited = true
+	waitErr := waitCmd(cmd, 5*time.Second, cancel)
+	if drainErr != nil {
+		t.Fatalf("stdout: %v\nwait: %v\nstderr: %s", drainErr, waitErr, stderr.String())
+	}
+	if waitErr != nil {
+		t.Fatalf("exit: %v\nstderr: %s", waitErr, stderr.String())
+	}
+
+	// Wait has joined the stderr copy goroutine, so the buffer is stable.
+	stderrText := stderr.String()
+	if strings.Contains(stderrText, tok) {
+		t.Fatal("stderr included the token")
+	}
+	if !strings.Contains(stderrText, "morph-mcp server ready") {
+		t.Fatalf("stderr = %q", stderrText)
+	}
+	if strings.Contains(stderrText, "user-stdio") || strings.Contains(stderrText, "user_id") {
+		t.Fatalf("stderr included the user id: %q", stderrText)
+	}
+}
+
+func TestLineReaderReportsScanError(t *testing.T) {
+	lines := startLineReader(errReader{err: io.ErrUnexpectedEOF})
+	res, ok := <-lines
+	if !ok {
+		t.Fatal("channel closed without a scan error")
+	}
+	if !errors.Is(res.err, io.ErrUnexpectedEOF) {
+		t.Fatalf("err = %v", res.err)
+	}
+	if _, stillOpen := <-lines; stillOpen {
+		t.Fatal("expected channel to close after the scan error")
 	}
 }
 
@@ -197,36 +236,94 @@ func writeLine(w io.Writer, line string) error {
 	return err
 }
 
-func startLineReader(r io.Reader) <-chan string {
-	ch := make(chan string)
+type scanResult struct {
+	line string
+	err  error
+}
+
+type errReader struct {
+	err error
+}
+
+func (r errReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
+func startLineReader(r io.Reader) <-chan scanResult {
+	ch := make(chan scanResult)
 	go func() {
 		defer close(ch)
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for sc.Scan() {
-			ch <- sc.Text()
+			ch <- scanResult{line: sc.Text()}
+		}
+		if err := sc.Err(); err != nil {
+			ch <- scanResult{err: err}
 		}
 	}()
 	return ch
 }
 
-func waitID(t *testing.T, lines <-chan string, id string) string {
-	t.Helper()
-	deadline := time.After(10 * time.Second)
+func drainLines(lines <-chan scanResult, token string, timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	for {
 		select {
-		case line, ok := <-lines:
+		case res, ok := <-lines:
+			if !ok {
+				return nil
+			}
+			if res.err != nil {
+				return fmt.Errorf("stdout scan: %w", res.err)
+			}
+			if strings.TrimSpace(res.line) == "" {
+				continue
+			}
+			if err := validateJSONRPC(res.line, token); err != nil {
+				return err
+			}
+		case <-timer.C:
+			return errors.New("stdout did not reach EOF")
+		}
+	}
+}
+
+func waitCmd(cmd *exec.Cmd, timeout time.Duration, cancel context.CancelFunc) error {
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+		cancel()
+		return fmt.Errorf("timed out waiting for process: %w", <-done)
+	}
+}
+
+func waitID(t *testing.T, lines <-chan scanResult, id string) string {
+	t.Helper()
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+	for {
+		select {
+		case res, ok := <-lines:
 			if !ok {
 				t.Fatal("stdout closed before a response")
 			}
+			if res.err != nil {
+				t.Fatalf("stdout scan: %v", res.err)
+			}
 			var msg map[string]any
-			if err := json.Unmarshal([]byte(line), &msg); err != nil {
-				t.Fatalf("stdout line is not JSON: %s", line)
+			if err := json.Unmarshal([]byte(res.line), &msg); err != nil {
+				t.Fatalf("stdout line is not JSON: %s", res.line)
 			}
 			if rpcID(msg["id"]) == id {
-				return line
+				return res.line
 			}
-		case <-deadline:
+		case <-timer.C:
 			t.Fatalf("timed out waiting for id %s", id)
 		}
 	}
@@ -234,16 +331,26 @@ func waitID(t *testing.T, lines <-chan string, id string) string {
 
 func assertJSONRPC(t *testing.T, line, token string) {
 	t.Helper()
-	var msg map[string]any
-	if err := json.Unmarshal([]byte(line), &msg); err != nil {
+	if err := validateJSONRPC(line, token); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func validateJSONRPC(line, token string) error {
+	var msg map[string]any
+	if err := json.Unmarshal([]byte(line), &msg); err != nil {
+		return fmt.Errorf("stdout line is not JSON: %s", line)
+	}
 	if msg["jsonrpc"] != "2.0" {
-		t.Fatalf("line = %s", line)
+		return fmt.Errorf("stdout line is not JSON-RPC: %s", line)
 	}
 	if token != "" && strings.Contains(line, token) {
-		t.Fatal("stdout included the token")
+		return errors.New("stdout included the token")
 	}
+	if strings.Contains(line, "server ready") {
+		return fmt.Errorf("stdout included a log line: %s", line)
+	}
+	return nil
 }
 
 func resultObject(t *testing.T, line string) map[string]any {

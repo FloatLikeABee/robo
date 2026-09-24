@@ -19,7 +19,9 @@ The client launches the binary. Stdout is protocol messages only. Logs go to std
 | `MORPH_MCP_TOKEN` | yes | Morph session JWT from `POST /api/auth/login`. Never log or commit it. |
 | `JWT_SECRET` | must match the API | HMAC secret used to verify that JWT. |
 
-A missing or invalid token exits non-zero before any protocol message. A raw user id is not accepted.
+A missing or invalid token exits non-zero before any protocol message. A raw user id is not accepted. The token is checked once, at startup. A running process does not re-check it.
+
+Identity is the verified JWT claims, not a live user lookup. A deleted or disabled user keeps working until that process exits, even after the token expires. Rotating `JWT_SECRET` or letting the token expire only blocks new launches. To revoke access immediately, stop or restart the running morph-mcp processes; the MCP client relaunches them. MCP never exposes private data to unauthenticated callers.
 
 This process does not open Badger or SQLite, so it can run while `morph-api` holds the Badger directory lock.
 
