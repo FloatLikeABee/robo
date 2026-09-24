@@ -37,7 +37,7 @@ A later dev start reuses the file and does not warn again. The file is not overw
 
 ## Production
 
-Production startup calls `Resolve(true, keyPath)`. A missing or invalid `MORPH_SECRETS_KEY` refuses the process. Production does not read `morph-secrets.key`. Before enabling production, copy that file's base64 line into `MORPH_SECRETS_KEY`.
+Production is `config.ParseMorphEnv()` (`MORPH_ENV=production` or `prod`). Startup does not call `Resolve` yet. When it does, call it after `NewTranSQL`, which creates the data directory. `Resolve(true, keyPath)` uses only `MORPH_SECRETS_KEY`. A missing or invalid key refuses the process. Production does not read `morph-secrets.key`. Before enabling production, copy that file's base64 line into `MORPH_SECRETS_KEY`.
 
 ```go
 dataDir := filepath.Dir(cfg.TranSQLitePath)
@@ -51,7 +51,7 @@ if created {
 }
 ```
 
-`production` is the flag added with the hosting-secrets startup guard. This package does not invent that flag's name.
+`production` is the bool from `config.ParseMorphEnv`. The env name is `MORPH_ENV`.
 
 ## Associated data
 

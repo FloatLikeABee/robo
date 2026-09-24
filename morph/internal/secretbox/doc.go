@@ -6,9 +6,10 @@
 // key is independent of JWT_SECRET. This package reads the process environment
 // only (it does not load dotenv) and it never logs key material or plaintext.
 //
-// Startup wiring belongs in the Morph process after config.GetConfig, once
-// issue #24 exposes a production bool. Do not put that call in config.go as
-// part of introducing this package:
+// Startup wiring belongs in the Morph process after config.GetConfig and
+// config.ParseMorphEnv (MORPH_ENV=production or prod). Call Resolve only after
+// the data directory exists; NewTranSQL creates filepath.Dir(TRAN_SQLITE_PATH).
+// This package is not called from main:
 //
 //	dataDir := filepath.Dir(cfg.TranSQLitePath)
 //	keyPath := filepath.Join(dataDir, "morph-secrets.key")
