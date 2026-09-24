@@ -34,6 +34,28 @@ func corsAllowOrigin(requestOrigin string) string {
 	return "*"
 }
 
+// corsMiddleware sets browser CORS headers. OPTIONS is answered here with 204.
+// Allow-Headers is explicit; identity headers are not credentials.
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		allow := corsAllowOrigin(origin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allow)
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, CONNECT, TRACE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	cfg := config.GetConfig()
 	prod, err := config.ParseMorphEnv()
@@ -132,23 +154,7 @@ func main() {
 	r := gin.Default()
 
 	// CORS: reflect localhost/127.0.0.1 origins for cross-port dev; otherwise *.
-	r.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		allow := corsAllowOrigin(origin)
-		c.Writer.Header().Set("Access-Control-Allow-Origin", allow)
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, CONNECT, TRACE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	r.Use(corsMiddleware())
 	r.Use(h.AuthzMiddleware())
 
 	// Swagger documentation
