@@ -50,7 +50,7 @@ Export a pure helper from `morph/frontend/src/auth/authKeyboard.js`:
 - `authKeyboardOverlap({ innerHeight, visualViewport, focused })` returns `0` when the field is not focused, when `visualViewport` is missing, or when `innerHeight - height - offsetTop` is under 120px (browser chrome, not a keyboard). Otherwise it returns that overlap in CSS pixels.
 - `controlHidden(rect, visualViewport, gap)` is true when the control's bottom is below the visible bottom or its top is above the visible top, with an 8px gap.
 
-`LoginPage` listens for focus on the form, writes the overlap to a spacer element after the card (`height: var(--auth-keyboard-inset)`), and on the next frame scrolls the focused field or Sign in with `scrollIntoView({ block: 'nearest' })` only when `controlHidden` says so. Blur that leaves the form, and unmount, set the inset back to `0`. The spacer is a child after the card, so it adds document height. Padding on the border-box shell would not, because global `box-sizing: border-box` keeps that padding inside `min-height: 100dvh`.
+`LoginPage` listens for focus on the form, writes the overlap to a spacer element after the card (`height: var(--auth-keyboard-inset)`), and on the next frame scrolls the window by `scrollDelta` for the focused field, or for Sign in when the field is already inside the visible band. `scrollIntoView` is not used: a browser that scrolls against the layout viewport leaves the control under the keyboard. Blur that leaves the form, and unmount, set the inset back to `0`. The spacer is a child after the card, so it adds document height. Padding on the border-box shell would not, because global `box-sizing: border-box` keeps that padding inside `min-height: 100dvh`.
 
 **Rejected:** `<meta name="viewport" content="..., interactive-widget=resizes-content">`. That resizes every route when a field is focused, including the chat composer (#98), and it is not a login-file change.
 
@@ -71,9 +71,9 @@ Keep `releaseStuckOverlays()` immediately before `navigate`. The landing at `/` 
 - [Top-aligned card looks sparse on a tall phone] → That is the point: the lower half is where the keyboard goes. Desktop widths stay centered.
 - [URL-bar resize looks like a keyboard] → Ignore overlap under 120px, and only while a sign-in field is focused. Portrait keyboards are well above 120px. Landscape phones are outside this story.
 - [Chrome already shrinks `innerHeight` with the keyboard] → Overlap is then ~0 and the spacer stays 0. The shorter viewport scrolls the document if the card does not fit. No double inset.
-- [Document cannot grow because `html` clips overflow] → Fall back to the shell as the scroll container and confirm Sign in moves with `scrollIntoView`. Do not change the shared `index.css` clip.
+- [Document cannot grow because `html` clips overflow] → Measured: a keyboard spacer still increases `scrollHeight` above the layout viewport, so the window scrolls. Do not change the shared `index.css` clip.
 - [Spacer left on after blur] → Clear on blur outside the form and on unmount.
-- [`scrollIntoView` before the spacer is in layout] → Set the CSS variable, then scroll in `requestAnimationFrame`.
+- [Scroll runs before the spacer is in layout] → Set the CSS variable, then scroll in `requestAnimationFrame`.
 - [Clipping a control that failed to shrink] → The card is `width: 100%` with `min-width: 0`. Verification checks `scrollWidth`, not only that overflow is clipped.
 - [16px inputs feel large] → Required to stop iOS zoom, which itself causes horizontal pan.
 

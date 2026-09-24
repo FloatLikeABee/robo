@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../apiBase';
-import { authKeyboardOverlap, controlHidden } from '../auth/authKeyboard';
+import { authKeyboardOverlap, scrollDelta } from '../auth/authKeyboard';
 import { loginMorph, setMorphToken, setMorphAuthSnapshot } from '../auth/morphSession';
 import { safeReturnPath } from '../auth/returnTo';
 import { releaseStuckOverlays } from '../utils/releaseStuckOverlays';
@@ -47,13 +47,17 @@ export default function LoginPage() {
       if (!view) return;
       const active = document.activeElement;
       const submit = shell.querySelector('button[type="submit"]');
-      const fieldHidden =
-        active instanceof HTMLElement &&
-        shell.contains(active) &&
-        controlHidden(active.getBoundingClientRect(), view);
-      const submitHidden = submit && controlHidden(submit.getBoundingClientRect(), view);
-      const target = fieldHidden ? active : submitHidden ? submit : null;
-      if (target) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      const field =
+        active instanceof HTMLElement && shell.contains(active) ? active : null;
+      const target =
+        field && scrollDelta(field.getBoundingClientRect(), view)
+          ? field
+          : submit && scrollDelta(submit.getBoundingClientRect(), view)
+            ? submit
+            : null;
+      if (!target) return;
+      const delta = scrollDelta(target.getBoundingClientRect(), view);
+      if (delta) window.scrollBy(0, delta);
     }
 
     function apply() {

@@ -10,4 +10,4 @@
 
 ## 3. Verify
 
-- [ ] 3.1 Re-run the Morph frontend unit tests and the production build. Measure `/login` at about 390px: no document horizontal scroll, Sign in at least 44×44, card top-aligned, a long error wraps, and a simulated keyboard overlap makes Sign in reachable. Open the default post-login landing at about 390px and confirm it does not scroll horizontally or leave a modal backdrop.
+- [x] 3.1 Re-run the Morph frontend unit tests and the production build. Measure `/login` at about 390px: no document horizontal scroll, Sign in at least 44×44, card top-aligned, a long error wraps, and a simulated keyboard overlap makes Sign in reachable. Open the default post-login landing at about 390px and confirm it does not scroll horizontally or leave a modal backdrop.

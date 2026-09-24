@@ -14,13 +14,27 @@ export function authKeyboardOverlap({ innerHeight, visualViewport, focused }) {
   return overlap;
 }
 
+function visibleBand(visualViewport, gap) {
+  const top = Number(visualViewport.offsetTop) || 0;
+  const height = Number(visualViewport.height);
+  if (!Number.isFinite(height)) return null;
+  return { visibleTop: top + gap, visibleBottom: top + height - gap };
+}
+
 /** True when a control sits outside the visible visual viewport. */
 export function controlHidden(rect, visualViewport, gap = 8) {
   if (!rect || !visualViewport) return false;
-  const top = Number(visualViewport.offsetTop) || 0;
-  const height = Number(visualViewport.height);
-  if (!Number.isFinite(height)) return false;
-  const visibleTop = top + gap;
-  const visibleBottom = top + height - gap;
-  return rect.bottom > visibleBottom || rect.top < visibleTop;
+  const band = visibleBand(visualViewport, gap);
+  if (!band) return false;
+  return rect.bottom > band.visibleBottom || rect.top < band.visibleTop;
+}
+
+/** Pixels to scroll so the control sits inside the visible visual viewport. */
+export function scrollDelta(rect, visualViewport, gap = 8) {
+  if (!rect || !visualViewport) return 0;
+  const band = visibleBand(visualViewport, gap);
+  if (!band) return 0;
+  if (rect.bottom > band.visibleBottom) return rect.bottom - band.visibleBottom;
+  if (rect.top < band.visibleTop) return rect.top - band.visibleTop;
+  return 0;
 }

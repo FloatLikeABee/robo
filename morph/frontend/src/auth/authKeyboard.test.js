@@ -1,4 +1,4 @@
-import { authKeyboardOverlap, controlHidden } from './authKeyboard';
+import { authKeyboardOverlap, controlHidden, scrollDelta } from './authKeyboard';
 
 test('reports no keyboard overlap when the sign-in field is not focused', () => {
   expect(
@@ -70,4 +70,12 @@ test('treats a control inside the visible viewport as shown', () => {
   expect(
     controlHidden({ top: 80, bottom: 124 }, { height: 430, offsetTop: 0 })
   ).toBe(false);
+});
+
+test('scrolls a control that sits under the keyboard up into the visible area', () => {
+  expect(scrollDelta({ top: 289, bottom: 333 }, { height: 300, offsetTop: 0 })).toBe(41);
+});
+
+test('does not scroll a control that is already inside the visible area', () => {
+  expect(scrollDelta({ top: 80, bottom: 124 }, { height: 430, offsetTop: 0 })).toBe(0);
 });
