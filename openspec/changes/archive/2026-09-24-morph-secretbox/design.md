@@ -94,7 +94,7 @@ func ProviderKeyAAD(scope, ownerID, provider string) ([]byte, error)
 2. Not production, both vars unset: `LoadOrCreateDevKeyFile`, then `New`.
 3. Not production, current key unset, previous keys set: `ErrInvalidKey`. Do not generate a fresh current key beside leftover previous keys.
 
-The production flag is a `bool` argument. `config.go` has no flag yet, and the issue does not name the env var. Reading a guessed name would race the #24 agent.
+The production flag is a `bool` argument. `Resolve` does not read an env name of its own. Issue #24 names that flag `MORPH_ENV` and parses it with `config.ParseMorphEnv()` (`production`/`prod` = production; unset/`development`/`dev`/`local`/`test` = local; anything else refuses to start) and `config.ValidateStartup(cfg, prod)` in `morph/config/startup.go`. This change does not edit that file.
 
 Rejected: generating a key inside `FromEnv`. That hides the production/dev split and would mint a key on a disk that does not survive restart.
 
@@ -118,9 +118,17 @@ warning: generated dev MORPH_SECRETS_KEY file at %s (mode 0600); set MORPH_SECRE
 
 ### Startup wiring for the follow-up (not in this change)
 
-After `cfg := config.GetConfig()` and once #24 exposes its production bool:
+After `cfg := config.GetConfig()`. Reuse the bool from `config.ParseMorphEnv` (`MORPH_ENV`) that `config.ValidateStartup(cfg, production)` already receives. Call `Resolve` only after `NewTranSQL` creates the data directory. Do not edit `morph/config` or `main.go` in this change.
 
 ```go
+production, err := config.ParseMorphEnv()
+if err != nil {
+    log.Fatalf("refusing to start: %s", err.Error())
+}
+if err = config.ValidateStartup(cfg, production); err != nil {
+    log.Fatalf("refusing to start: %s", err.Error())
+}
+// NewTranSQL creates filepath.Dir(cfg.TranSQLitePath).
 dataDir := filepath.Dir(cfg.TranSQLitePath)
 keyPath := filepath.Join(dataDir, "morph-secrets.key")
 box, created, err := secretbox.Resolve(production, keyPath)
@@ -157,7 +165,7 @@ Proposer and reviewer pass, against `config.go`, `main.go`, `.gitignore`, and th
 - `config.go` must not grow a default for `MORPH_SECRETS_KEY` the way it did for `JWT_SECRET`. This change does not edit that file, and `.env.example` leaves the variable commented with no value.
 - The warning log must not include the key. The package returns a bool; the documented format string prints the path only.
 
-No open question changes the spec, the approach, or the tasks. #24's flag name is deliberately unknown.
+No open question changes the spec, the approach, or the tasks. `Resolve` still takes a bool. The #24 flag name is `MORPH_ENV`, parsed by `config.ParseMorphEnv` and checked by `config.ValidateStartup` in `morph/config/startup.go`.
 
 ## Risks / Trade-offs
 
