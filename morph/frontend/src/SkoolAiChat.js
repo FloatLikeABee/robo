@@ -7,15 +7,15 @@ import AiToolsWorkspaceDrawer from './components/chat/AiToolsWorkspaceDrawer';
 import SkillsModal from './components/SkillsModal';
 import { tranApi } from './api/tranClient';
 import { runAiProgress } from './lib/aiProgress';
-import { contextFingerprint, inferSubAgents, readPinnedFileBodies } from './lib/agentContext';
-import {
-  clearSessionBinding,
-  loadWorkspaceForSession,
-  reconnectRecentFolder,
-  rememberDirectory,
-  setSessionBinding,
-} from './lib/filesWorkspaceStore';
-import AgentWorkspace, { workspaceTabStorageKey } from './components/chat/AgentWorkspace';
+import { contextFingerprint, inferSubAgents } from './lib/agentContext';
+import AgentWorkspace, {
+  readLastSessionId,
+  readWorkspaceOpen,
+  readWorkspaceTab,
+  resolveRestoredSessionId,
+  writeLastSessionId,
+  writeWorkspaceOpen,
+} from './components/chat/AgentWorkspace';
 import {
   APPLIED_ASSISTANT_MSG,
   isAllowedBkOrigin,
@@ -31,11 +31,21 @@ import {
 } from './lib/appliedAssistantChannel';
 import { getMorphToken, clearMorphSession } from './auth/morphSession';
 import { useConfirm } from './components/ConfirmDialog';
+import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
 import './App.css';
 const THEME_KEY = 'skool-ai-chat-theme';
 const PROMPT_HISTORY_KEY = 'skool-ai-chat-prompt-history';
-const SESSIONS_COLLAPSED_KEY = 'morphai-sessions-collapsed';
 const MAX_PROMPTS = 10;
+const SESSION_SWATCH_COLORS = [
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#38bdf8',
+  '#818cf8',
+  '#e879f9',
+  '#fb7185',
+];
 const APP_URLS = {
   morphData: process.env.REACT_APP_MORPHDATA_URL || '/morphdata',
   morphUtils: process.env.REACT_APP_MORPH_UTILS_URL || 'http://localhost:3040',
@@ -47,6 +57,26 @@ const HEADER_APP_ICONS = {
   morphutils: `${process.env.PUBLIC_URL || ''}/icons/morph-utils-icon.svg`,
   bk: `${process.env.PUBLIC_URL || ''}/icons/bk-icon.svg`,
 };
+
+function hashSessionId(id) {
+  const s = String(id || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function sessionSwatchColor(id, usedIndexes) {
+  const n = SESSION_SWATCH_COLORS.length;
+  const start = hashSessionId(id) % n;
+  for (let k = 0; k < n; k += 1) {
+    const idx = (start + k) % n;
+    if (!usedIndexes.has(idx)) {
+      usedIndexes.add(idx);
+      return SESSION_SWATCH_COLORS[idx];
+    }
+  }
+  return SESSION_SWATCH_COLORS[start];
+}
 
 function appHrefWithSession(baseUrl) {
   const token = getMorphToken();
@@ -103,25 +133,13 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const [responseTimeMs, setResponseTimeMs] = useState(null);
   const [attachedFile, setAttachedFile] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState('default');
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [editTitleValue, setEditTitleValue] = useState('');
+  const [currentSessionId, setCurrentSessionId] = useState(
+    () => (singleSession ? 'default' : readLastSessionId() || 'default')
+  );
   const theme = 'dark';
   const [sidebarNavOpen, setSidebarNavOpen] = useState(false);
-  const [sessionsCollapsed, setSessionsCollapsed] = useState(() => {
-    try {
-      return sessionStorage.getItem(SESSIONS_COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const [workspaceTab, setWorkspaceTab] = useState('files');
-  const [folderName, setFolderName] = useState('');
-  const [workspaceFiles, setWorkspaceFiles] = useState([]);
-  const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
-  const [workspaceFolderId, setWorkspaceFolderId] = useState('');
-  const [workspaceReconnect, setWorkspaceReconnect] = useState(false);
-  const [includeFiles, setIncludeFiles] = useState(true);
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => (isAgentShell ? readWorkspaceOpen() : true));
+  const [workspaceTab, setWorkspaceTab] = useState('knowledge');
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeKnowledge, setIncludeKnowledge] = useState(true);
   const [hybridDrawerOpen, setHybridDrawerOpen] = useState(false);
@@ -140,13 +158,13 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const skillsPickerRef = useRef(null);
   const aiToolsFrameRef = useRef(null);
   const appliedAssistantRef = useRef(appliedAssistant);
-  const sessionTitleInputRef = useRef(null);
   const promptHistoryRef = useRef(loadPromptHistory());
   const historyNavIndexRef = useRef(-1);
   const draftBeforeNavRef = useRef('');
   const wasLoadingRef = useRef(false);
   const abortControllerRef = useRef(null);
   const lastContextFpRef = useRef('');
+  const didRestoreSessionRef = useRef(!isAgentShell);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-chat-theme', theme);
@@ -276,13 +294,27 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   };
 
 
+  const pickRestoredSession = (list, lastId) => {
+    const sessionIds = (Array.isArray(list) ? list : []).map((s) => s.id).filter(Boolean);
+    return resolveRestoredSessionId({ lastId, sessionIds });
+  };
+
   const loadSessions = async () => {
     try {
       const res = await tranApi.get('/api/chat/sessions');
-      setSessions(Array.isArray(res.data) ? res.data : []);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setSessions(list);
+      if (isAgentShell && !didRestoreSessionRef.current) {
+        didRestoreSessionRef.current = true;
+        const next = pickRestoredSession(list, readLastSessionId());
+        setCurrentSessionId((prev) => (prev === next ? prev : next));
+        writeLastSessionId(next);
+      }
+      return list;
     } catch (e) {
       console.error('Load sessions error:', e);
       setSessions([]);
+      return [];
     }
   };
 
@@ -360,51 +392,22 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (!sessionId) return;
     loadSessionMessages(sessionId);
     loadHybridAttachment();
-    try {
-      const t = sessionStorage.getItem(workspaceTabStorageKey(sessionId));
-      if (t === 'files' || t === 'notes' || t === 'knowledge') setWorkspaceTab(t);
-    } catch {
-      /* ignore */
-    }
-    if (!isAgentShell) return undefined;
-    let cancelled = false;
-    setFolderName('');
-    setWorkspaceFiles([]);
-    setPinnedPaths(new Set());
-    setWorkspaceFolderId('');
-    setWorkspaceReconnect(false);
-    void loadWorkspaceForSession(sessionId).then((w) => {
-      if (cancelled) return;
-      setFolderName(w.folderName || '');
-      setWorkspaceFiles(Array.isArray(w.files) ? w.files : []);
-      setPinnedPaths(new Set(w.pinnedPaths || []));
-      setWorkspaceFolderId(w.folderId || '');
-      setWorkspaceReconnect(Boolean(w.reconnect));
-    });
-    return () => {
-      cancelled = true;
-    };
+    const savedTab = readWorkspaceTab(sessionId);
+    if (savedTab) setWorkspaceTab(savedTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load on session id change only
   }, [sessionId]);
 
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SESSIONS_COLLAPSED_KEY, sessionsCollapsed ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
-  }, [sessionsCollapsed]);
+  const toggleWorkspace = useCallback(() => {
+    setWorkspaceOpen((v) => {
+      const next = !v;
+      writeWorkspaceOpen(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    if (editingSessionId && sessionTitleInputRef.current) {
-      sessionTitleInputRef.current.focus();
-      sessionTitleInputRef.current.select();
-    }
-  }, [editingSessionId]);
 
   useEffect(() => {
     if (wasLoadingRef.current && !loading) {
@@ -441,38 +444,24 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     setLoadingStatus('Reading your question…');
     const startedAt = performance.now();
 
-    let pinnedBodies = [];
-    if (isAgentShell && includeFiles) {
-      try {
-        pinnedBodies = await readPinnedFileBodies(workspaceFiles, pinnedPaths);
-      } catch {
-        pinnedBodies = [];
-      }
-    }
     const fp = contextFingerprint({
-      includeFiles: isAgentShell && includeFiles,
       includeNotes: isAgentShell && includeNotes,
       includeKnowledge: isAgentShell && includeKnowledge,
-      pinHashes: pinnedBodies.map((p) => p.hash),
     });
-    const reuseCache = isAgentShell && lastContextFpRef.current === fp && Boolean(fp);
-    const pinnedPayload =
-      reuseCache ? pinnedBodies.map(({ path, hash }) => ({ path, hash })) : pinnedBodies;
     if (isAgentShell) lastContextFpRef.current = fp;
     const subAgents = isAgentShell
       ? inferSubAgents(trimmed || userMessage, {
-          hasFiles: includeFiles && pinnedBodies.length > 0,
           hasNotes: includeNotes,
           hasKnowledge: includeKnowledge,
         })
       : [];
     const agentFields = isAgentShell
       ? {
-          include_files: includeFiles,
+          include_files: false,
           include_notes: includeNotes,
           include_knowledge: includeKnowledge,
           context_cache_key: fp,
-          pinned_files: includeFiles ? pinnedPayload : [],
+          pinned_files: [],
         }
       : {};
 
@@ -646,6 +635,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
       const res = await tranApi.post('/api/chat/sessions', { title: 'New chat' });
       const id = res.data?.id;
       if (id) {
+        if (isAgentShell) writeLastSessionId(id);
         setCurrentSessionId(id);
         setMessages([]);
         loadSessions();
@@ -657,28 +647,9 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
   const handleSelectSession = (selectedId) => {
     if (selectedId === currentSessionId) return;
-    setEditingSessionId(null);
+    if (isAgentShell) writeLastSessionId(selectedId);
     setCurrentSessionId(selectedId);
   };
-
-  const saveSessionTitle = useCallback(
-    async (sessionId) => {
-      const t = editTitleValue.trim();
-      setEditingSessionId(null);
-      if (!t) {
-        loadSessions();
-        return;
-      }
-      try {
-        await tranApi.put(`/api/chat/sessions/${sessionId}`, { title: t });
-        loadSessions();
-      } catch (e) {
-        console.error('Rename session error:', e);
-        loadSessions();
-      }
-    },
-    [editTitleValue]
-  );
 
   const handleDeleteSession = async (idToRemove) => {
     const ok = await confirm({
@@ -690,13 +661,16 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (!ok) return;
     try {
       await tranApi.delete(`/api/chat/sessions/${idToRemove}`);
+      const list = await loadSessions();
       if (idToRemove === currentSessionId) {
-        setEditingSessionId(null);
-        setCurrentSessionId('default');
+        const next = isAgentShell
+          ? await pickRestoredSession(list, idToRemove)
+          : 'default';
+        if (isAgentShell) writeLastSessionId(next);
+        setCurrentSessionId(next);
         setMessages([]);
-        await loadSessionMessages('default');
+        await loadSessionMessages(next);
       }
-      loadSessions();
     } catch (e) {
       console.error('Delete session error:', e);
     }
@@ -729,103 +703,20 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   };
 
   const toggleSessionsNav = () => {
-    if (
-      isAgentShell &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(min-width: 769px)').matches
-    ) {
-      setSessionsCollapsed((v) => !v);
-      return;
-    }
     setSidebarNavOpen((v) => !v);
   };
 
-  const handleFolderOpened = async ({ name, files, directoryHandle }) => {
-    let folderId = '';
-    if (directoryHandle) {
-      const rec = await rememberDirectory(directoryHandle);
-      folderId = rec?.id || '';
-    }
-    if (folderId) {
-      await setSessionBinding(sessionId, { folderId, pinnedPaths: [] });
-    } else {
-      await clearSessionBinding(sessionId);
-    }
-    setFolderName(name || '');
-    setWorkspaceFiles(Array.isArray(files) ? files : []);
-    setPinnedPaths(new Set());
-    setWorkspaceFolderId(folderId);
-    setWorkspaceReconnect(false);
-    lastContextFpRef.current = '';
-  };
-
-  const handleFolderCleared = () => {
-    void clearSessionBinding(sessionId);
-    setFolderName('');
-    setWorkspaceFiles([]);
-    setPinnedPaths(new Set());
-    setWorkspaceFolderId('');
-    setWorkspaceReconnect(false);
-    lastContextFpRef.current = '';
-  };
-
-  const handleOpenRecent = async (folderId) => {
-    if (!folderId) return;
-    const prev = await loadWorkspaceForSession(sessionId);
-    const keepPins = prev.folderId === folderId ? prev.pinnedPaths : [];
-    await setSessionBinding(sessionId, { folderId, pinnedPaths: keepPins });
-    const w = await loadWorkspaceForSession(sessionId);
-    setFolderName(w.folderName || '');
-    setWorkspaceFiles(Array.isArray(w.files) ? w.files : []);
-    setPinnedPaths(new Set(w.pinnedPaths || []));
-    setWorkspaceFolderId(w.folderId || folderId);
-    setWorkspaceReconnect(Boolean(w.reconnect));
-    if (w.reconnect) {
-      const again = await reconnectRecentFolder(folderId);
-      if (again) {
-        const live = new Set(again.files.map((f) => f.path));
-        const pins = (w.pinnedPaths || []).filter((p) => live.has(p));
-        await setSessionBinding(sessionId, { folderId, pinnedPaths: pins });
-        setFolderName(again.folderName);
-        setWorkspaceFiles(again.files);
-        setPinnedPaths(new Set(pins));
-        setWorkspaceReconnect(false);
-      }
-    }
-    lastContextFpRef.current = '';
-  };
-
-  const handleReconnectFolder = async () => {
-    if (!workspaceFolderId) return false;
-    const again = await reconnectRecentFolder(workspaceFolderId);
-    if (!again) return false;
-    const live = new Set(again.files.map((f) => f.path));
-    const pins = [...pinnedPaths].filter((p) => live.has(p));
-    await setSessionBinding(sessionId, { folderId: workspaceFolderId, pinnedPaths: pins });
-    setFolderName(again.folderName);
-    setWorkspaceFiles(again.files);
-    setPinnedPaths(new Set(pins));
-    setWorkspaceReconnect(false);
-    lastContextFpRef.current = '';
-    return true;
-  };
-
-  const handleTogglePin = (file) => {
-    if (!file?.path) return;
-    setPinnedPaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(file.path)) next.delete(file.path);
-      else next.add(file.path);
-      if (workspaceFolderId) {
-        void setSessionBinding(sessionId, { folderId: workspaceFolderId, pinnedPaths: [...next] });
-      }
-      return next;
+  const sessionColorById = useMemo(() => {
+    const used = new Set();
+    const map = {};
+    (sessions || []).forEach((s) => {
+      map[s.id] = sessionSwatchColor(s.id, used);
     });
-    lastContextFpRef.current = '';
-  };
+    return map;
+  }, [sessions]);
 
   const chatInner = (
-    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent' : ''}${isAgentShell && sessionsCollapsed ? ' app--sessions-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
+    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent app--sessions-collapsed' : ''}${isAgentShell && !workspaceOpen ? ' app--workspace-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
       {!singleSession && sidebarNavOpen && (
         <button
           type="button"
@@ -835,69 +726,43 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
         />
       )}
       {!singleSession && (
-        <aside className={`chat-sidebar${sidebarNavOpen ? ' is-open' : ''}`} aria-hidden={!sidebarNavOpen ? undefined : undefined}>
+        <aside className={`chat-sidebar${sidebarNavOpen ? ' is-open' : ''}`}>
           <div className="sidebar-split-top">
             <button
               type="button"
               className="sidebar-new-chat"
+              title="New chat"
+              aria-label="New chat"
               onClick={() => {
                 handleNewChat();
                 setSidebarNavOpen(false);
               }}
             >
-              {isAgentShell && sessionsCollapsed ? '+' : '+ New chat'}
+              +
             </button>
             <div className="sidebar-sessions">
-              {(sessions || []).map((s) => (
+              {(sessions || []).map((s) => {
+                const title = s.title || 'Chat';
+                return (
                 <div key={s.id} className={`sidebar-session-row ${s.id === currentSessionId ? 'active' : ''}`}>
                   <button
                     type="button"
                     className="sidebar-session-main"
+                    title={title}
+                    aria-label={title}
+                    aria-current={s.id === currentSessionId ? 'true' : undefined}
+                    style={{ background: sessionColorById[s.id] }}
                     onClick={() => {
-                      if (editingSessionId === s.id) return;
                       handleSelectSession(s.id);
                       setSidebarNavOpen(false);
                     }}
-                  >
-                    {editingSessionId === s.id ? (
-                      <input
-                        ref={sessionTitleInputRef}
-                        className="sidebar-session-input"
-                        value={editTitleValue}
-                        onChange={(e) => setEditTitleValue(e.target.value)}
-                        onBlur={() => saveSessionTitle(s.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            saveSessionTitle(s.id);
-                          }
-                          if (e.key === 'Escape') {
-                            setEditingSessionId(null);
-                            loadSessions();
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <span
-                        className="sidebar-session-title"
-                        title="Double-click to rename"
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSessionId(s.id);
-                          setEditTitleValue(s.title || 'Chat');
-                        }}
-                      >
-                        {s.title || 'Chat'}
-                      </span>
-                    )}
-                  </button>
+                  />
                   {s.id !== 'default' && (
                     <button
                       type="button"
                       className="sidebar-session-remove"
                       title="Remove session"
-                      aria-label="Remove session"
+                      aria-label={`Remove ${title}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteSession(s.id);
@@ -905,8 +770,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
+                        width="12"
+                        height="12"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -923,7 +788,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </aside>
@@ -934,16 +800,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             <button
               type="button"
               className="chat-nav-toggle"
-              aria-label={
-                isAgentShell
-                  ? sessionsCollapsed
-                    ? 'Expand sessions'
-                    : 'Collapse sessions'
-                  : sidebarNavOpen
-                    ? 'Close sessions menu'
-                    : 'Open sessions menu'
-              }
-              aria-expanded={isAgentShell ? !sessionsCollapsed : sidebarNavOpen}
+              aria-label={sidebarNavOpen ? 'Close sessions menu' : 'Open sessions menu'}
+              aria-expanded={sidebarNavOpen}
               onClick={toggleSessionsNav}
             >
               <span aria-hidden>☰</span>
@@ -958,6 +816,32 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             ) : null}
           </div>
           <div className="header-actions">
+            {isAgentShell ? (
+              <button
+                type="button"
+                className="chat-icon-button chat-workspace-toggle"
+                onClick={toggleWorkspace}
+                aria-expanded={workspaceOpen}
+                aria-label={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
+                title={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M15 3v18" />
+                </svg>
+              </button>
+            ) : null}
             <div className="header-app-links" aria-label="App links">
               <button
                 type="button"
@@ -1117,7 +1001,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                           const b64 = img.base64 || '';
                           if (!b64) return null;
                           return (
-                            <img
+                            <EnlargeImg
                               key={iidx}
                               className="chat-generated-image"
                               src={`data:${ctype};base64,${b64}`}
@@ -1303,16 +1187,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
         {isAgentShell ? (
           <div className="agent-include-bar" role="group" aria-label="Context included on next send">
-            <button
-              type="button"
-              className={`agent-include-chip${includeFiles ? ' is-on' : ''}`}
-              onClick={() => {
-                setIncludeFiles((v) => !v);
-                lastContextFpRef.current = '';
-              }}
-            >
-              Files{pinnedPaths.size ? ` (${pinnedPaths.size})` : ''}
-            </button>
             <button
               type="button"
               className={`agent-include-chip${includeNotes ? ' is-on' : ''}`}
@@ -1568,15 +1442,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             sessionId={sessionId}
             activeTab={workspaceTab}
             onTabChange={setWorkspaceTab}
-            folderName={folderName}
-            files={workspaceFiles}
-            pinnedPaths={pinnedPaths}
-            onFolderOpened={handleFolderOpened}
-            onFolderCleared={handleFolderCleared}
-            onTogglePin={handleTogglePin}
-            onOpenRecent={handleOpenRecent}
-            onReconnectFolder={handleReconnectFolder}
-            reconnectNeeded={workspaceReconnect}
             onBringToConversation={bringHybridToConversation}
             onAttachmentChange={loadHybridAttachment}
           />
@@ -1587,14 +1452,20 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
   if (embedded) {
     return (
-      <div
-        className={`skool-ai-chat--embedded${singleSession ? ' skool-ai-chat--single-session' : ''}`}
-        style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
-      >
-        {chatInner}
-      </div>
+      <VisualLightboxProvider>
+        <div
+          className={`skool-ai-chat--embedded${singleSession ? ' skool-ai-chat--single-session' : ''}`}
+          style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          {chatInner}
+        </div>
+      </VisualLightboxProvider>
     );
   }
 
-  return <div className="app-outer">{chatInner}</div>;
+  return (
+    <VisualLightboxProvider>
+      <div className="app-outer">{chatInner}</div>
+    </VisualLightboxProvider>
+  );
 }

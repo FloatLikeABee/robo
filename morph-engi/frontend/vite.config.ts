@@ -16,6 +16,6 @@ const backendProxy = {
 export default defineConfig({
   plugins: [svelte(), tailwindcss()],
   envDir: repoRoot,
-  server: { port: 5179, proxy: { ...backendProxy } },
-  preview: { port: 5179, proxy: { ...backendProxy } },
+  server: { host: true, port: 5179, proxy: { ...backendProxy } },
+  preview: { host: true, port: 5179, proxy: { ...backendProxy } },
 })

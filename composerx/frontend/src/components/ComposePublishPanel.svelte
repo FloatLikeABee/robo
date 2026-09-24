@@ -1,6 +1,7 @@
 <script>
   import ButtonLeadingIcon from '../lib/ButtonLeadingIcon.svelte'
   import { runAiProgress } from '../lib/aiProgress'
+  import AssistantMarkdown from './AssistantMarkdown.svelte'
 
   /** @type {{ apiBase: string, getAuthHeaders: (extra?: Record<string, string>) => Record<string, string>, notify?: (kind?: string, msg?: string) => void, theme?: 'light' | 'dark' }} */
   let { apiBase, getAuthHeaders, notify = () => {}, theme = 'dark' } = $props()
@@ -425,7 +426,7 @@
           {#each aiMessages as msg (msg.id)}
             <div class="ai-chat-bubble" class:ai-chat-user={msg.role === 'user'} class:ai-chat-asst={msg.role !== 'user'}>
               <div class="ai-chat-role">{msg.role === 'user' ? 'You' : 'Assistant'}</div>
-              <div class="ai-chat-text">{msg.content}</div>
+              <div class="ai-chat-text"><AssistantMarkdown text={msg.content} /></div>
               {#if msg.role === 'assistant' && msg.proposedHtml}
                 <div class="ai-chat-apply-row">
                   <button type="button" class="btn-secondary" onclick={() => applyProposedHtml(msg.proposedHtml)}>

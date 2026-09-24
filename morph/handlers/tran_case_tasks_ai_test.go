@@ -122,21 +122,54 @@ func TestParseCaseTaskAIDraftOutput(t *testing.T) {
 }
 
 func TestParseCaseTaskAIDraftOutputRequiresTitleAndDetailObject(t *testing.T) {
-	if _, err := parseCaseTaskAIDraftOutput(`{"title":"","detail":{}}`); err == nil {
+	if _, err := parseCaseTaskAIDraftOutput(`{"title":""}`); err == nil {
 		t.Fatal("expected empty title error")
-	}
-	if _, err := parseCaseTaskAIDraftOutput(`{"title":"X","detail":[]}`); err == nil {
-		t.Fatal("expected detail-must-be-object error")
 	}
 	if _, err := parseCaseTaskAIDraftOutput(`not json`); err == nil {
 		t.Fatal("expected parse error")
 	}
-	got, err := parseCaseTaskAIDraftOutput(`{"title":"X","detail":{"a":1},"location":{"label":"","area":[["x","y"]]}}`)
+}
+
+func TestParseCaseTaskAIDraftOutputMarkdownWithoutDetail(t *testing.T) {
+	got, err := parseCaseTaskAIDraftOutput(`{
+		"title": "Onboard vendor",
+		"markdown": "Walk the checklist. Flow: A then B.",
+		"start_at": "2026-09-19T09:00:00",
+		"end_at": "2026-09-19T11:00:00"
+	}`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Location != nil {
-		t.Fatalf("invented location from invalid coords: %#v", got.Location)
+	if got.Title != "Onboard vendor" {
+		t.Fatalf("title %#v", got.Title)
+	}
+	if !strings.Contains(got.Markdown, "Walk the checklist") {
+		t.Fatalf("markdown %#v", got.Markdown)
+	}
+	if got.Markdown != got.Description {
+		t.Fatalf("description should mirror markdown %#v", got)
+	}
+	if got.StartAt == "" || got.EndAt == "" {
+		t.Fatalf("times %#v", got)
+	}
+}
+
+func TestParseCaseTaskAIDraftOutputMarkdownFallsBackToDescription(t *testing.T) {
+	got, err := parseCaseTaskAIDraftOutput(`{"title":"X","description":"Legacy body"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Markdown != "Legacy body" || got.Description != "Legacy body" {
+		t.Fatalf("fallback %#v", got)
+	}
+}
+
+func TestCaseTaskAIDraftPromptAsksForMarkdown(t *testing.T) {
+	p := caseTaskAIDraftPrompt("source")
+	for _, want := range []string{"markdown", "mermaid", "Visual-first"} {
+		if !strings.Contains(p, want) {
+			t.Fatalf("missing %q in:\n%s", want, p)
+		}
 	}
 }
 

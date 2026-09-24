@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"strings"
 
 	"idongivaflyinfa/ai"
@@ -27,25 +28,27 @@ import (
 
 // Handlers contains all handler dependencies
 type Handlers struct {
-	db                *db.DB
-	aiService         *ai.AIService
-	externalAPIBase   string
-	jwtCfg            auth.TokenConfig
-	TranMySQL         *db.TranSQL
-	EntityDetails     db.EntityDetailStore
+	db              *db.DB
+	aiService       *ai.AIService
+	externalAPIBase string
+	jwtCfg          auth.TokenConfig
+	TranMySQL       *db.TranSQL
+	EntityDetails   db.EntityDetailStore
 	// TranMongo is kept as a deprecated alias field name used by older call sites;
 	// prefer EntityDetails. Populated when EntityDetails is a *db.TranMongo.
-	TranMongo             *db.TranMongo
-	hybridStore           *hybridcontext.Store
-	sharpReportBase       string
-	tranFormBase          string
-	tranMailBase          string
-	bookiBase             string
+	TranMongo               *db.TranMongo
+	hybridStore             *hybridcontext.Store
+	sharpReportBase         string
+	tranFormBase            string
+	tranMailBase            string
+	bookiBase               string
 	entityAttachmentMax     int
 	entityAttachmentRootDir string
 	importJobs              *importJobStore
 	// ginEngine is the fully registered router; used to execute /api/tran and /api/forms calls from the AI assistant.
 	ginEngine *gin.Engine
+	// distillLesson, if set, replaces the LLM when harvesting a session lesson (tests).
+	distillLesson func(ctx context.Context, transcript string) (trigger, rule string, err error)
 }
 
 // New creates a new Handlers instance.

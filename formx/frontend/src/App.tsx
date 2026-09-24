@@ -6,7 +6,6 @@ import { Layout } from './components/Layout';
 import { PublicForm } from './pages/PublicForm';
 import { PublicEventInfoSubmit } from './pages/PublicEventInfoSubmit';
 import { EventsInfo } from './pages/EventsInfo';
-import { SurveyBot } from './pages/SurveyBot';
 import { PublicAISheet } from './pages/PublicAISheet';
 import { Login } from './pages/Login';
 import { getAuthToken, AUTH_EXPIRED_EVENT } from './lib/api';
@@ -35,13 +34,13 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Navigate to="/events-info" replace />} />
-          <Route path="forms" element={<Navigate to="/survey-bot" replace />} />
+          <Route path="forms" element={<Navigate to="/events-info" replace />} />
           <Route path="events-info" element={<EventsInfo />} />
-          <Route path="survey-bot" element={<SurveyBot />} />
+          <Route path="survey-bot" element={<Navigate to="/events-info" replace />} />
           <Route path="settings" element={<Navigate to="/events-info" replace />} />
-          <Route path="forms/new" element={<Navigate to="/survey-bot" replace />} />
-          <Route path="forms/:id/edit" element={<Navigate to="/survey-bot" replace />} />
-          <Route path="forms/:id/results" element={<Navigate to="/survey-bot" replace />} />
+          <Route path="forms/new" element={<Navigate to="/events-info" replace />} />
+          <Route path="forms/:id/edit" element={<Navigate to="/events-info" replace />} />
+          <Route path="forms/:id/results" element={<Navigate to="/events-info" replace />} />
           <Route path="*" element={<Navigate to="/events-info" replace />} />
         </Route>
         <Route path="f/:slug" element={<PublicForm />} />

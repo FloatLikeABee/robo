@@ -8,6 +8,7 @@
 		updateDataTableRow,
 		type DataTableSummary
 	} from '$lib/dataTables';
+	import { confirm } from '$lib/confirmDialog';
 	import { whenSessionReady } from '$lib/stores/auth.svelte';
 	import DataTableAiAnalysisModal from '$lib/components/data-tables/DataTableAiAnalysisModal.svelte';
 	import {
@@ -153,7 +154,7 @@
 
 	async function deleteRow(rowIndex: number) {
 		if (!tableId) return;
-		if (!confirm(`Delete row ${rowIndex + 1}?`)) return;
+		if (!(await confirm({ message: `Delete row ${rowIndex + 1}?`, danger: true, confirmLabel: 'Delete' }))) return;
 		deletingIndex = rowIndex;
 		error = '';
 		success = '';

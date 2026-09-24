@@ -77,6 +77,9 @@ pub struct ProjectBody {
     pub progress_pct: f64,
     #[serde(default)]
     pub description: String,
+    /// When present, persist markdown and regenerate `html_content`.
+    #[serde(default)]
+    pub markdown_content: Option<String>,
 }
 
 fn default_status() -> String {
@@ -163,6 +166,19 @@ pub async fn update_project(
     .map_err(db_err)?;
     if n.rows_affected() == 0 {
         return Err(json_err("project not found"));
+    }
+    if let Some(md) = &body.markdown_content {
+        let html = crate::api::project_docs::build_project_html(body.name.trim(), md);
+        sqlx::query(
+            "UPDATE projects SET markdown_content=?, html_content=?, updated_at=datetime('now') WHERE id=? AND organization_id=?",
+        )
+        .bind(md)
+        .bind(&html)
+        .bind(id)
+        .bind(auth.org_id)
+        .execute(&state.pool)
+        .await
+        .map_err(db_err)?;
     }
     fetch_project(&state.pool, auth.org_id, id).await
 }
@@ -1431,4 +1447,130 @@ pub async fn serve_upload(
         .header(axum::http::header::CONTENT_TYPE, "application/octet-stream")
         .body(axum::body::Body::from(data))
         .unwrap())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Settings;
+    use crate::middleware::auth::AuthContext;
+    use crate::services::{jwt, users_panel, AppState};
+    use axum::extract::{Path, State};
+    use std::sync::Arc;
+
+    const ORG: i64 = 1;
+
+    fn auth() -> AuthUser {
+        AuthUser(AuthContext {
+            user_id: 7,
+            org_id: ORG,
+            role: "admin".into(),
+            bearer: String::new(),
+        })
+    }
+
+    fn patch_body(name: &str, code: &str, markdown: Option<String>) -> ProjectBody {
+        ProjectBody {
+            code: code.into(),
+            name: name.into(),
+            client: String::new(),
+            location: String::new(),
+            status: "planning".into(),
+            start_date: None,
+            end_date: None,
+            budget_total: 0.0,
+            progress_pct: 0.0,
+            description: String::new(),
+            markdown_content: markdown,
+        }
+    }
+
+    async fn test_state() -> Arc<AppState> {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrations::run(&pool).await.unwrap();
+        sqlx::query("INSERT INTO organizations (id, name) VALUES (?, ?)")
+            .bind(ORG)
+            .bind("Org")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let settings = Settings {
+            database_url: "sqlite::memory:".into(),
+            jwt_secret: "test-secret".into(),
+            jwt_access_expiry_min: 60,
+            app_env: "test".into(),
+            app_port: 0,
+            cors_origin: "*".into(),
+            users_panel_base_url: "http://localhost".into(),
+            static_dir: String::new(),
+            preview_demo: false,
+        };
+        Arc::new(AppState {
+            pool,
+            jwt: jwt::JwtService::new(settings.jwt_secret.clone(), settings.jwt_access_expiry_min),
+            users_panel: users_panel::UsersPanelClient::new(settings.users_panel_base_url.clone()),
+            settings,
+            ai: Arc::new(None),
+        })
+    }
+
+    #[tokio::test]
+    async fn patch_markdown_content_regenerates_html() {
+        let state = test_state().await;
+        let id = sqlx::query(
+            "INSERT INTO projects (organization_id, code, name, status, markdown_content, html_content) VALUES (?,?,?,?,?,?)",
+        )
+        .bind(ORG)
+        .bind("OLD")
+        .bind("Old")
+        .bind("planning")
+        .bind("stale")
+        .bind("STALE_HTML")
+        .execute(&state.pool)
+        .await
+        .unwrap()
+        .last_insert_rowid();
+
+        let Json(out) = update_project(
+            State(state.clone()),
+            auth(),
+            Path(id),
+            Json(patch_body(
+                "Bridge",
+                "BRG",
+                Some("# Bridge\n\n**span**".into()),
+            )),
+        )
+        .await
+        .expect("patch with markdown");
+
+        let html = out["project"]["html_content"].as_str().unwrap_or("");
+        assert!(
+            !html.contains("STALE_HTML"),
+            "html_content must be regenerated, got {html}"
+        );
+        assert!(
+            html.contains("<strong>") || html.contains("<b>"),
+            "markdown emphasis must become HTML, got {html}"
+        );
+        assert!(html.contains("Bridge"), "{html}");
+        assert_eq!(
+            out["project"]["markdown_content"].as_str().unwrap(),
+            "# Bridge\n\n**span**"
+        );
+
+        let Json(out2) = update_project(
+            State(state),
+            auth(),
+            Path(id),
+            Json(patch_body("Bridge", "BRG", None)),
+        )
+        .await
+        .expect("patch without markdown");
+        assert_eq!(
+            out2["project"]["html_content"].as_str().unwrap(),
+            html,
+            "omitting markdown_content must leave html_content unchanged"
+        );
+    }
 }

@@ -309,6 +309,7 @@ func (a *App) registerRoutes() {
 	r.GET("/publishes/resolve-path", a.resolvePublishSlug)
 	r.GET("/publishes/history", a.listPublishedPages)
 	r.POST("/publishes", a.createPublishedPage)
+	r.DELETE("/publishes/:id", a.deletePublishedPage)
 	r.GET("/publish-drafts", a.listPublishDrafts)
 	r.POST("/publish-drafts", a.createPublishDraft)
 	r.GET("/publish-drafts/:id", a.getPublishDraft)

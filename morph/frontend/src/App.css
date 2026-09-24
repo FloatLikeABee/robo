@@ -805,6 +805,111 @@ html[data-chat-theme='light'] {
   margin-bottom: 0;
 }
 
+.chat-markdown .chat-mermaid,
+.chat-markdown .chat-pixel-grid {
+  margin: 0.75em 0;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.chat-markdown .chat-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.chat-markdown .chat-pixel-grid {
+  display: block;
+  background: #0b1220;
+  border: 1px solid var(--chat-border, #1e293b);
+  border-radius: 6px;
+}
+
+.chat-markdown .chat-mermaid-fallback,
+.chat-markdown .chat-pixel-fallback {
+  white-space: pre-wrap;
+  font-size: 0.85em;
+}
+
+.chat-visual-enlarge {
+  cursor: zoom-in;
+}
+
+.visual-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 28px);
+  box-sizing: border-box;
+  background: rgba(2, 4, 8, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.visual-lightbox {
+  position: relative;
+  width: min(96vw, 1800px);
+  height: min(92dvh, 1600px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 48px 16px 16px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.visual-lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--chat-border, #334155);
+  background: var(--chat-surface2, #1e293b);
+  color: var(--chat-text, #e2e8f0);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.visual-lightbox-close:hover {
+  border-color: var(--chat-accent, #38bdf8);
+  color: var(--chat-accent-soft, #7dd3fc);
+}
+
+.visual-lightbox-svg,
+.visual-lightbox-img {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.visual-lightbox-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.visual-lightbox-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.visual-lightbox-img {
+  object-fit: contain;
+}
+
 .chat-markdown h1,
 .chat-markdown h2,
 .chat-markdown h3,
@@ -884,6 +989,14 @@ html[data-chat-theme='light'] {
   overflow-x: auto;
   background: var(--chat-msg-bg);
   border: 1px solid var(--chat-border);
+}
+
+.chat-markdown pre:has(.chat-mermaid),
+.chat-markdown pre:has(.chat-pixel-grid) {
+  padding: 0;
+  background: transparent;
+  border: none;
+  overflow: visible;
 }
 
 .chat-markdown pre code {
@@ -2923,8 +3036,9 @@ html[data-chat-theme='light'] .skills-panel-alert {
 
 /* ===== Morph AI agent shell (main chat, not embedded) ===== */
 .app.app--agent {
+  --agent-sessions: 80px;
   display: grid;
-  grid-template-columns: var(--agent-sessions, 220px) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: var(--agent-sessions) minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     'head head head'
@@ -2936,10 +3050,6 @@ html[data-chat-theme='light'] .skills-panel-alert {
   display: contents;
 }
 
-.app.app--agent.app--sessions-collapsed {
-  --agent-sessions: 48px;
-}
-
 .app.app--agent .chat-header {
   grid-area: head;
 }
@@ -2947,13 +3057,13 @@ html[data-chat-theme='light'] .skills-panel-alert {
 .app.app--agent .chat-sidebar {
   grid-area: sessions;
   height: auto;
-  width: var(--agent-sessions, 220px);
-  min-width: var(--agent-sessions, 220px);
+  width: var(--agent-sessions);
+  min-width: var(--agent-sessions);
   overflow: hidden;
 }
 
 .app.app--agent .chat-nav-toggle {
-  display: inline-flex;
+  display: none;
 }
 
 .app.app--agent .agent-chat-column {
@@ -2982,14 +3092,83 @@ html[data-chat-theme='light'] .skills-panel-alert {
   background: var(--chat-surface);
 }
 
-.app.app--agent.app--sessions-collapsed .sidebar-sessions {
+.app.app--agent.app--workspace-collapsed {
+  grid-template-columns: var(--agent-sessions) minmax(0, 1fr);
+  grid-template-areas:
+    'head head'
+    'sessions chat';
+}
+
+.app.app--agent.app--workspace-collapsed .agent-workspace {
   display: none;
 }
 
-.app.app--agent.app--sessions-collapsed .sidebar-new-chat {
-  margin: 8px 6px;
-  padding: 8px 0;
-  font-size: 1.1rem;
+.app.app--agent .sidebar-new-chat {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 8px auto 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.app.app--agent .sidebar-sessions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 8px 8px;
+}
+
+.app.app--agent .sidebar-session-row {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin: 0 0 10px;
+  border-radius: 10px;
+  border-left: none;
+  overflow: visible;
+  background: transparent;
+}
+
+.app.app--agent .sidebar-session-row:hover {
+  background: transparent;
+}
+
+.app.app--agent .sidebar-session-row.active {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--chat-sidebar), 0 0 0 4px var(--chat-accent);
+}
+
+.app.app--agent .sidebar-session-main {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+
+.app.app--agent .sidebar-session-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  background: var(--chat-surface);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.app.app--agent .sidebar-session-row:hover .sidebar-session-remove,
+.app.app--agent .sidebar-session-row:focus-within .sidebar-session-remove {
+  opacity: 1;
 }
 
 .app.app--agent .input-container {
@@ -3047,98 +3226,8 @@ html[data-chat-theme='light'] .skills-panel-alert {
   overflow: auto;
 }
 
-.agent-files-tab,
 .agent-workspace-body .hybrid-drawer--panel {
   padding: 12px;
-}
-
-.agent-files-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0 12px;
-}
-
-.agent-files-actions > button {
-  margin-top: 0;
-  box-sizing: border-box;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  padding: 8px 14px;
-  min-height: 36px;
-  min-width: 110px;
-  border-radius: 8px;
-}
-
-.agent-files-empty {
-  color: var(--chat-text-muted);
-  font-size: 0.9rem;
-  padding: 16px 0;
-}
-
-.agent-files-recents {
-  margin: 0 0 12px;
-}
-
-.agent-files-recents-label {
-  color: var(--chat-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.agent-files-recents-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.agent-files-recent-btn {
-  appearance: none;
-  border: 1px solid var(--chat-border, rgba(255, 255, 255, 0.12));
-  background: var(--chat-surface, rgba(255, 255, 255, 0.04));
-  color: var(--chat-text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.agent-files-recent-btn:hover {
-  border-color: var(--chat-accent);
-}
-
-.agent-file-tree {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.agent-file-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--chat-border);
-}
-
-.agent-file-row.is-skipped {
-  opacity: 0.55;
-}
-
-.agent-file-path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.82rem;
 }
 
 .agent-include-bar {
@@ -3168,12 +3257,19 @@ html[data-chat-theme='light'] .skills-panel-alert {
 
 @media (max-width: 900px) {
   .app.app--agent {
-    grid-template-columns: var(--agent-sessions, 220px) minmax(0, 1fr);
+    grid-template-columns: var(--agent-sessions) minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) minmax(200px, 38vh);
     grid-template-areas:
       'head head'
       'sessions chat'
       'workspace workspace';
+  }
+
+  .app.app--agent.app--workspace-collapsed {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'head head'
+      'sessions chat';
   }
 
   .app.app--agent .agent-workspace {
@@ -3191,9 +3287,20 @@ html[data-chat-theme='light'] .skills-panel-alert {
       'workspace';
   }
 
+  .app.app--agent.app--workspace-collapsed {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'chat';
+  }
+
+  .app.app--agent .chat-nav-toggle {
+    display: inline-flex;
+  }
+
   .app.app--agent .chat-sidebar {
-    width: min(300px, 88vw);
-    min-width: 0;
+    width: 80px;
+    min-width: 80px;
   }
 
   .app.app--agent .agent-workspace {

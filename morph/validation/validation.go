@@ -6,6 +6,12 @@ import (
 	"unicode"
 )
 
+// HasVisualFence reports mermaid/pixel fences that spelling-correct and
+// gibberish checks must not rewrite or reject.
+func HasVisualFence(s string) bool {
+	return strings.Contains(s, "```mermaid") || strings.Contains(s, "```pixel")
+}
+
 // IsValidPrompt checks if a prompt makes sense (not gibberish)
 // Returns true if the prompt appears to be valid, false if it's likely gibberish
 func IsValidPrompt(prompt string) bool {
@@ -34,6 +40,11 @@ func IsValidPrompt(prompt string) bool {
 	// Check maximum reasonable length (prevent extremely long gibberish)
 	if len(trimmed) > 10000 {
 		return false
+	}
+
+	// Fenced mermaid/pixel is punctuation-heavy on purpose (visual-first).
+	if HasVisualFence(trimmed) {
+		return true
 	}
 	
 	// Check for minimum word count (at least 2 words for a meaningful prompt)

@@ -64,6 +64,55 @@ func TestBuildTimelineHTML(t *testing.T) {
 	}
 }
 
+func TestPersistTimelineMarkdownRoundTrip(t *testing.T) {
+	db, err := sql.Open("sqlite", "file:timeline-md-patch?mode=memory&cache=shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	_, err = db.Exec(`CREATE TABLE timeline (
+		id INTEGER PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		owner_key TEXT NOT NULL,
+		title TEXT NOT NULL,
+		source_summary TEXT NOT NULL,
+		source_file_name TEXT NULL,
+		source_url TEXT NULL,
+		has_paste INTEGER NOT NULL DEFAULT 0,
+		markdown_content TEXT NOT NULL,
+		html_content TEXT NOT NULL,
+		published_slug TEXT NULL,
+		published_path TEXT NULL,
+		created_on TEXT DEFAULT CURRENT_TIMESTAMP,
+		last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`INSERT INTO timeline (id, user_id, owner_key, title, source_summary, markdown_content, html_content)
+		VALUES (1, 1, 'o', 'Demo', '', 'old', 'old-html')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	html, err := persistTimelineMarkdown(db, 1, "Demo", "## Hello **world**")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, "world") {
+		t.Fatalf("regenerated html missing markdown: %s", truncateRunes(html, 240))
+	}
+	var md, storedHTML string
+	if err := db.QueryRow(`SELECT markdown_content, html_content FROM timeline WHERE id = 1`).Scan(&md, &storedHTML); err != nil {
+		t.Fatal(err)
+	}
+	if md != "## Hello **world**" {
+		t.Fatalf("markdown not saved: %q", md)
+	}
+	if storedHTML != html {
+		t.Fatal("stored html != returned html")
+	}
+}
+
 func TestScanTimelineAcceptsSQLiteTextTimestamps(t *testing.T) {
 	db, err := sql.Open("sqlite", "file:timeline-scan?mode=memory&cache=shared")
 	if err != nil {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import VisualMarkdown from '../components/VisualMarkdown';
+import { VisualLightboxProvider } from '../components/visualLightbox';
 import { useParams } from 'react-router-dom';
 import { api, type AISheetUIBlock } from '../lib/api';
 
@@ -117,6 +117,7 @@ export function PublicAISheet() {
   };
 
   return (
+    <VisualLightboxProvider>
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <header className="border-b border-white/10 px-4 py-3 flex items-center justify-between gap-3">
         <div>
@@ -158,7 +159,7 @@ export function PublicAISheet() {
           >
             {m.role === 'assistant' ? (
               <div className="ai-sheet-md">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content || ''}</ReactMarkdown>
+                <VisualMarkdown text={m.content || ''} />
               </div>
             ) : (
               m.content
@@ -205,5 +206,6 @@ export function PublicAISheet() {
         </button>
       </form>
     </div>
+    </VisualLightboxProvider>
   );
 }

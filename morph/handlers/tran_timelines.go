@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"idongivaflyinfa/ai"
+	"idongivaflyinfa/internal/htmldoc"
 
 	"github.com/gin-gonic/gin"
 	"github.com/robo/morphgraph"
@@ -344,29 +345,7 @@ func buildTimelineHTML(title, markdown string) string {
 	if title == "" {
 		title = "Timeline"
 	}
-	proseCSS := `.prose{font-size:1.05rem;color:var(--ink)}
-.prose>:first-child{margin-top:0}
-.prose h1,.prose h2,.prose h3,.prose h4{line-height:1.25;margin:1.35em 0 .55em;font-weight:700;color:#f8fafc}
-.prose h1{font-size:1.55rem}.prose h2{font-size:1.3rem}.prose h3{font-size:1.12rem}
-.prose p,.prose ul,.prose ol,.prose blockquote,.prose pre,.prose table{margin:.85em 0}
-.prose ul,.prose ol{padding-left:1.4em}
-.prose li{margin:.35em 0}
-.prose blockquote{padding:.35em 0 .35em 1em;border-left:3px solid var(--accent);color:var(--muted)}
-.prose code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:var(--card);padding:.12em .35em;border-radius:4px;border:1px solid var(--line)}
-.prose pre{overflow:auto;padding:1em;border-radius:10px;background:var(--card);border:1px solid var(--line)}
-.prose a{color:var(--accent)}
-.prose hr{border:0;border-top:1px solid var(--line);margin:1.5em 0}
-.prose strong{font-weight:700}
-.prose table{border-collapse:collapse;width:100%;font-size:.95em}
-.prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
-.prose th{background:var(--card)}`
-	css := `:root{--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#0b1220;--card:#111827;--accent:#38bdf8;}
-*{box-sizing:border-box}body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e293b 0%,var(--bg) 55%);line-height:1.55}
-.wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
-h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}
-` + proseCSS + `
-.foot{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
+	css := htmldoc.DarkDocumentCSS()
 	mdBody := stripLeadingTitleHeading(markdown, title)
 	rendered := markdownToHTMLFragment(mdBody)
 	var body strings.Builder
@@ -668,6 +647,53 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+func persistTimelineMarkdown(db *sql.DB, id int, title, markdown string) (html string, err error) {
+	html = buildTimelineHTML(title, markdown)
+	_, err = db.Exec(
+		`UPDATE timeline SET markdown_content = ?, html_content = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
+		markdown, html, id,
+	)
+	return html, err
+}
+
+// PatchTimelineMarkdown PATCH /api/tran/timelines/:id  { "markdown_content": "..." }
+func (h *Handlers) PatchTimelineMarkdown(c *gin.Context) {
+	if h.TranMySQL == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+		return
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	t, err := h.getTimelineOwned(c, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "timeline not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var in struct {
+		MarkdownContent string `json:"markdown_content"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		return
+	}
+	htmlOut, err := persistTimelineMarkdown(h.TranMySQL.DB, id, t.Title, in.MarkdownContent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	t.MarkdownContent = in.MarkdownContent
+	t.HTMLContent = htmlOut
+	h.attachTimelineURL(&t)
+	c.JSON(http.StatusOK, t)
 }
 
 // DeleteTimeline DELETE /api/tran/timelines/:id

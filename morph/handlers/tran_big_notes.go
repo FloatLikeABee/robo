@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"idongivaflyinfa/ai"
+	"idongivaflyinfa/internal/htmldoc"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yuin/goldmark"
@@ -437,7 +438,7 @@ func buildBigNoteHTML(title, markdown, kind string, questions []bigNoteQuestion,
 		theme = "dark"
 	}
 	dark := strings.Contains(strings.ToLower(theme), "dark")
-	proseCSS := `.prose{font-size:1.05rem;color:var(--ink)}
+	lightProseCSS := `.prose{font-size:1.05rem;color:var(--ink)}
 .prose>:first-child{margin-top:0}
 .prose h1,.prose h2,.prose h3,.prose h4{line-height:1.25;margin:1.35em 0 .55em;font-weight:700}
 .prose h1{font-size:1.55rem}.prose h2{font-size:1.3rem}.prose h3{font-size:1.12rem}
@@ -456,28 +457,14 @@ func buildBigNoteHTML(title, markdown, kind string, questions []bigNoteQuestion,
 .prose th{background:var(--card)}`
 	var css string
 	if dark {
-		css = `:root{--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#0b1220;--card:#111827;--accent:#38bdf8;}
-*{box-sizing:border-box}body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e293b 0%,var(--bg) 55%);line-height:1.55}
-.wrap{max-width:720px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
-h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}
-` + proseCSS + `
-.prose h1,.prose h2,.prose h3,.prose h4{color:#f8fafc}
-.q{margin:1.25rem 0;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:12px;background:var(--card)}
-.q label{display:block;font-family:system-ui,sans-serif;font-weight:600;margin-bottom:.55rem;color:#e2e8f0}
-.q input[type=text],.q textarea,.q select{width:100%;padding:.65rem .75rem;border:1px solid #334155;border-radius:8px;font:inherit;background:#0f172a;color:#e2e8f0}
-.q textarea{min-height:96px;resize:vertical}
-.opts{display:grid;gap:.4rem;font-family:system-ui,sans-serif}
-.opts label{font-weight:500;display:flex;gap:.5rem;align-items:flex-start;color:#cbd5e1}
-button.primary{margin-top:1.25rem;padding:.7rem 1.1rem;border:0;border-radius:999px;background:var(--accent);color:#0b1220;font:600 14px system-ui,sans-serif;cursor:pointer}
-.theme{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
+		css = htmldoc.DarkBigNoteDocumentCSS()
 	} else {
 		css = `:root{--ink:#1c1917;--muted:#57534e;--line:#e7e5e4;--bg:#fafaf9;--card:#fff;--accent:#0f766e;}
 *{box-sizing:border-box}body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:linear-gradient(180deg,#f5f5f4,var(--bg));line-height:1.55}
 .wrap{max-width:720px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2}
-` + proseCSS + `
+` + lightProseCSS + `
 .q{margin:1.25rem 0;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .q label{display:block;font-family:system-ui,sans-serif;font-weight:600;margin-bottom:.55rem}
 .q input[type=text],.q textarea,.q select{width:100%;padding:.65rem .75rem;border:1px solid var(--line);border-radius:8px;font:inherit}
@@ -762,6 +749,98 @@ func (h *Handlers) RegenerateBigNote(c *gin.Context) {
 	}
 	h.attachBigNoteURL(&n)
 	c.JSON(http.StatusOK, n)
+}
+
+func persistBigNoteMarkdown(db *sql.DB, n *bigNote, markdown string) error {
+	n.MarkdownContent = markdown
+	refreshBigNoteHTML(n)
+	_, err := db.Exec(
+		`UPDATE big_note SET markdown_content = ?, html_content = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
+		n.MarkdownContent, n.HTMLContent, n.ID,
+	)
+	return err
+}
+
+// PatchBigNoteMarkdown PATCH /api/tran/big-notes/:id  { "markdown_content": "..." }
+func (h *Handlers) PatchBigNoteMarkdown(c *gin.Context) {
+	if h.TranMySQL == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+		return
+	}
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	n, err := h.getBigNoteOwned(c, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var in struct {
+		MarkdownContent string `json:"markdown_content"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		return
+	}
+	if err := persistBigNoteMarkdown(h.TranMySQL.DB, &n, in.MarkdownContent); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	h.attachBigNoteURL(&n)
+	c.JSON(http.StatusOK, n)
+}
+
+// PatchBigNoteResponse PATCH /api/tran/big-notes/:id/responses/:responseId  { "analysis_markdown": "..." }
+func (h *Handlers) PatchBigNoteResponse(c *gin.Context) {
+	if h.TranMySQL == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+		return
+	}
+	noteID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || noteID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	respID, err := strconv.Atoi(c.Param("responseId"))
+	if err != nil || respID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid response id"})
+		return
+	}
+	if _, err := h.getBigNoteOwned(c, noteID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var in struct {
+		AnalysisMarkdown string `json:"analysis_markdown"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		return
+	}
+	res, err := h.TranMySQL.DB.Exec(
+		`UPDATE big_note_response SET analysis_markdown = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND big_note_id = ?`,
+		in.AnalysisMarkdown, respID, noteID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "response not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"id": respID, "big_note_id": noteID, "analysis_markdown": in.AnalysisMarkdown})
 }
 
 // PublishBigNote POST /api/tran/big-notes/:id/publish

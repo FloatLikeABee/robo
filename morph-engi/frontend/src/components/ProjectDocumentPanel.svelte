@@ -1,35 +1,28 @@
 <script lang="ts">
   import { api, apiUrl, uploadFiles } from '../lib/api'
+  import { withDarkPreviewSrcDoc } from '../lib/darkPreviewSrcDoc'
+  import { renderMarkdownHtml } from '../lib/markdown'
+  import { runMermaidIn } from '../lib/runMermaidIn'
+  import { confirm } from '../lib/confirmDialog'
+  import { tick } from 'svelte'
 
   const ACCEPT = '.pdf,.txt,.csv,.md,.markdown,application/pdf,text/plain,text/csv,text/markdown'
 
-  const DARK_SCROLL_STYLE = `<style>
-:root {
-  color-scheme: dark;
-  --scrollbar-thumb: #8b8b9a;
-  --scrollbar-track: #1e1e24;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-html, body { margin: 0; min-height: 100%; }
-@supports not (scrollbar-color: auto) {
-  *::-webkit-scrollbar { width: 12px; height: 12px; }
-  *::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
-  *::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-}
-</style>`
-
-  function withDarkPreviewSrcDoc(html: string) {
-    const src = String(html || '')
-    const inject = `<meta name="color-scheme" content="dark">${DARK_SCROLL_STYLE}`
-    if (!src.trim()) {
-      return `<!DOCTYPE html><html><head>${inject}</head><body></body></html>`
+  function projectPatchBody(p: any, markdown?: string) {
+    const body: Record<string, unknown> = {
+      code: p.code,
+      name: p.name,
+      client: p.client || '',
+      location: p.location || '',
+      status: p.status || 'planning',
+      start_date: p.start_date ?? null,
+      end_date: p.end_date ?? null,
+      budget_total: p.budget_total ?? 0,
+      progress_pct: p.progress_pct ?? 0,
+      description: p.description || '',
     }
-    if (/scrollbar-color/i.test(src) && /color-scheme/i.test(src)) return src
-    if (/<head[\s>]/i.test(src)) {
-      return src.replace(/<head([^>]*)>/i, `<head$1>${inject}`)
-    }
-    return `<!DOCTYPE html><html><head>${inject}</head><body>${src}</body></html>`
+    if (markdown !== undefined) body.markdown_content = markdown
+    return body
   }
 
   let { onCreated }: { onCreated?: () => Promise<void> | void } = $props()
@@ -41,18 +34,35 @@ html, body { margin: 0; min-height: 100%; }
   let generating = $state(false)
   let publishing = $state(false)
   let deleting = $state(false)
+  let savingMd = $state(false)
   let previewTab = $state<'md' | 'html'>('md')
+  let mdView = $state<'rendered' | 'raw'>('rendered')
+  let draftMd = $state('')
   let selected = $state<any | null>(null)
   let projects = $state<any[]>([])
   let loadingList = $state(false)
   let info = $state('')
   let createOpen = $state(false)
 
+  const renderedMd = $derived(renderMarkdownHtml(selected?.markdown_content || ''))
+  let mdPreviewEl = $state<HTMLElement | null>(null)
+
+  $effect(() => {
+    renderedMd
+    void tick().then(() => runMermaidIn(mdPreviewEl))
+  })
+
   async function loadProjects() {
     loadingList = true
     try {
       const res = await api<{ projects: any[] }>('/api/v1/projects')
       projects = res.projects ?? []
+      if (!selected) {
+        if (projects[0]) openProject(projects[0])
+      } else if (!projects.some((p) => p.id === selected.id)) {
+        if (projects[0]) openProject(projects[0])
+        else selected = null
+      }
     } finally {
       loadingList = false
     }
@@ -111,10 +121,12 @@ html, body { margin: 0; min-height: 100%; }
         fields
       )
       selected = out.project
+      draftMd = out.project?.markdown_content || ''
       resetCreateForm()
       createOpen = false
       info = 'Project document generated. Source files (and paste, if any) were saved under Files.'
       previewTab = 'md'
+      mdView = 'rendered'
       await loadProjects()
       await onCreated?.()
     } catch (e) {
@@ -149,17 +161,39 @@ html, body { margin: 0; min-height: 100%; }
     }
   }
 
+  async function saveMarkdown() {
+    if (!selected?.id || savingMd) return
+    savingMd = true
+    warning = ''
+    info = ''
+    try {
+      const out = await api<{ project: any }>(`/api/v1/projects/${selected.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(projectPatchBody(selected, draftMd)),
+      })
+      selected = out.project ?? { ...selected, markdown_content: draftMd }
+      draftMd = selected.markdown_content || ''
+      projects = projects.map((p) => (p.id === selected.id ? selected : p))
+      mdView = 'rendered'
+      info = 'Markdown saved.'
+    } catch (e) {
+      warning = e instanceof Error ? e.message : 'Save failed'
+    } finally {
+      savingMd = false
+    }
+  }
+
   async function removeProject() {
     if (!selected?.id || deleting) return
-    if (!confirm(`Delete project “${selected.name}”?`)) return
+    if (!(await confirm({ message: `Delete project “${selected.name}”?`, danger: true, confirmLabel: 'Delete' }))) return
     deleting = true
     warning = ''
     info = ''
     try {
       await api(`/api/v1/projects/${selected.id}`, { method: 'DELETE' })
       selected = null
-      info = 'Project deleted.'
       await loadProjects()
+      info = 'Project deleted.'
       await onCreated?.()
     } catch (e) {
       warning = e instanceof Error ? e.message : 'Delete failed'
@@ -171,6 +205,8 @@ html, body { margin: 0; min-height: 100%; }
   function openProject(p: any) {
     selected = p
     previewTab = 'md'
+    mdView = 'rendered'
+    draftMd = p?.markdown_content || ''
     info = ''
     warning = ''
   }
@@ -196,7 +232,7 @@ html, body { margin: 0; min-height: 100%; }
     <button type="button" class="btn-primary w-full shrink-0" onclick={openCreate}>Create new</button>
 
     {#if info}
-      <p class="text-sm text-teal px-1">{info}</p>
+      <p class="text-sm text-sky-300 px-1">{info}</p>
     {/if}
     {#if warning && !createOpen}
       <p class="text-sm text-amber-300 px-1">{warning}</p>
@@ -253,7 +289,7 @@ html, body { margin: 0; min-height: 100%; }
           </button>
           <button
             type="button"
-            class="btn-ghost border border-white/10 px-3 py-1.5 rounded-xl text-xs text-rose-300"
+            class="btn-ghost border border-white/10 px-3 py-1.5 rounded-xl text-xs text-muted"
             onclick={removeProject}
             disabled={publishing || deleting}
           >
@@ -261,21 +297,57 @@ html, body { margin: 0; min-height: 100%; }
           </button>
         </div>
       </div>
-      <div class="shrink-0 flex gap-1 px-4 pt-2">
-        <button
-          type="button"
-          class="px-3 py-1 rounded-lg text-xs {previewTab === 'md' ? 'bg-violet/30' : 'text-muted'}"
-          onclick={() => (previewTab = 'md')}>Markdown</button
-        >
-        <button
-          type="button"
-          class="px-3 py-1 rounded-lg text-xs {previewTab === 'html' ? 'bg-violet/30' : 'text-muted'}"
-          onclick={() => (previewTab = 'html')}>HTML</button
-        >
+      <div class="shrink-0 flex items-center justify-between gap-2 px-4 pt-2">
+        <div class="flex gap-1">
+          <button
+            type="button"
+            class="px-3 py-1 rounded-lg text-xs {previewTab === 'md' ? 'bg-violet/30' : 'text-muted'}"
+            onclick={() => (previewTab = 'md')}>Markdown</button
+          >
+          <button
+            type="button"
+            class="px-3 py-1 rounded-lg text-xs {previewTab === 'html' ? 'bg-violet/30' : 'text-muted'}"
+            onclick={() => (previewTab = 'html')}>HTML</button
+          >
+        </div>
+        {#if previewTab === 'md'}
+          <div class="flex gap-1 items-center">
+            <button
+              type="button"
+              class="px-3 py-1 rounded-lg text-xs {mdView === 'rendered' ? 'bg-violet/30' : 'text-muted'}"
+              onclick={() => (mdView = 'rendered')}>Rendered</button
+            >
+            <button
+              type="button"
+              class="px-3 py-1 rounded-lg text-xs {mdView === 'raw' ? 'bg-violet/30' : 'text-muted'}"
+              onclick={() => (mdView = 'raw')}>Raw</button
+            >
+            {#if mdView === 'raw'}
+              <button
+                type="button"
+                class="btn-primary text-xs px-3 py-1.5"
+                onclick={saveMarkdown}
+                disabled={savingMd || publishing || deleting}
+              >
+                {savingMd ? 'Saving…' : 'Save'}
+              </button>
+            {/if}
+          </div>
+        {/if}
       </div>
       <div class="flex-1 min-h-0 overflow-hidden">
         {#if previewTab === 'md'}
-          <pre class="preview-scroll h-full min-h-0 overflow-auto p-4 whitespace-pre-wrap text-sm font-mono">{selected.markdown_content || '(no markdown)'}</pre>
+          {#if mdView === 'raw'}
+            <textarea
+              class="preview-scroll h-full min-h-0 w-full resize-none border-0 bg-transparent p-4 text-sm font-mono text-white outline-none"
+              bind:value={draftMd}
+              spellcheck="false"
+            ></textarea>
+          {:else if selected.markdown_content}
+            <div class="md-prose preview-scroll h-full min-h-0 overflow-auto p-4 text-sm" bind:this={mdPreviewEl}>{@html renderedMd}</div>
+          {:else}
+            <div class="p-4 text-sm text-muted">(no markdown)</div>
+          {/if}
         {:else}
           <iframe
             title="Project HTML"
@@ -391,5 +463,82 @@ html, body { margin: 0; min-height: 100%; }
 
   .create-modal-body {
     padding: 16px;
+  }
+
+  .md-prose {
+    color: #e8e8f0;
+    line-height: 1.55;
+  }
+
+  .md-prose :global(h1),
+  .md-prose :global(h2),
+  .md-prose :global(h3) {
+    color: #fff;
+    line-height: 1.25;
+    margin: 1.1em 0 0.45em;
+  }
+
+  .md-prose :global(h1) { font-size: 1.45rem; }
+  .md-prose :global(h2) { font-size: 1.2rem; }
+  .md-prose :global(h3) { font-size: 1.05rem; }
+
+  .md-prose :global(p),
+  .md-prose :global(ul),
+  .md-prose :global(ol) {
+    margin: 0.7em 0;
+  }
+
+  .md-prose :global(ul),
+  .md-prose :global(ol) {
+    padding-left: 1.4em;
+  }
+
+  .md-prose :global(a) {
+    color: #38bdf8;
+  }
+
+  .md-prose :global(code) {
+    font-family: ui-monospace, monospace;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  .md-prose :global(pre) {
+    overflow: auto;
+    padding: 1em;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .md-prose :global(blockquote) {
+    margin: 0.7em 0;
+    padding-left: 0.9em;
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    color: #b8b8c7;
+  }
+
+  .md-prose :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+  }
+
+  .md-prose :global(th),
+  .md-prose :global(td) {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.4rem 0.55rem;
+    text-align: left;
+  }
+
+  .md-prose :global(strong) {
+    color: #fff;
+  }
+
+  .md-prose :global(hr) {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.2em 0;
   }
 </style>

@@ -59,7 +59,7 @@ export function mergePublishedContents(drafts, published) {
       publishedId: page.id,
       canOpen: true,
       canView: existing?.draftId != null,
-      canDelete: false,
+      canDelete: true,
     })
   }
 

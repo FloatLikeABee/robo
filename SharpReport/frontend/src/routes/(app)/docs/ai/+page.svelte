@@ -13,6 +13,7 @@
 		uploadDoc,
 		type DocsSession
 	} from '$lib/docs';
+	import { confirm } from '$lib/confirmDialog';
 
 	type ChatMsg = { role: 'user' | 'assistant'; content: string };
 
@@ -55,7 +56,7 @@
 	}
 
 	async function onDelete(id: string) {
-		if (!confirm('Delete this session?')) return;
+		if (!(await confirm({ message: 'Delete this session?', danger: true, confirmLabel: 'Delete' }))) return;
 		await deleteSession(id);
 		if (activeId === id) {
 			activeId = null;

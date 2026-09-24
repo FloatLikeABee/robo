@@ -1,3 +1,5 @@
+import { renderMarkdownHtml } from './markdown'
+
 const KEY = 'morph-engi-browser-store'
 const TOKEN = 'local-preview'
 
@@ -78,15 +80,10 @@ function codeFrom(name: string) {
 }
 
 function markdownToHtml(title: string, md: string) {
-  const body = md
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\n\n/g, '</p><p>')
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title.replace(/</g, '')}</title>
-<style>body{font-family:Inter,system-ui,sans-serif;max-width:44rem;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#111}pre{white-space:pre-wrap}</style></head><body><p>${body}</p></body></html>`
+  const safeTitle = title.replace(/</g, '')
+  const body = renderMarkdownHtml(md)
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title>
+<style>body{font-family:Inter,system-ui,sans-serif;max-width:44rem;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#e8eef7;background:#0b1220}pre{white-space:pre-wrap}</style></head><body>${body}</body></html>`
 }
 
 function jsonError(msg: string): never {
@@ -163,6 +160,25 @@ export async function handleApi<T = unknown>(path: string, init: RequestInit = {
   }
 
   const proj = urlPath.match(/^\/api\/v1\/projects\/(\d+)$/)
+  if (proj && method === 'PATCH') {
+    const id = Number(proj[1])
+    const p = store.projects.find((x) => x.id === id)
+    if (!p) jsonError('project not found')
+    const body = JSON.parse(String(init.body || '{}')) as Partial<Project> & {
+      markdown_content?: string
+    }
+    if (typeof body.code === 'string') p.code = body.code.trim()
+    if (typeof body.name === 'string') p.name = body.name.trim()
+    if (typeof body.status === 'string') p.status = body.status
+    if (typeof body.description === 'string') p.description = body.description
+    if (typeof body.markdown_content === 'string') {
+      p.markdown_content = body.markdown_content
+      p.html_content = markdownToHtml(p.name, p.markdown_content)
+    }
+    p.updated_at = now()
+    save(store)
+    return { project: p } as T
+  }
   if (proj && method === 'DELETE') {
     const id = Number(proj[1])
     store.projects = store.projects.filter((x) => x.id !== id)

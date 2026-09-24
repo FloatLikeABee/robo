@@ -235,3 +235,27 @@ LIMIT ? OFFSET ?`
 	}
 	return out, total, nil
 }
+
+func (r *PublishedPageRepository) Delete(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return sql.ErrNoRows
+	}
+	const q = `SELECT content_mongo_id FROM published_pages WHERE id = ?`
+	var mongoID string
+	if err := r.db.QueryRowContext(ctx, q, id).Scan(&mongoID); err != nil {
+		return err
+	}
+	res, err := r.db.ExecContext(ctx, `DELETE FROM published_pages WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	_ = r.content.DeleteByHexID(ctx, mongoID)
+	return nil
+}

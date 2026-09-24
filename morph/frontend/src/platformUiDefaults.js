@@ -56,7 +56,7 @@ export const platformUILabelHints = {
   nav_activities: 'Activities (menu + grid title)',
   nav_generic_data: 'Generic data (Work data — CSV/JSON/PDF imports)',
   nav_big_notes: 'Big notes — AI HTML/MD notes with ComposerX publish',
-  nav_user_settings: 'Configuration → users',
+  nav_user_settings: 'MorphUtils account',
   nav_display_labels: 'Configuration → this screen',
   term_facility: 'Singular place label (columns, selectors)',
   term_facilities: 'Plural places label',

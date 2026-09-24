@@ -12,9 +12,9 @@ npm run dev
 
 Open http://localhost:3040
 
-Prefer the repo launcher: `./start-all.sh start morph-utils` (and the module UIs you need).
+Prefer the repo launcher: `./start-all.sh start morph-utils` starts the MorphUtils shell plus Data Access UI and API (`sharpreport-ui`, `sharpreport-api`).
 
-Embedded app UIs must be running on their default ports (or set `VITE_*_URL` in the **repo-root** `.env`).
+Event Logs, Content Maker, and Project UIs must still be running on their default ports (or set `VITE_*_URL` in the **repo-root** `.env`). If Data Access is down, MorphUtils shows a start hint instead of a refused iframe.
 
 Sign in with Morph auth so the shared session cookie is present. Chat is **Morph AI**, not a drawer in this shell.
 

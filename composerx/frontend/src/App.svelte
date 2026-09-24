@@ -6,7 +6,10 @@
   import ComposePublishPanel from './components/ComposePublishPanel.svelte'
   import { runAiProgress } from './lib/aiProgress'
   import ComposePublishRecordsPanel from './components/ComposePublishRecordsPanel.svelte'
+  import ConfirmDialog from './components/ConfirmDialog.svelte'
+  import { confirm } from './lib/confirmDialog.js'
   import ContentMarkdownPanel from './components/ContentMarkdownPanel.svelte'
+  import AssistantMarkdown from './components/AssistantMarkdown.svelte'
   import { downloadMarkdownFile, savedContentMarkdown } from './lib/contentMarkdown'
   import { resolveComposerProposedDraft } from './lib/composerDraft'
 
@@ -136,38 +139,6 @@
   let loginLoading = $state(false)
   let loginError = $state('')
   let loginRememberMe = $state(typeof localStorage !== 'undefined' ? localStorage.getItem(AUTH_REMEMBER_KEY) !== '0' : true)
-
-  let confirmModalOpen = $state(false)
-  let confirmModalTitle = $state('Confirm')
-  let confirmModalMessage = $state('')
-  let confirmModalDanger = $state(false)
-  let confirmModalConfirmLabel = $state('OK')
-  let confirmModalCancelLabel = $state('Cancel')
-  /** @type {((ok: boolean) => void) | null} */
-  let confirmDialogResolver = null
-
-  /**
-   * @param {{ message: string, title?: string, danger?: boolean, confirmLabel?: string, cancelLabel?: string }} opts
-   */
-  function openConfirmDialog(opts) {
-    return new Promise((resolve) => {
-      confirmModalTitle = opts.title ?? 'Confirm'
-      confirmModalMessage = opts.message
-      confirmModalDanger = opts.danger ?? false
-      confirmModalConfirmLabel = opts.confirmLabel ?? 'OK'
-      confirmModalCancelLabel = opts.cancelLabel ?? 'Cancel'
-      confirmDialogResolver = resolve
-      confirmModalOpen = true
-    })
-  }
-
-  function finishConfirmDialog(ok) {
-    if (!confirmModalOpen) return
-    confirmModalOpen = false
-    const r = confirmDialogResolver
-    confirmDialogResolver = null
-    if (r) r(ok)
-  }
 
   // Reference library (RAG for AI composer)
   let referenceDocs = $state([])
@@ -493,7 +464,7 @@
   async function deleteSavedEmailRow(id) {
     if (!id) return
     if (
-      !(await openConfirmDialog({
+      !(await confirm({
         title: 'Delete saved content',
         message: 'Are you sure you want to delete this saved content? This cannot be undone.',
         danger: true,
@@ -813,7 +784,7 @@
   async function deleteReferenceDocRow(id) {
     if (!id) return
     if (
-      !(await openConfirmDialog({
+      !(await confirm({
         title: 'Delete reference document',
         message: 'Remove this file from the knowledge library? This cannot be undone.',
         danger: true,
@@ -1199,7 +1170,7 @@
                         class:ai-chat-asst={msg.role !== 'user'}
                       >
                         <div class="ai-chat-role">{msg.role === 'user' ? 'You' : 'Assistant'}</div>
-                        <div class="ai-chat-text">{msg.content}</div>
+                        <div class="ai-chat-text"><AssistantMarkdown text={msg.content} /></div>
                       </div>
                     {/each}
                   {/if}
@@ -1448,57 +1419,7 @@
       </div>
     {/if}
 
-    {#if confirmModalOpen}
-      <div
-        class="modal-backdrop confirm-dialog-backdrop"
-        role="presentation"
-        tabindex="-1"
-        onclick={() => finishConfirmDialog(false)}
-        onkeydown={(e) => e.key === 'Escape' && finishConfirmDialog(false)}
-      >
-        <div
-          class="modal-panel confirm-dialog-panel"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="confirm-dialog-title"
-          aria-describedby="confirm-dialog-desc"
-          tabindex="-1"
-          onclick={(e) => e.stopPropagation()}
-          onkeydown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault()
-              finishConfirmDialog(false)
-            }
-            e.stopPropagation()
-          }}
-        >
-          <header class="modal-header">
-            <h2 id="confirm-dialog-title" class="modal-title">{confirmModalTitle}</h2>
-          </header>
-          <div class="modal-body">
-            <p id="confirm-dialog-desc" class="confirm-dialog-message">{confirmModalMessage}</p>
-            <div class="modal-footer-row confirm-dialog-actions">
-              <button type="button" class="btn-ghost" onclick={() => finishConfirmDialog(false)}>
-                {confirmModalCancelLabel}
-              </button>
-              <button
-                type="button"
-                class="btn-secondary"
-                class:btn-confirm-danger={confirmModalDanger}
-                onclick={() => finishConfirmDialog(true)}
-              >
-                {#if confirmModalDanger}
-                  <ButtonLeadingIcon name="danger" />
-                {:else}
-                  <ButtonLeadingIcon name="confirmOk" />
-                {/if}
-                {confirmModalConfirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    {/if}
+    <ConfirmDialog />
   </section>
   {/if}
 </main>

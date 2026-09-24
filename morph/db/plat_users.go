@@ -421,3 +421,51 @@ func VerifyPassword(hash, password string) bool {
 	}
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
+
+// UpdatePlatUserCredentials updates username and/or password for the given user id.
+// Password change requires currentPassword to match when newPassword is non-empty.
+func (m *TranSQL) UpdatePlatUserCredentials(ctx context.Context, id, newUsername, newPassword, currentPassword string) (*PlatUser, error) {
+	u, err := m.GetPlatUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	newUsername = strings.TrimSpace(newUsername)
+	newPassword = strings.TrimSpace(newPassword)
+	currentPassword = strings.TrimSpace(currentPassword)
+	if newUsername == "" && newPassword == "" {
+		return nil, fmt.Errorf("nothing to update")
+	}
+	if newUsername != "" && !strings.EqualFold(newUsername, u.Username) {
+		var other string
+		err := m.DB.QueryRowContext(ctx, `SELECT id FROM plat_users WHERE LOWER(username) = LOWER(?) AND id != ? LIMIT 1`, newUsername, id).Scan(&other)
+		if err == nil {
+			return nil, fmt.Errorf("username already taken")
+		}
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
+		u.Username = newUsername
+	}
+	hash := u.PasswordHash
+	if newPassword != "" {
+		if !VerifyPassword(u.PasswordHash, currentPassword) {
+			return nil, fmt.Errorf("current password incorrect")
+		}
+		if len(newPassword) < 4 {
+			return nil, fmt.Errorf("password too short")
+		}
+		b, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+		if err != nil {
+			return nil, err
+		}
+		hash = string(b)
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err = m.DB.ExecContext(ctx, `
+UPDATE plat_users SET username = ?, password_hash = ?, updated_at = ? WHERE id = ?`,
+		u.Username, hash, now, id)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetPlatUserByID(ctx, id)
+}

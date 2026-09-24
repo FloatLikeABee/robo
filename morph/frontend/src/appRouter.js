@@ -16,7 +16,7 @@ import CaseTasks from './pages/admin/CaseTasks';
 import Timelines from './pages/admin/Timelines';
 import GenericData from './pages/admin/GenericData';
 import BigNotes from './pages/admin/BigNotes';
-import UsersAdmin from './pages/admin/UsersAdmin';
+import Research from './pages/admin/Research';
 import DocumentBranding from './DocumentBranding';
 
 function RootLayout() {
@@ -72,68 +72,39 @@ export const appRouter = createBrowserRouter([
           { path: 'stories', element: <Navigate to={`${ADMIN_BASE_PATH}/timelines`} replace /> },
           { path: 'story-board', element: <Navigate to={`${ADMIN_BASE_PATH}/timelines`} replace /> },
           { path: 'big-notes', element: <BigNotes /> },
+          { path: 'research', element: <Research /> },
           { path: 'quick-sheets/*', element: <Navigate to={`${ADMIN_BASE_PATH}/big-notes`} replace /> },
           {
             path: 'configuration',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          { path: 'configuration/user-settings', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          {
-            path: 'configuration/custom-attributes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          {
-            path: 'configuration/disability-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          {
-            path: 'configuration/ethnic-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          {
-            path: 'configuration/grades',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          {
-            path: 'configuration/display-labels',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          { path: 'configuration/users', element: <UsersAdmin /> },
-          {
-            path: 'configuration/file-import',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
-          },
-          {
-            path: 'configuration/data-import',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/udfs',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/custom-attributes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/disability-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/ethnic-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/grades',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           {
             path: 'settings/mailing',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/configuration/users`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
         ],

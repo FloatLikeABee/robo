@@ -94,6 +94,10 @@ export const tranEndpoints = {
   timelines: '/api/tran/timelines',
   timeline: (id) => `/api/tran/timelines/${id}`,
   timelinePublish: (id) => `/api/tran/timelines/${id}/publish`,
+  research: '/api/tran/research',
+  researchItem: (id) => `/api/tran/research/${id}`,
+  researchPublish: (id) => `/api/tran/research/${id}/publish`,
+  researchCancel: (id) => `/api/tran/research/${id}/cancel`,
   /** Short AI text helpers (notes, todos, task chain steps) */
   textAssist: '/api/tran/text-assist',
   composerxEmails: '/api/composerx/emails',

@@ -237,6 +237,7 @@ type agentApplyResult struct {
 	message          string
 	subAgents        []string
 	includeKnowledge bool
+	hasDocuments     bool
 }
 
 func (h *Handlers) applyAgentContext(userID, sessionID string, req *models.ChatRequest) agentApplyResult {
@@ -292,7 +293,11 @@ func (h *Handlers) applyAgentContext(userID, sessionID string, req *models.ChatR
 	if len(workers) > 0 {
 		msg = wrapAgentContext(msg, "Collect from these workers concurrently, then write one reply. Never create, modify, or delete files in the user's local workspace folder: "+strings.Join(workers, ", ")+".", "Sub-agents")
 	}
-	return agentApplyResult{message: msg, subAgents: workers, includeKnowledge: includeKnowledge}
+	hasDocuments := filesBlob != "" || notesBlob != ""
+	if !hasDocuments && h.hybridStore != nil && h.hybridStore.IsAttached(userID, sessionID) {
+		hasDocuments = true
+	}
+	return agentApplyResult{message: msg, subAgents: workers, includeKnowledge: includeKnowledge, hasDocuments: hasDocuments}
 }
 
 func parseOptionalBoolForm(c *gin.Context, key string) *bool {

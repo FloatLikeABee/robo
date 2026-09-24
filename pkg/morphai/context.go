@@ -15,6 +15,9 @@ const (
 
 const FastToolFirstInstructions = `Use the fastest grounded source available. Prefer live MCP-style catalogs, product APIs, repositories, or read-only database/schema lookups before broad reasoning. List or search first, then fetch details by id. Use read-only SQL unless the user explicitly asks to create, update, or delete.`
 
+// VisualFirstInstructions is the platform motto for assistant replies (chats and documents).
+const VisualFirstInstructions = `Visual-first: short caption, then a mermaid diagram for structure/process/code (flowchart, sequence, or class) or a mermaid pie/xychart for quantities. Do not write a long essay. Single Morph Data records stay compact **Label:** value fields — do not invent a chart. Ordinary chat may include a ` + "```pixel```" + ` grid (rows of #RRGGBB or . / #, max 64×64) when a tiny illustration helps; never call an image API from the tool loop.`
+
 // TruncateRunes shortens s to at most max Unicode runes without splitting UTF-8.
 func TruncateRunes(s string, max int) string {
 	if max <= 0 {
@@ -50,7 +53,7 @@ func trimSpace(s string) string {
 
 // ToolFollowUpPrompt builds a compact tool-loop message (avoids echoing the prior JSON call).
 func ToolFollowUpPrompt(toolResult string) string {
-	return toolResult + "\n\nSummarize for the user in markdown. If you need another tool, reply with only one JSON object."
+	return toolResult + "\n\n" + VisualFirstInstructions + " If you need another tool, reply with only one JSON object."
 }
 
 // ToolFollowUpPromptWithInstruction keeps product-specific answer requirements while
@@ -60,7 +63,7 @@ func ToolFollowUpPromptWithInstruction(toolResult, instruction string) string {
 	if instruction == "" {
 		return ToolFollowUpPrompt(toolResult)
 	}
-	return toolResult + "\n\n" + instruction + " If another tool is needed, reply with only one JSON object."
+	return toolResult + "\n\n" + VisualFirstInstructions + "\n" + instruction + " If another tool is needed, reply with only one JSON object."
 }
 
 // ExtractJSONObject returns the first complete top-level JSON object from model output.

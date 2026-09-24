@@ -1,15 +1,24 @@
 <script>
+  import { tick } from 'svelte'
   import { renderMarkdownHtml } from '../lib/contentMarkdown'
+  import { runMermaidIn } from '../lib/runMermaidIn'
   import '../lib/message-body.css'
 
   /** @type {{ markdown?: string, mode?: 'preview' | 'source' }} */
   let { markdown = '', mode = 'preview' } = $props()
 
   const html = $derived(renderMarkdownHtml(markdown))
+  let wrap = $state(null)
+
+  $effect(() => {
+    html
+    if (mode !== 'preview') return
+    void tick().then(() => runMermaidIn(wrap))
+  })
 </script>
 
 {#if mode === 'preview'}
-  <div class="content-markdown-preview platform-message-body">
+  <div class="content-markdown-preview platform-message-body" bind:this={wrap}>
     {#if String(markdown || '').trim()}
       {@html html}
     {:else}

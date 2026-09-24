@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Tab, Tabs, TextField, Typography } from '@mui/material';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import VisualMarkdown from '../../lib/VisualMarkdown';
 
 const markdownPreviewSx = {
   '& h1, & h2, & h3, & h4': { mt: 0.75, mb: 0.5, fontWeight: 700, lineHeight: 1.3 },
@@ -34,7 +33,7 @@ const markdownPreviewSx = {
     bgcolor: 'action.hover',
   },
   '& pre code': { bgcolor: 'transparent', p: 0 },
-  '& a': { color: 'primary.main' },
+  '& a': { color: '#38bdf8' },
   '& table': { width: '100%', borderCollapse: 'collapse', my: 0.75 },
   '& th, & td': { border: 1, borderColor: 'divider', px: 0.75, py: 0.35, fontSize: '0.875rem' },
   '& hr': { my: 1, borderColor: 'divider' },
@@ -46,9 +45,11 @@ export default function MarkdownEditor({
   placeholder = 'Write in Markdown…',
   disabled = false,
   minRows = 10,
+  hint = true,
 }) {
-  const [tab, setTab] = useState('write');
+  const [tab, setTab] = useState('markdown');
   const body = value || '';
+  const rawLocked = disabled || typeof onChange !== 'function';
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -57,11 +58,11 @@ export default function MarkdownEditor({
         onChange={(_, next) => setTab(next)}
         sx={{ minHeight: 36, flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab label="Write" value="write" sx={{ minHeight: 36, py: 0.5, textTransform: 'none' }} />
-        <Tab label="Preview" value="preview" sx={{ minHeight: 36, py: 0.5, textTransform: 'none' }} />
+        <Tab label="Markdown" value="markdown" sx={{ minHeight: 36, py: 0.5, textTransform: 'none' }} />
+        <Tab label="Raw" value="raw" sx={{ minHeight: 36, py: 0.5, textTransform: 'none' }} />
       </Tabs>
 
-      {tab === 'write' ? (
+      {tab === 'raw' ? (
         <TextField
           fullWidth
           multiline
@@ -69,7 +70,8 @@ export default function MarkdownEditor({
           placeholder={placeholder}
           value={body}
           onChange={(e) => onChange?.(e.target.value)}
-          disabled={disabled}
+          disabled={rawLocked}
+          InputProps={{ readOnly: rawLocked }}
           sx={{
             flex: 1,
             minHeight: 0,
@@ -94,6 +96,7 @@ export default function MarkdownEditor({
         />
       ) : (
         <Box
+          className="themed-preview-scroll"
           sx={{
             flex: 1,
             minHeight: 0,
@@ -104,11 +107,12 @@ export default function MarkdownEditor({
             borderColor: 'divider',
             borderRadius: 1,
             bgcolor: 'background.paper',
+            color: 'text.primary',
             ...markdownPreviewSx,
           }}
         >
           {body.trim() ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+            <VisualMarkdown text={body} />
           ) : (
             <Typography variant="body2" color="text.secondary">
               Nothing to preview yet.
@@ -117,9 +121,11 @@ export default function MarkdownEditor({
         </Box>
       )}
 
-      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-        Markdown supported: **bold**, lists, ## headings, [links](url)
-      </Typography>
+      {hint ? (
+        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+          Markdown: **bold**, lists, ## headings, [links](url)
+        </Typography>
+      ) : null}
     </Box>
   );
 }

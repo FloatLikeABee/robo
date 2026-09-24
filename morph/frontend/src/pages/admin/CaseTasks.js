@@ -32,6 +32,7 @@ import RecordAttachmentsPanel from '../../components/admin/RecordAttachmentsPane
 import { useConfirm } from '../../components/ConfirmDialog';
 import { buildCaseTaskHTML, buildCaseTaskMarkdown } from './caseTaskViewDocs';
 import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 
 const MAP_CENTER = [39.8283, -98.5795];
 
@@ -237,27 +238,6 @@ function caseTaskDraftLooksFilled(draft) {
   return Boolean(d && d !== '{}' && d !== 'null');
 }
 
-function locationFromAiDraft(loc) {
-  if (loc == null || loc === '') return '';
-  if (typeof loc === 'string') {
-    const s = loc.trim();
-    if (!s || s === 'null') return '';
-    try {
-      JSON.parse(s);
-      return s;
-    } catch {
-      return JSON.stringify({ label: s, area: [] }, null, 2);
-    }
-  }
-  if (typeof loc === 'object') {
-    const label = typeof loc.label === 'string' ? loc.label.trim() : typeof loc.location === 'string' ? loc.location.trim() : '';
-    const area = Array.isArray(loc.area) ? loc.area : [];
-    if (!label && area.length === 0) return '';
-    return JSON.stringify({ label, area }, null, 2);
-  }
-  return '';
-}
-
 export default function CaseTasks() {
   const { confirm } = useConfirm();
   const [rows, setRows] = useState([]);
@@ -306,6 +286,7 @@ export default function CaseTasks() {
   }, [employees, members]);
 
   const viewMarkdown = useMemo(() => {
+    if (!editing) return String(draft.description || '');
     const assignees =
       (draft.assignees || [])
         .map((a) => a.label || a.name)
@@ -320,11 +301,16 @@ export default function CaseTasks() {
       location: draft.location,
       detail: draft.detail,
     });
-  }, [draft, editing?.assignees_label]);
+  }, [draft, editing]);
 
   const viewHTML = useMemo(
-    () => buildCaseTaskHTML({ title: draft.title, markdown: viewMarkdown, detail: draft.detail }),
-    [draft.title, draft.detail, viewMarkdown]
+    () =>
+      buildCaseTaskHTML({
+        title: draft.title,
+        markdown: viewMarkdown,
+        detail: editing ? draft.detail : '',
+      }),
+    [draft.title, draft.detail, editing, viewMarkdown]
   );
 
   const load = async () => {
@@ -432,7 +418,7 @@ export default function CaseTasks() {
     if (caseTaskDraftLooksFilled(draft)) {
       const ok = await confirm({
         title: 'Replace case/task fields?',
-        message: 'This will replace the current title, description, dates, map area, and detail JSON. Save afterward to keep the change.',
+        message: 'This will replace the current title, times, and markdown document. Save afterward to keep the change.',
         confirmLabel: 'Replace',
       });
       if (!ok) return;
@@ -453,27 +439,23 @@ export default function CaseTasks() {
       }
       const data = res.data || {};
       const title = String(data.title || '').trim();
-      const detail = data.detail;
-      const detailCheck = validateJsonDetailStructure(detail);
-      if (
-        !title ||
-        detail == null ||
-        typeof detail !== 'object' ||
-        Array.isArray(detail) ||
-        Object.keys(detail).length === 0 ||
-        !detailCheck.ok
-      ) {
-        throw new Error(detailCheck.error || 'AI did not return a valid case/task draft');
+      const markdown = String(data.markdown || data.description || '');
+      if (!title) {
+        throw new Error('AI did not return a valid case/task draft');
       }
       const bounds = localDayBounds();
       setDraft((prev) => ({
         ...prev,
         title,
-        description: String(data.description || ''),
+        description: markdown,
         start_at: toDateTimeLocal(data.start_at) || bounds.start_at,
         end_at: toDateTimeLocal(data.end_at) || bounds.end_at,
-        location: locationFromAiDraft(data.location),
-        detail: JSON.stringify(detail, null, 2),
+        ...(editing
+          ? {}
+          : {
+              location: '',
+              detail: '',
+            }),
       }));
       setDetailError('');
       setDetailInfo('Draft filled from material. Review and save when ready.');
@@ -498,28 +480,30 @@ export default function CaseTasks() {
       return;
     }
     let parsedDetail = null;
-    const detailRaw = String(draft.detail || '').trim();
-    if (detailRaw) {
-      try {
-        parsedDetail = JSON.parse(detailRaw);
-      } catch {
-        setDetailError('Detail must be valid JSON.');
-        return;
-      }
-      const depthCheck = validateJsonDetailStructure(parsedDetail);
-      if (!depthCheck.ok) {
-        setDetailError(depthCheck.error);
-        return;
-      }
-    }
     let parsedLocation = null;
-    const locationRaw = String(draft.location || '').trim();
-    if (locationRaw) {
-      try {
-        parsedLocation = JSON.parse(locationRaw);
-      } catch {
-        setDetailError('Location JSON is invalid. Re-open the area selector and apply again.');
-        return;
+    if (editing) {
+      const detailRaw = String(draft.detail || '').trim();
+      if (detailRaw) {
+        try {
+          parsedDetail = JSON.parse(detailRaw);
+        } catch {
+          setDetailError('Detail must be valid JSON.');
+          return;
+        }
+        const depthCheck = validateJsonDetailStructure(parsedDetail);
+        if (!depthCheck.ok) {
+          setDetailError(depthCheck.error);
+          return;
+        }
+      }
+      const locationRaw = String(draft.location || '').trim();
+      if (locationRaw) {
+        try {
+          parsedLocation = JSON.parse(locationRaw);
+        } catch {
+          setDetailError('Location JSON is invalid. Re-open the area selector and apply again.');
+          return;
+        }
       }
     }
 
@@ -528,8 +512,8 @@ export default function CaseTasks() {
       description: draft.description?.trim() || null,
       start_at: draft.start_at || null,
       end_at: draft.end_at || null,
-      location: parsedLocation,
-      detail: parsedDetail ?? {},
+      location: editing ? parsedLocation : null,
+      detail: editing ? parsedDetail ?? {} : {},
     };
     // Assignees are soft-deprecated: omit on write so historical rows stay readable.
 
@@ -686,24 +670,17 @@ export default function CaseTasks() {
           }}
         >
           {detailsTab === 'markdown' ? (
-            <Box
-              component="pre"
-              className="themed-preview-scroll"
-              sx={{
-                m: 0,
-                p: 2.5,
-                flex: 1,
-                minHeight: 0,
-                overflow: 'auto',
-                borderRadius: 0,
-                bgcolor: 'action.hover',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                fontSize: 13,
-              }}
-            >
-              {viewMarkdown}
+            <Box sx={{ flex: 1, minHeight: 0, p: 1.5, display: 'flex', flexDirection: 'column' }}>
+              <MarkdownEditor
+                value={viewMarkdown}
+                onChange={
+                  editing
+                    ? undefined
+                    : (v) => setDraft((prev) => ({ ...prev, description: v }))
+                }
+                minRows={12}
+                hint={false}
+              />
             </Box>
           ) : null}
           {detailsTab === 'html' ? (
@@ -779,15 +756,6 @@ export default function CaseTasks() {
               value={draft.title}
               onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
             />
-            <TextField
-              size="small"
-              label="Description"
-              multiline
-              minRows={2}
-              value={draft.description}
-              onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-              helperText="Put assignment detail in the description or JSON detail below."
-            />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
                 required
@@ -810,6 +778,16 @@ export default function CaseTasks() {
                 InputLabelProps={{ shrink: true }}
               />
             </Stack>
+            {editing ? (
+            <>
+            <TextField
+              size="small"
+              label="Description"
+              multiline
+              minRows={2}
+              value={draft.description}
+              onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
+            />
             {editing?.assignees_label ? (
               <Typography variant="body2" color="text.secondary">
                 Historical assignees (read-only): {editing.assignees_label}
@@ -879,6 +857,8 @@ export default function CaseTasks() {
                 compact
               />
             </Box>
+              </>
+            ) : null}
             {detailInfo ? <Alert severity="success">{detailInfo}</Alert> : null}
             {detailError ? <Alert severity="error">{detailError}</Alert> : null}
           </Stack>

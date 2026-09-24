@@ -14,6 +14,7 @@ require (
 	github.com/robo/morphai v0.0.0
 	github.com/robo/morphgraph v0.0.0
 	github.com/robo/repoenv v0.0.0
+	github.com/robo/webresearch v0.0.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.2
@@ -30,6 +31,8 @@ replace github.com/robo/morphai => ../pkg/morphai
 replace github.com/robo/morphgraph => ../pkg/morphgraph
 
 replace github.com/robo/repoenv => ../pkg/repoenv
+
+replace github.com/robo/webresearch => ../pkg/webresearch
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

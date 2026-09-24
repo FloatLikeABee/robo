@@ -287,9 +287,10 @@ function markdownToHTMLFragment(markdown) {
     .trim();
   if (!text) return '';
   const codes = [];
-  const withPh = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, _lang, body) => {
+  const withPh = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, body) => {
     const i = codes.length;
-    codes.push(`<pre><code>${escapeHtml(String(body).replace(/\n$/, ''))}</code></pre>`);
+    const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
+    codes.push(`<pre><code${cls}>${escapeHtml(String(body).replace(/\n$/, ''))}</code></pre>`);
     return `\n\n%%CODE${i}%%\n\n`;
   });
   return withPh
@@ -328,9 +329,9 @@ export function buildCaseTaskHTML({ title = '', markdown = '', detail } = {}) {
 .prose table{border-collapse:collapse;width:100%;font-size:.95em}
 .prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
 .prose th{background:var(--card)}`;
-  const css = `:root{color-scheme:dark;--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#0b1220;--card:#111827;--accent:#38bdf8;--scrollbar-thumb:#64748b;--scrollbar-track:#0b1220;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track)}
+  const css = `:root{color-scheme:dark;--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#0b1220;--card:#111827;--accent:#38bdf8;--accent-purple:#818cf8;--scrollbar-thumb:#64748b;--scrollbar-track:#0b1220;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track)}
 html,body{height:100%;margin:0}
-*{box-sizing:border-box}body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e293b 0%,var(--bg) 55%);line-height:1.55}
+*{box-sizing:border-box}body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0%,var(--bg) 55%);line-height:1.55}
 .wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}

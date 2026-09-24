@@ -40,7 +40,9 @@ Tools:
 - search_reference_docs — args: query (string), limit (int, default 10)
 
 After each TOOL_RESULT, summarize in clear markdown. For content suggestions, use markdown when helpful.
-If no tool is needed, reply in markdown only (not JSON). Do not invent ids.`
+If no tool is needed, reply in markdown only (not JSON). Do not invent ids.
+
+` + morphai.VisualFirstInstructions
 
 const tranMailToolMaxRounds = 8
 const tranMailMaxToolResultRunes = morphai.DefaultToolResultMaxRunes

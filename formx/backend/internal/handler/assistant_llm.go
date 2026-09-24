@@ -50,7 +50,9 @@ Tools:
 - Tip: when the user says "survey bot …", the dedicated Survey Bot mode runs automatically.
 
 After TOOL_RESULT: summarize in markdown. Another tool → JSON only. No tool → markdown only.
-Do not invent ids. List before detail lookups.`
+Do not invent ids. List before detail lookups.
+
+` + morphai.VisualFirstInstructions
 
 const formsXToolMaxRounds = 8
 const formsXMaxToolResultRunes = morphai.DefaultToolResultMaxRunes

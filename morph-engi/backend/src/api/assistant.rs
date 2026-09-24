@@ -1,7 +1,7 @@
 //! Morph Engi AI assistant — MorphAI tool loop covering all app modules.
 
 use axum::{extract::State, http::StatusCode, Json};
-use morphai::{extract_json_object, tool_follow_up_prompt, truncate_chars, Message, DEFAULT_TOOL_MAX_ROUNDS, DEFAULT_TOOL_RESULT_MAX_CHARS};
+use morphai::{extract_json_object, tool_follow_up_prompt, truncate_chars, Message, DEFAULT_TOOL_MAX_ROUNDS, DEFAULT_TOOL_RESULT_MAX_CHARS, VISUAL_FIRST_INSTRUCTIONS};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Column, Row};
@@ -107,6 +107,8 @@ pub async fn assistant_chat(
     };
 
     let mut prompt = ENGI_INSTRUCTIONS.to_string();
+    prompt.push_str("\n\n");
+    prompt.push_str(VISUAL_FIRST_INSTRUCTIONS);
     if let Some(hist) = format_history(&req.messages) {
         prompt.push_str("\n\nRecent conversation:\n");
         prompt.push_str(&hist);

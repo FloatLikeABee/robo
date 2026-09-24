@@ -7,6 +7,7 @@
 		processUploadFile,
 		type DataTableSummary
 	} from '$lib/dataTables';
+	import { confirm } from '$lib/confirmDialog';
 	import { whenSessionReady } from '$lib/stores/auth.svelte';
 	import { ChevronDown, ChevronUp, Plus, Table2, Trash2, X } from 'lucide-svelte';
 	import { onMount } from 'svelte';
@@ -106,7 +107,7 @@
 	}
 
 	async function removeTable(id: string, name: string) {
-		if (!confirm(`Delete data table "${name}"?`)) return;
+		if (!(await confirm({ message: `Delete data table "${name}"?`, danger: true, confirmLabel: 'Delete' }))) return;
 		try {
 			await deleteDataTable(id);
 			await refresh();

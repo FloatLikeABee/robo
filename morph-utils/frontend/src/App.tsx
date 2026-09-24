@@ -13,21 +13,78 @@ import {
   normalizeModuleId,
   type UtilsModuleId,
 } from './config';
+import { embedStartCommand, probeEmbedOrigin, PROBED_EMBED_IDS } from './embedProbe';
+import UserProfileModal from './UserProfileModal';
 import './App.css';
 
 function ModulePanel({ moduleId }: { moduleId: UtilsModuleId }) {
   const token = getSharedToken();
+  const [up, setUp] = useState<Partial<Record<UtilsModuleId, boolean>>>({});
+  const [checking, setChecking] = useState(true);
+
+  const recheck = useCallback(async () => {
+    setChecking(true);
+    const next: Partial<Record<UtilsModuleId, boolean>> = {};
+    await Promise.all(
+      UTILS_MODULES.filter((m) => m.embedUrl && PROBED_EMBED_IDS.includes(m.id)).map(async (m) => {
+        next[m.id] = await probeEmbedOrigin(m.embedUrl as string);
+      }),
+    );
+    setUp(next);
+    setChecking(false);
+  }, []);
+
+  useEffect(() => {
+    void recheck();
+  }, [recheck]);
 
   return (
     <div className="morph-utils-frame-wrap">
       {UTILS_MODULES.filter((m) => m.embedUrl).map((m) => {
         const src = withSessionToken(m.embedUrl);
+        const visible = m.id === moduleId;
+        const needsProbe = PROBED_EMBED_IDS.includes(m.id);
+        const ready = !needsProbe || up[m.id] === true;
+        const pending = needsProbe && checking && up[m.id] === undefined;
+
+        if (needsProbe && !ready) {
+          if (!visible) return null;
+          return (
+            <div
+              key={m.id}
+              data-module={m.id}
+              className="morph-utils-embed-down"
+              role="status"
+            >
+              {pending ? (
+                <p>Checking {m.label}…</p>
+              ) : (
+                <>
+                  <p>
+                    {m.label} isn’t running. Start it with{' '}
+                    <code>{embedStartCommand(m.id)}</code>
+                    {m.id === 'datax' ? (
+                      <>
+                        {' '}
+                        (also started by <code>./start-all.sh start morph-utils</code>).
+                      </>
+                    ) : null}
+                  </p>
+                  <button type="button" className="morph-utils-embed-retry" onClick={() => void recheck()}>
+                    Retry
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        }
+
         return (
           <iframe
             key={`${m.id}:${token ? 'authed' : 'anon'}:${m.embedUrl}`}
             data-module={m.id}
             title={m.label}
-            className={`morph-utils-frame${m.id === moduleId ? '' : ' is-hidden'}`}
+            className={`morph-utils-frame${visible ? '' : ' is-hidden'}`}
             src={src}
             allow="clipboard-read; clipboard-write"
           />
@@ -52,6 +109,7 @@ export default function App() {
   const defaultModule = useMemo(() => UTILS_MODULES[0], []);
   const [authed, setAuthed] = useState(() => Boolean(getSharedToken()));
   const [moreOpen, setMoreOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const activeModule = useMemo(() => {
     const seg = location.pathname.split('/').filter(Boolean)[0];
@@ -114,7 +172,20 @@ export default function App() {
         </nav>
 
         <div className="morph-utils-sidebar-footer">
-          {!authed ? (
+          {authed ? (
+            <button
+              type="button"
+              className="morph-utils-account-btn"
+              aria-label="Your account"
+              onClick={() => setProfileOpen(true)}
+            >
+              <span className="morph-utils-account-icon" aria-hidden>👤</span>
+              <span className="morph-utils-nav-tooltip" role="tooltip">
+                <strong>Account</strong>
+                <span>Username & password</span>
+              </span>
+            </button>
+          ) : (
             <a
               className="morph-utils-external-link"
               href={morphAiHref}
@@ -126,7 +197,7 @@ export default function App() {
                 <span>Sign in once for all Morph apps</span>
               </span>
             </a>
-          ) : null}
+          )}
         </div>
       </aside>
 
@@ -178,6 +249,8 @@ export default function App() {
           </div>
         </div>
       ) : null}
+
+      <UserProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

@@ -41,6 +41,7 @@ import { getMorphToken } from '../../auth/morphSession';
 import { RecordSheetJsonDetail } from '../../components/admin/jsonDetailViews';
 import { usePlatformUi } from '../../PlatformUiContext';
 import { useConfirm } from '../../components/ConfirmDialog';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import {
   ADMIN_RIGHT_PANEL_TOP,
   adminRightPanelHeightCalc,
@@ -121,7 +122,7 @@ function formatWhen(v) {
   return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function GenericDataMarkdownView({ markdown, articleTitle }) {
+function GenericDataMarkdownView({ markdown, articleTitle, onChange, onSave, saving }) {
   return (
     <Paper
       elevation={0}
@@ -134,6 +135,9 @@ function GenericDataMarkdownView({ markdown, articleTitle }) {
         maxWidth: 820,
         mx: 'auto',
         width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 280,
       }}
     >
       {articleTitle && (
@@ -141,9 +145,18 @@ function GenericDataMarkdownView({ markdown, articleTitle }) {
           Article
         </Typography>
       )}
-      <Box sx={markdownArticleSx}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown || '_Empty document_'}</ReactMarkdown>
-      </Box>
+      <MarkdownEditor value={markdown} onChange={onChange} minRows={10} hint={false} />
+      {onSave ? (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={onSave}
+          disabled={saving}
+          sx={{ mt: 1, alignSelf: 'flex-start', textTransform: 'none' }}
+        >
+          {saving ? 'Saving…' : 'Save markdown'}
+        </Button>
+      ) : null}
     </Paper>
   );
 }
@@ -177,7 +190,7 @@ function GenericDataJsonView({ payload }) {
   );
 }
 
-function GenericDataContentView({ record }) {
+function GenericDataContentView({ record, markdown, onMarkdownChange, onMarkdownSave, markdownSaving }) {
   const detail = parseDetail(record?.detail);
   const sourceType = record?.source_type;
 
@@ -189,7 +202,12 @@ function GenericDataContentView({ record }) {
     );
   }
 
-  const md = typeof detail.content_markdown === 'string' ? detail.content_markdown : '';
+  const md =
+    markdown != null
+      ? markdown
+      : typeof detail.content_markdown === 'string'
+        ? detail.content_markdown
+        : '';
   const colKeys = detail.columns || [];
   const hasTable = Array.isArray(colKeys) && colKeys.length > 0;
   const jsonPayload =
@@ -247,7 +265,15 @@ function GenericDataContentView({ record }) {
         </Stack>
       )}
       {showJson && <GenericDataJsonView payload={jsonPayload} />}
-      {md ? <GenericDataMarkdownView markdown={md} articleTitle={detail.article_title} /> : null}
+      {md || onMarkdownChange ? (
+        <GenericDataMarkdownView
+          markdown={md}
+          articleTitle={detail.article_title}
+          onChange={onMarkdownChange}
+          onSave={onMarkdownSave}
+          saving={markdownSaving}
+        />
+      ) : null}
       {!hasTable && !showJson && !md ? (
         <Typography variant="body2" color="text.secondary">
           No imported content yet.
@@ -661,6 +687,8 @@ export default function GenericData() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailTab, setDetailTab] = useState('content');
+  const [contentMd, setContentMd] = useState('');
+  const [savingMd, setSavingMd] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [rowSelectionModel, setRowSelectionModel] = useState([]);
@@ -688,6 +716,8 @@ export default function GenericData() {
     try {
       const res = await tranApi.get(tranEndpoints.genericDataFull(id));
       setDetail(res.data || null);
+      const parsed = parseDetail(res.data?.detail);
+      setContentMd(typeof parsed?.content_markdown === 'string' ? parsed.content_markdown : '');
     } catch (err) {
       setActionError(err.response?.data?.error || err.message || 'Failed to load record');
       setDetail(null);
@@ -699,7 +729,24 @@ export default function GenericData() {
   const closeDetail = () => {
     setSelectedId(null);
     setDetail(null);
+    setContentMd('');
     setActionError(null);
+  };
+
+  const saveContentMarkdown = async () => {
+    if (!detail?.id) return;
+    setSavingMd(true);
+    setActionError(null);
+    try {
+      const parsed = parseDetail(detail.detail) || {};
+      const next = { ...parsed, content_markdown: contentMd };
+      const res = await tranApi.put(tranEndpoints.genericDataItem(detail.id), { detail: next });
+      setDetail(res.data || detail);
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Failed to save markdown');
+    } finally {
+      setSavingMd(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -1024,7 +1071,13 @@ export default function GenericData() {
                   </Typography>
                 </Paper>
               )}
-              <GenericDataContentView record={detail} />
+              <GenericDataContentView
+                record={detail}
+                markdown={contentMd}
+                onMarkdownChange={setContentMd}
+                onMarkdownSave={saveContentMarkdown}
+                markdownSaving={savingMd}
+              />
             </Stack>
           ) : (
             <AiAnalysisPanel

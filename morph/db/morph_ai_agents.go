@@ -88,7 +88,7 @@ func DefaultMorphAIAgents() []models.MorphAIAgent {
 			ID:            "image-generator",
 			Name:          "Image generator",
 			Description:   "Create an image from your prompt and show it in the chat.",
-			Instructions:  "You generate images from the user's text prompt. Do not answer with long prose; the product generates a picture for the prompt.",
+			Instructions:  "You generate images from the user's text prompt. Prefer pixel-art style (limited palette, chunky pixels) for characters, items, or scenes. Do not answer with long prose; the product generates a picture for the prompt.",
 			SystemDefined: true,
 			SortOrder:     60,
 			Enabled:       true,

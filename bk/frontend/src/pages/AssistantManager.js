@@ -39,6 +39,7 @@ import {
   subscribeAppliedAssistantChannel,
   waitForAppliedState,
 } from '../lib/appliedAssistantChannel';
+import { useConfirm } from '../components/ConfirmDialog';
 
 const EMPTY_FORM = {
   name: '',
@@ -56,6 +57,7 @@ const providerLabel = (p) => {
 };
 
 const AssistantManager = () => {
+  const { confirm } = useConfirm();
   const [assistants, setAssistants] = useState([]);
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -150,7 +152,7 @@ const AssistantManager = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this assistant?')) return;
+    if (!(await confirm({ message: 'Delete this assistant?', danger: true, confirmLabel: 'Delete' }))) return;
     try {
       await api.deleteAssistant(id);
       await fetchAssistants();

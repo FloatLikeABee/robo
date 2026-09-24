@@ -2,7 +2,7 @@
 
 ## Overview
 
-User-facing product: **Event Logs**. Repository folder stays `formx`. MorphUtils embed id is `sheetx`. Default iframe URL is `/events-info` (legacy `/survey-bot` may still exist).
+User-facing product: **Event Logs**. Repository folder stays `formx`. MorphUtils embed id is `sheetx`. Default iframe URL is `/events-info`. Legacy `/survey-bot` redirects there.
 
 | | |
 |--|--|
@@ -12,7 +12,7 @@ User-facing product: **Event Logs**. Repository folder stays `formx`. MorphUtils
 | Auth | Morph SSO (`USERS_PANEL_BASE_URL`) |
 | Data | SQLite `FORMSX_SQLITE_PATH` + Badger `FORMSX_BADGER_PATH` |
 
-Inner tabs: **Events & Info** then **Info Sheets**. Do not label the module Survey Maker / SurveyX.
+Inner tab: **Events & Info** only. Do not restore an Info Sheets tab. Do not label the module Survey Maker / SurveyX.
 
 ## Storage
 

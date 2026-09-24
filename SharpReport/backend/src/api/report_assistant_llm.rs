@@ -130,6 +130,8 @@ async fn respond_llm(
         LlmMode::General => SHARP_REPORT_INSTRUCTIONS.to_string(),
         LlmMode::DataAi => DATA_AI_INSTRUCTIONS.to_string(),
     };
+    first.push_str("\n\n");
+    first.push_str(morphai::VISUAL_FIRST_INSTRUCTIONS);
     first.push_str("\n\nFast source selection:\n");
     first.push_str(morphai::FAST_TOOL_FIRST_INSTRUCTIONS);
     if let Some(hist) = format_history(messages) {

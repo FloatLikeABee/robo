@@ -88,11 +88,13 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 			if strings.EqualFold(agent.ID, morphAIImageGeneratorAgentID) {
 				pendingConfirm := getPendingForm(userID) != nil && isFormConfirmMessage(req.Message)
 				if !pendingConfirm {
-					correctedMessage, corrErr := h.aiService.CorrectSpelling(req.Message)
-					if corrErr != nil {
-						correctedMessage = req.Message
-					} else if correctedMessage != req.Message {
-						req.Message = correctedMessage
+					if !validation.HasVisualFence(req.Message) {
+						correctedMessage, corrErr := h.aiService.CorrectSpelling(req.Message)
+						if corrErr != nil {
+							correctedMessage = req.Message
+						} else if correctedMessage != req.Message {
+							req.Message = correctedMessage
+						}
 					}
 					if !validation.IsValidPrompt(req.Message) {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "The request appears to be invalid or gibberish. Please provide a meaningful message."})
@@ -126,13 +128,15 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		}
 	}
 
-	correctedMessage, err := h.aiService.CorrectSpelling(req.Message)
-	if err != nil {
-		log.Printf("[CHAT HANDLER] Error correcting spelling: %v, using original message", err)
-		correctedMessage = req.Message
-	} else if correctedMessage != req.Message {
-		log.Printf("[CHAT HANDLER] Spelling corrected: '%s' -> '%s'", req.Message, correctedMessage)
-		req.Message = correctedMessage
+	if !validation.HasVisualFence(req.Message) {
+		correctedMessage, err := h.aiService.CorrectSpelling(req.Message)
+		if err != nil {
+			log.Printf("[CHAT HANDLER] Error correcting spelling: %v, using original message", err)
+			correctedMessage = req.Message
+		} else if correctedMessage != req.Message {
+			log.Printf("[CHAT HANDLER] Spelling corrected: '%s' -> '%s'", req.Message, correctedMessage)
+			req.Message = correctedMessage
+		}
 	}
 
 	log.Printf("[CHAT HANDLER] User: %s, Message: %s", userID, req.Message)
@@ -211,11 +215,12 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 	}
 
 	var chatResponse string
+	var toolLog []string
 	var genErr error
 	if h.ginEngine != nil {
-		chatResponse, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
+		chatResponse, toolLog, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
 	} else {
-		skillsCtx := h.buildEnabledSkillsContext(req.SkillIDs)
+		skillsCtx := h.agentSkillsAndLessonsContext(req.SkillIDs)
 		agentExtra := agentInstructions
 		if skillsCtx != "" {
 			if agentExtra != "" {
@@ -238,6 +243,7 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		SubAgents: applied.subAgents,
 	}
 	persistChatExchange(h, userID, sessionID, userVisible, &response)
+	h.maybeHarvestSession(userID, sessionID, userVisible, countUserTurns(h, userID, sessionID), len(toolLog), applied.hasDocuments)
 	c.JSON(http.StatusOK, response)
 }
 

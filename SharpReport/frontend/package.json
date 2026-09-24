@@ -22,6 +22,7 @@
     "echarts-for-svelte": "^0.1.11",
     "lucide-svelte": "^0.378.0",
     "marked": "^18.0.11",
+    "mermaid": "^11.17.2",
     "postcss": "^8.4.38",
     "svelte": "^5.0.0",
     "svelte-check": "^3.6.0",

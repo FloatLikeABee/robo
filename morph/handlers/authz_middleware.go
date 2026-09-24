@@ -28,8 +28,8 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// Public auth endpoints (login). /api/auth/me|user|permissions require Bearer below.
-		if path == "/api/auth/login" {
+		// Public auth endpoints (login, invite redeem). /api/auth/me|user|permissions validate Bearer in handlers.
+		if path == "/api/auth/login" || path == "/api/invite/redeem" {
 			c.Next()
 			return
 		}
@@ -38,8 +38,7 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 			return
 		}
 		if strings.HasPrefix(path, "/api/auth/") {
-			// Still require auth for me/user/permissions — handlers validate Bearer.
-			// Let them run without AuthzMiddleware abort so they can return their own errors.
+			// Let auth handlers run without AuthzMiddleware abort so they can return their own errors.
 			if path == "/api/auth/me" || path == "/api/auth/user" || path == "/api/auth/permissions" {
 				c.Next()
 				return

@@ -39,6 +39,7 @@ import {
   Web as CrawlerIcon,
   Chat as DialogueIcon,
 } from '@mui/icons-material';
+import { useConfirm } from './ConfirmDialog';
 
 const stepTypeIcons = {
   customization: CustomizationIcon,
@@ -76,6 +77,7 @@ const GraphicalFlowEditor = ({
   requestTools = [],
   dialogues = [],
 }) => {
+  const { confirm } = useConfirm();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -354,10 +356,10 @@ const GraphicalFlowEditor = ({
           {(showActions || selected) && (
             <IconButton
               size="small"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                if (window.confirm('Are you sure you want to delete this node?')) {
+                if (await confirm({ message: 'Are you sure you want to delete this node?', danger: true, confirmLabel: 'Delete' })) {
                   handleDeleteNode(id);
                 }
               }}

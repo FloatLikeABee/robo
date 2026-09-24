@@ -4,10 +4,11 @@
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
   import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, uploadFile } from './lib/api'
-  import { buildAiStateExtra } from './lib/aiContext'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
   import ProjectDocumentPanel from './components/ProjectDocumentPanel.svelte'
+  import ConfirmDialog from './components/ConfirmDialog.svelte'
+  import { confirm } from './lib/confirmDialog'
 
   let authed = $state(false)
   let loading = $state(true)
@@ -16,7 +17,6 @@
 
   let projects = $state<any[]>([])
   let resourceFiles = $state<any[]>([])
-  let org = $state<any>(null)
   let actionError = $state('')
 
   let newResourceFile = $state({ name: '', source_type: 'url' as 'url' | 'upload', file_url: '', description: '' })
@@ -78,12 +78,8 @@
   }
 
   async function refreshAll() {
-    const [proj, orgRes] = await Promise.all([
-      api<{ projects: any[] }>('/api/v1/projects'),
-      api<any>('/api/v1/organization'),
-    ])
+    const proj = await api<{ projects: any[] }>('/api/v1/projects')
     projects = proj.projects ?? []
-    org = orgRes
     await refreshPageData()
   }
 
@@ -138,7 +134,7 @@
   }
 
   async function deleteResourceFile(id: number, name: string) {
-    if (!confirm(`Delete file “${name}”?`)) return
+    if (!(await confirm({ message: `Delete file “${name}”?`, danger: true, confirmLabel: 'Delete' }))) return
     actionError = ''
     try {
       await api(`/api/v1/resource-files/${id}`, { method: 'DELETE' })
@@ -150,15 +146,6 @@
 
   const pageTitle = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
   const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
-
-  function getAiStateExtra() {
-    return buildAiStateExtra({
-      page,
-      organization: org,
-      projects,
-      resourceFiles,
-    })
-  }
 </script>
 
 {#if loading}
@@ -203,7 +190,7 @@
     </p>
   {/if}
   <div class="flex-1 min-h-0">
-  <AppLayout bind:page getStateExtra={getAiStateExtra}>
+  <AppLayout bind:page>
     <div class="h-full min-h-0">
       {#if page === 'projects'}
         <div class="h-full min-h-0">
@@ -259,7 +246,7 @@
                       <tr>
                         <td>{d.name}</td>
                         <td>{d.source_type}</td>
-                        <td class="max-w-[12rem] truncate"><a class="text-teal underline" href={d.file_url} target="_blank" rel="noopener">{d.file_name || d.file_url}</a></td>
+                        <td class="max-w-[12rem] truncate"><a class="text-sky-300 underline" href={d.file_url} target="_blank" rel="noopener">{d.file_name || d.file_url}</a></td>
                         <td class="max-w-[18rem] whitespace-pre-wrap text-muted">{d.description || '—'}</td>
                         <td class="text-xs text-muted whitespace-nowrap">{d.created_at || '—'}</td>
                         <td>
@@ -282,6 +269,8 @@
   </div>
 
 {/if}
+
+<ConfirmDialog />
 
 <style>
   :global(.auth-flow-shell) {

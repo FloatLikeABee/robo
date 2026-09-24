@@ -32,6 +32,15 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uk_plat_users_email ON plat_users(email)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uk_plat_users_username ON plat_users(username)`,
+		`CREATE TABLE IF NOT EXISTS plat_invite_codes (
+			id TEXT NOT NULL PRIMARY KEY,
+			code TEXT NOT NULL,
+			created_by TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			redeemed_at TEXT NULL,
+			redeemed_by_user_id TEXT NULL
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uk_plat_invite_codes_code ON plat_invite_codes(code)`,
 		`CREATE TABLE IF NOT EXISTS "User" (
 			UserID INTEGER PRIMARY KEY AUTOINCREMENT,
 			LoginID TEXT NULL,
@@ -296,6 +305,49 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			created_on TEXT DEFAULT CURRENT_TIMESTAMP,
 			last_updated TEXT DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS research (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			owner_key TEXT NOT NULL DEFAULT '',
+			title TEXT NOT NULL,
+			prompt TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'ingesting',
+			current_round INTEGER NOT NULL DEFAULT 0,
+			round_target INTEGER NOT NULL DEFAULT 5,
+			markdown_content TEXT NOT NULL DEFAULT '',
+			html_content TEXT NOT NULL DEFAULT '',
+			error_text TEXT NULL,
+			published_slug TEXT NULL,
+			published_path TEXT NULL,
+			created_on TEXT DEFAULT CURRENT_TIMESTAMP,
+			last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS research_file (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			research_id INTEGER NOT NULL,
+			filename TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			text_excerpt TEXT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS research_chunk (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			research_id INTEGER NOT NULL,
+			file_id INTEGER NOT NULL DEFAULT 0,
+			chunk_index INTEGER NOT NULL,
+			text_content TEXT NOT NULL,
+			embedding_json TEXT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS research_piece (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			research_id INTEGER NOT NULL,
+			round_index INTEGER NOT NULL,
+			markdown TEXT NOT NULL DEFAULT '',
+			verification TEXT NOT NULL DEFAULT '',
+			sources_json TEXT NULL,
+			status TEXT NOT NULL DEFAULT 'ok',
+			created_on TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(research_id, round_index)
+		)`,
 		`CREATE TABLE IF NOT EXISTS morph_knowledge_files (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL,
@@ -355,6 +407,15 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			updated_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_ai_skills_enabled ON ai_skills(enabled)`,
+		`CREATE TABLE IF NOT EXISTS agent_lesson (
+			id TEXT NOT NULL PRIMARY KEY,
+			trigger TEXT NOT NULL,
+			rule TEXT NOT NULL,
+			source_session_id TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_session ON agent_lesson(source_session_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_agent_lesson_created ON agent_lesson(created_at)`,
 		`CREATE TABLE IF NOT EXISTS morph_agent_context_cache (
 			user_id TEXT NOT NULL,
 			session_id TEXT NOT NULL,
@@ -410,5 +471,7 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 	_ = sqliteAddColumnIfMissing(db, "big_note", "note_kind", "TEXT NOT NULL DEFAULT 'note'")
 	_ = sqliteAddColumnIfMissing(db, "big_note", "questions_json", "TEXT NULL")
 	_ = sqliteAddColumnIfMissing(db, "user_note_todo", "DeadlineAt", "TEXT NULL")
+	_ = sqliteAddColumnIfMissing(db, "research", "round_target", "INTEGER NOT NULL DEFAULT 5")
+	_, _ = db.Exec(`UPDATE research SET round_target = 20 WHERE current_round > 5 OR id IN (SELECT research_id FROM research_piece GROUP BY research_id HAVING COUNT(*) > 5)`)
 	return nil
 }

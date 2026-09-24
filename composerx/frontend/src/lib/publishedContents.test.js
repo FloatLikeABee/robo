@@ -15,7 +15,9 @@ test('merge keeps one row when draft and published share a name', () => {
   assert.equal(rows[0].status, 'Published')
   assert.equal(rows[0].path, '/public/p/summer-launch')
   assert.equal(rows[0].draftId, 10)
+  assert.equal(rows[0].publishedId, 3)
   assert.equal(rows[0].slug, 'summer-launch')
+  assert.equal(rows[0].canDelete, true)
 })
 
 test('saved-only rows keep draft actions and no public path', () => {
@@ -32,7 +34,7 @@ test('saved-only rows keep draft actions and no public path', () => {
   assert.equal(rows[0].canDelete, true)
 })
 
-test('published-only rows can open and cannot delete', () => {
+test('published-only rows can open and can delete', () => {
   const rows = mergePublishedContents(
     [],
     [{ id: 3, name: 'Live', slug: 'live', theme: 'default', updated_at: '2026-09-01T02:00:00Z' }],
@@ -40,6 +42,8 @@ test('published-only rows can open and cannot delete', () => {
   assert.equal(rows.length, 1)
   assert.equal(rows[0].status, 'Published')
   assert.equal(rows[0].canOpen, true)
-  assert.equal(rows[0].canDelete, false)
+  assert.equal(rows[0].canDelete, true)
   assert.equal(rows[0].canView, false)
+  assert.equal(rows[0].publishedId, 3)
+  assert.equal(rows[0].draftId, null)
 })

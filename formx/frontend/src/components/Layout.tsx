@@ -70,10 +70,6 @@ export function Layout() {
             <span aria-hidden className="text-base leading-none">📌</span>
             <span>Events &amp; Info</span>
           </NavLink>
-          <NavLink to="/survey-bot" className={tc}>
-            <span aria-hidden className="text-base leading-none">📋</span>
-            <span>Info Sheets</span>
-          </NavLink>
         </nav>
       </header>
 

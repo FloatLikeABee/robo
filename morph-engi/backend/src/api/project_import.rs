@@ -902,6 +902,8 @@ mod tests {
             app_port: 0,
             cors_origin: "*".into(),
             users_panel_base_url: "http://localhost".into(),
+            static_dir: String::new(),
+            preview_demo: false,
         };
         Arc::new(AppState {
             pool,

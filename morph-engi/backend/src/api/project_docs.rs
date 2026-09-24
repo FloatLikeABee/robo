@@ -113,7 +113,7 @@ fn html_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-fn build_project_html(title: &str, markdown: &str) -> String {
+pub(crate) fn build_project_html(title: &str, markdown: &str) -> String {
     let body = markdown_to_html_fragment(markdown);
     format!(
         r#"<!doctype html>
@@ -121,8 +121,8 @@ fn build_project_html(title: &str, markdown: &str) -> String {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>{title}</title>
 <style>
-:root {{ --ink:#e8eef7; --muted:#94a3b8; --line:#1e293b; --bg:#0b1220; --card:#111827; --accent:#2dd4bf; }}
-*{{box-sizing:border-box}} body{{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#134e4a 0%,var(--bg) 55%);line-height:1.55}}
+:root {{ --ink:#e8eef7; --muted:#94a3b8; --line:#1e293b; --bg:#0b1220; --card:#111827; --accent:#38bdf8; --accent-purple:#818cf8; }}
+*{{box-sizing:border-box}} body{{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0%,var(--bg) 55%);line-height:1.55}}
 .wrap{{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}}
 .meta{{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}}
 h1.page-title{{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}}

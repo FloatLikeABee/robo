@@ -21,20 +21,20 @@ type publishPageCreateRequest struct {
 }
 
 type publishAIRequest struct {
-	Messages         []composerAIMessage     `json:"messages"`
-	CurrentHTML      string                  `json:"current_html"`
-	SourceText       string                  `json:"source_text"`
-	SourceMaterials  []publishSourceMaterial `json:"source_materials"`
-	Theme            string                  `json:"theme"`
-	UseWebSearch     *bool                   `json:"use_web_search"`
-	WebSearchQuery   string                  `json:"web_search_query"`
+	Messages        []composerAIMessage     `json:"messages"`
+	CurrentHTML     string                  `json:"current_html"`
+	SourceText      string                  `json:"source_text"`
+	SourceMaterials []publishSourceMaterial `json:"source_materials"`
+	Theme           string                  `json:"theme"`
+	UseWebSearch    *bool                   `json:"use_web_search"`
+	WebSearchQuery  string                  `json:"web_search_query"`
 }
 
 type publishAIResponse struct {
-	AssistantMessage string                 `json:"assistant_message"`
-	ProposedPageHTML *string                `json:"proposed_page_html,omitempty"`
-	ResearchNotes    string                 `json:"research_notes,omitempty"`
-	Sources          []webresearchSource    `json:"sources,omitempty"`
+	AssistantMessage string              `json:"assistant_message"`
+	ProposedPageHTML *string             `json:"proposed_page_html,omitempty"`
+	ResearchNotes    string              `json:"research_notes,omitempty"`
+	Sources          []webresearchSource `json:"sources,omitempty"`
 }
 
 type webresearchSource struct {
@@ -96,7 +96,7 @@ func (a *App) createPublishedPage(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to publish page: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to publish page: " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{
@@ -137,6 +137,23 @@ func (a *App) listPublishedPages(c *gin.Context) {
 		"limit":  limit,
 		"offset": offset,
 	})
+}
+
+func (a *App) deletePublishedPage(c *gin.Context) {
+	id, err := strconv.ParseInt(strings.TrimSpace(c.Param("id")), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := a.publishedPages.Delete(c.Request.Context(), id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "published page not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete published page"})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 func (a *App) createPublishDraft(c *gin.Context) {

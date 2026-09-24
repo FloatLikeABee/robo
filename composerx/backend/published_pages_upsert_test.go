@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -182,5 +183,73 @@ func TestCreatePublishedPageHandlerRepublishSamePath(t *testing.T) {
 	}
 	if count() != 1 {
 		t.Fatalf("row count=%d want 1", count())
+	}
+}
+
+func TestDeletePublishedPageThenPublic404(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo, count := testPublishedPagesRepo(t)
+	app := &App{publishedPages: repo}
+	r := gin.New()
+	r.POST("/publishes", app.createPublishedPage)
+	r.DELETE("/publishes/:id", app.deletePublishedPage)
+	r.GET("/public/p/:slug", app.servePublishedPage)
+
+	body, err := json.Marshal(map[string]string{
+		"name":         "Summer Launch",
+		"theme":        "default",
+		"html_content": "<p>old-html</p>",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/publishes", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
+		t.Fatalf("publish status=%d body=%s", w.Code, w.Body.String())
+	}
+	var created map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	id, ok := created["id"].(float64)
+	if !ok || id <= 0 {
+		t.Fatalf("id=%v", created["id"])
+	}
+	slug, _ := created["slug"].(string)
+	if slug == "" {
+		t.Fatalf("missing slug in %v", created)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/public/p/"+slug, nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("public GET before delete status=%d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "old-html") {
+		t.Fatalf("public GET missing html: %s", w.Body.String())
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/publishes/%d", int64(id)), nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("delete status=%d body=%s", w.Code, w.Body.String())
+	}
+	if count() != 0 {
+		t.Fatalf("row count=%d want 0", count())
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/public/p/"+slug, nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("public GET after delete status=%d body=%s", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "old-html") {
+		t.Fatal("old HTML still served after delete")
 	}
 }

@@ -70,3 +70,22 @@ func TestTextAssistImprovePromptIncludesTitle(t *testing.T) {
 	}
 	assertNoSchoolOpsLeftover(t, p)
 }
+
+func TestTextAssistPromptsAllowMermaidFences(t *testing.T) {
+	prompts := []string{
+		textAssistGenerateNotePrompt("onboarding flow"),
+		textAssistGenerateTodoPrompt("onboarding flow"),
+		textAssistGenerateNotePrompt(""),
+		textAssistGenerateTodoPrompt(""),
+		textAssistImprovePrompt("note", "onboarding flow", "write steps"),
+		textAssistTaskChainStepPrompt("onboarding flow", ""),
+	}
+	for _, p := range prompts {
+		if strings.Contains(strings.ToLower(p), "no markdown fences") {
+			t.Errorf("still forbids mermaid fences:\n%s", p)
+		}
+		if !strings.Contains(p, "mermaid") && !strings.Contains(p, "Visual-first") {
+			t.Errorf("expected mermaid or Visual-first:\n%s", p)
+		}
+	}
+}

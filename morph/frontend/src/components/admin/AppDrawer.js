@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminBasePath } from '../../adminPaths';
 import { usePlatformUi } from '../../PlatformUiContext';
-import { isMorphAdmin } from '../../auth/isMorphAdmin';
-import { getMorphAuthSnapshot } from '../../auth/morphSession';
 import {
   Drawer,
   List,
@@ -14,7 +12,6 @@ import {
   Divider,
   Typography,
   Box,
-  Collapse,
   useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -22,36 +19,14 @@ import {
   ChevronLeft as ChevronLeftIcon,
   AssignmentTurnedIn as CaseTaskIcon,
   Timeline as TimelinesIcon,
-  Settings as SettingsIcon,
-  ExpandLess,
-  ExpandMore,
   NotesOutlined as BigNotesIcon,
   DatasetOutlined as GenericDataIcon,
+  TravelExplore as ResearchIcon,
 } from '@mui/icons-material';
 
 /** Fixed desktop width — sized for longest labels (Generic data / Settings). */
 export const DRAWER_WIDTH = 200;
 const MORPH_DATA_LOGO = `${process.env.PUBLIC_URL || ''}/icons/morph-data-icon.svg`;
-const SS_CONFIGURATION = 'morphdata.drawer.configurationOpen';
-
-function readSessionBool(key) {
-  try {
-    const v = sessionStorage.getItem(key);
-    if (v === '1') return true;
-    if (v === '0') return false;
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
-function writeSessionBool(key, value) {
-  try {
-    sessionStorage.setItem(key, value ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
-}
 
 export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
   const theme = useTheme();
@@ -66,21 +41,6 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
     window.addEventListener('morph-auth-updated', onAuth);
     return () => window.removeEventListener('morph-auth-updated', onAuth);
   }, []);
-  const adminNav = isMorphAdmin() || Boolean(getMorphAuthSnapshot()?.user?.is_admin);
-
-  const [configurationOpen, setConfigurationOpen] = useState(() => {
-    const saved = readSessionBool(SS_CONFIGURATION);
-    if (saved !== null) return saved;
-    const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    return path.startsWith(`${base}/configuration`);
-  });
-
-  useEffect(() => {
-    if (location.pathname.startsWith(`${base}/configuration`)) {
-      setConfigurationOpen(true);
-      writeSessionBool(SS_CONFIGURATION, true);
-    }
-  }, [location.pathname, base]);
 
   const isSelected = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -91,14 +51,6 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
     }
     navigate(to);
     if (isMobile && typeof onMobileClose === 'function') onMobileClose();
-  };
-
-  const toggleConfiguration = () => {
-    setConfigurationOpen((prev) => {
-      const next = !prev;
-      writeSessionBool(SS_CONFIGURATION, next);
-      return next;
-    });
   };
 
   const drawerPaperSx = {
@@ -208,6 +160,16 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemText primary="Big notes" sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
+          selected={isSelected(base + '/research')}
+          onClick={() => go(`${base}/research`)}
+          sx={navButtonSx}
+        >
+          <ListItemIcon sx={iconSx}>
+            <ResearchIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText primary="Research" sx={textPrimarySx} />
+        </ListItemButton>
+        <ListItemButton
           selected={isSelected(base + '/generic-data')}
           onClick={() => go(`${base}/generic-data`)}
           sx={navButtonSx}
@@ -217,29 +179,6 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           </ListItemIcon>
           <ListItemText primary="Generic data" sx={textPrimarySx} />
         </ListItemButton>
-        <Divider sx={{ borderColor: 'grey.700', my: 0.75 }} />
-        <ListItemButton onClick={toggleConfiguration} sx={navButtonSx}>
-          <ListItemIcon sx={iconSx}>
-            <SettingsIcon sx={{ color: 'grey.500', fontSize: 20 }} />
-          </ListItemIcon>
-          <ListItemText primary="Settings" sx={textPrimarySx} />
-          {configurationOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-        </ListItemButton>
-        <Collapse in={configurationOpen} timeout="auto">
-          <List component="div" disablePadding>
-            {adminNav && (
-              <>
-                <ListItemButton
-                  selected={isSelected(base + '/configuration/users')}
-                  onClick={() => go(`${base}/configuration/users`)}
-                  sx={{ ...navButtonSx, pl: 5.5 }}
-                >
-                  <ListItemText primary="Users" sx={textPrimarySx} />
-                </ListItemButton>
-              </>
-            )}
-          </List>
-        </Collapse>
       </List>
     </>
   );

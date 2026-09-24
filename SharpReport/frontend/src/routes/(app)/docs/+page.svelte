@@ -10,6 +10,7 @@
 		uploadDoc,
 		type DocsDocument
 	} from '$lib/docs';
+	import { confirm } from '$lib/confirmDialog';
 
 	let docs = $state<DocsDocument[]>([]);
 	let loading = $state(true);
@@ -76,7 +77,7 @@
 	}
 
 	async function onDelete(doc: DocsDocument) {
-		if (!confirm(`Delete "${doc.title || doc.id}"?`)) return;
+		if (!(await confirm({ message: `Delete "${doc.title || doc.id}"?`, danger: true, confirmLabel: 'Delete' }))) return;
 		try {
 			await deleteDoc(doc.id);
 			if (selected?.id === doc.id) selected = null;

@@ -31,11 +31,12 @@ type caseTaskAILocation struct {
 
 type caseTaskAIDraft struct {
 	Title       string              `json:"title"`
+	Markdown    string              `json:"markdown"`
 	Description string              `json:"description"`
 	StartAt     string              `json:"start_at"`
 	EndAt       string              `json:"end_at"`
-	Location    *caseTaskAILocation `json:"location"`
-	Detail      map[string]any      `json:"detail"`
+	Location    *caseTaskAILocation `json:"location,omitempty"`
+	Detail      map[string]any      `json:"detail,omitempty"`
 }
 
 // CreateCaseTaskAIDraft POST /api/tran/case-tasks/ai-draft
@@ -224,18 +225,16 @@ func tabularFileToPromptText(parsed *importcol.ParsedFile) string {
 }
 
 func caseTaskAIDraftPrompt(source string) string {
-	return `You create a Morph Data case/task draft from source material.
-Respond with ONLY one JSON object (no markdown fences, no commentary) with keys:
+	return `You create a MorphNotes case/task draft from source material.
+Respond with ONLY one JSON object (no markdown fences around the JSON, no commentary) with keys:
 - "title": short task title (required, max ~80 characters)
-- "description": 1-3 sentence summary; use "" if the source has no extra prose
+- "markdown": the task document in markdown. Include a mermaid diagram or chart when the source is structure, process, comparison, or quantities. Use "" if there is nothing to write.
 - "start_at": ISO-8601 datetime if the source implies a start time, else ""
 - "end_at": ISO-8601 datetime if the source implies an end time, else ""
-- "location": null if the source has no place; otherwise {"label": string, "area": [[lat, lng], ...]}
-  Put a place name in label when named. Set area ONLY when the source contains explicit coordinates. Never invent a polygon.
-- "detail": a JSON OBJECT (required, not an array or primitive) of structured operational fields inferred from the source.
-  Use snake_case keys. Nested objects and arrays are allowed; keep nesting shallow (at most 5 levels).
-  Prefer keys such as case_summary, workflow, and tags when they fit, plus any other fields the source implies.
-  Do not invent facts that are not in the source.
+
+Do not invent facts that are not in the source. Do not include location or JSON detail objects.
+
+` + morphai.VisualFirstInstructions + `
 
 Source material:
 ` + source
@@ -262,14 +261,19 @@ func parseCaseTaskAIDraftOutput(raw string) (caseTaskAIDraft, error) {
 	if utf8.RuneCountInString(out.Title) > 255 {
 		out.Title = string([]rune(out.Title)[:255])
 	}
-	out.Description = strings.TrimSpace(optionalDraftString(obj["description"]))
+	md := strings.TrimSpace(optionalDraftString(obj["markdown"]))
+	if md == "" {
+		md = strings.TrimSpace(optionalDraftString(obj["description"]))
+	}
+	out.Markdown = md
+	out.Description = md
 	out.StartAt = strings.TrimSpace(optionalDraftString(obj["start_at"]))
 	out.EndAt = strings.TrimSpace(optionalDraftString(obj["end_at"]))
-	detail, err := parseCaseTaskAIDetail(obj["detail"])
-	if err != nil {
-		return out, err
+	if v, ok := obj["detail"]; ok && v != nil {
+		if detail, err := parseCaseTaskAIDetail(v); err == nil {
+			out.Detail = detail
+		}
 	}
-	out.Detail = detail
 	out.Location = sanitizeCaseTaskAILocation(obj["location"])
 	return out, nil
 }

@@ -84,3 +84,6 @@ SharpReport/backend/plugins/
 
 # Webwright autotest workspaces
 webwright-runs/
+
+# TypeScript incremental build info
+*.tsbuildinfo

@@ -85,6 +85,14 @@ Use query strings exactly as the admin app (e.g. list filters, user_id). Tran en
 
 const managementToolInstructions = `You are Morph AI (MorphData) in the management site. You help staff in plain language.
 
+` + morphai.VisualFirstInstructions + `
+
+Before a tool call or final answer, analyse this turn:
+- Goal: what the operator wants
+- Materials: pinned files, notes, knowledge excerpts, or none
+- Unknowns: if underspecified, state one unknown and either ask one clarifying question or proceed with an explicit assumption
+Then issue a JSON tool call or answer. Use materials already in the prompt; do not ignore them.
+
 Fast source selection:
 - ` + morphai.FastToolFirstInstructions + `
 - Platform knowledge / uploaded docs: POST /api/graph/search with body {"query":"…"} first when the question is about known Morph Knowledge Library content.
@@ -287,7 +295,7 @@ func persistManagementCachesAsync(cacheKey, userID, sessionID, prompt, reply str
 // chatWithManagementTools runs a multi-turn loop: the model may issue JSON API calls executed against the local Gin router.
 // agentInstructions is optional extra persona text from a selected Morph AI agent.
 // skillIDs optionally loads full skill bodies in addition to the enabled skills catalog.
-func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, userPrompt, agentInstructions string, skillIDs []string) (string, error) {
+func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, userPrompt, agentInstructions string, skillIDs []string) (string, []string, error) {
 	ctx := context.Background()
 	cacheKey := managementExactQueryKey(userID, agentInstructions, userPrompt)
 	hybridSkipCache := h.hybridStore != nil && h.hybridStore.IsAttached(userID, sessionID)
@@ -295,14 +303,14 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 		if cached, ok := managementExactQueryCache.Get(cacheKey); ok {
 			if reply, ok := cached.(string); ok && strings.TrimSpace(reply) != "" {
 				log.Printf("[MGMT-CHAT] exact-query cache hit user=%s session=%s", userID, sessionID)
-				return reply, nil
+				return reply, nil, nil
 			}
 		}
 	}
 
 	hist := h.toolChatHistory(userID, sessionID)
 	first := managementToolInstructions
-	if skillsBlock := h.buildEnabledSkillsContext(skillIDs); skillsBlock != "" {
+	if skillsBlock := h.agentSkillsAndLessonsContext(skillIDs); skillsBlock != "" {
 		first += "\n\n" + skillsBlock
 	}
 	if strings.TrimSpace(agentInstructions) != "" {
@@ -332,23 +340,23 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 	for round := 0; round < managementToolMaxRounds; round++ {
 		reply, err := h.aiService.ChatCompletion(ctx, messages)
 		if err != nil {
-			return "", err
+			return "", toolLog, err
 		}
 		reply = strings.TrimSpace(reply)
 		if reply == "" {
-			return "", fmt.Errorf("empty model response")
+			return "", toolLog, fmt.Errorf("empty model response")
 		}
 
 		obj, ok := morphai.ExtractJSONObject(reply)
 		if !ok {
 			persistManagementCachesAsync(cacheKey, userID, sessionID, userPrompt, reply, toolLog)
-			return reply, nil
+			return reply, toolLog, nil
 		}
 
 		call, err := parseManagementCall(obj)
 		if err != nil {
 			persistManagementCachesAsync(cacheKey, userID, sessionID, userPrompt, reply, toolLog)
-			return reply, nil
+			return reply, toolLog, nil
 		}
 
 		code, body := h.execManagementAPI(c, call.Method, call.Path, call.Query, call.Body)
@@ -361,5 +369,5 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 		messages = append(messages, ai.DashScopeMessage{Role: "user", Content: followUp})
 	}
 
-	return "", fmt.Errorf("management tool loop exceeded %d rounds", managementToolMaxRounds)
+	return "", toolLog, fmt.Errorf("management tool loop exceeded %d rounds", managementToolMaxRounds)
 }

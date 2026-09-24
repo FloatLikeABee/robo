@@ -24,8 +24,10 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { useConfirm } from '../../components/ConfirmDialog';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -65,6 +67,8 @@ export default function Timelines() {
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [previewTab, setPreviewTab] = useState(0);
+  const [draftMd, setDraftMd] = useState('');
+  const [savingMd, setSavingMd] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
@@ -86,6 +90,15 @@ export default function Timelines() {
 
   useEffect(() => {
     loadList()
+      .then((list) => {
+        setSelectedId((cur) => {
+          if (cur != null) return cur;
+          const ordered = [...list].sort((a, b) =>
+            String(b.last_updated || '').localeCompare(String(a.last_updated || ''))
+          );
+          return ordered[0]?.id ?? null;
+        });
+      })
       .catch((err) => setError(err.response?.data?.error || err.message || 'Failed to load timelines'))
       .finally(() => setLoading(false));
   }, [loadList]);
@@ -100,6 +113,7 @@ export default function Timelines() {
     try {
       const res = await tranApi.get(tranEndpoints.timeline(id));
       setSelected(res.data || null);
+      setDraftMd(res.data?.markdown_content || '');
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to load timeline');
       setSelected(null);
@@ -134,6 +148,7 @@ export default function Timelines() {
     });
     setSelected(created);
     setSelectedId(created.id);
+    setDraftMd(created.markdown_content || '');
     setPreviewTab(0);
   };
 
@@ -225,14 +240,38 @@ export default function Timelines() {
     setInfo('');
     try {
       await tranApi.delete(tranEndpoints.timeline(selectedId));
-      setSelectedId(null);
-      setSelected(null);
       setInfo('Timeline deleted.');
-      await loadList();
+      const list = await loadList();
+      const ordered = [...list].sort((a, b) =>
+        String(b.last_updated || '').localeCompare(String(a.last_updated || ''))
+      );
+      setSelectedId(ordered[0]?.id ?? null);
+      if (!ordered[0]) {
+        setSelected(null);
+        setDraftMd('');
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Delete failed');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const onSaveMarkdown = async () => {
+    if (!selectedId || savingMd) return;
+    setSavingMd(true);
+    setError('');
+    setInfo('');
+    try {
+      const res = await tranApi.patch(tranEndpoints.timeline(selectedId), { markdown_content: draftMd });
+      setSelected(res.data || null);
+      setDraftMd(res.data?.markdown_content ?? draftMd);
+      setInfo('Markdown saved.');
+      await loadList().catch(() => {});
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Save failed');
+    } finally {
+      setSavingMd(false);
     }
   };
 
@@ -395,6 +434,18 @@ export default function Timelines() {
                       </IconButton>
                     </Tooltip>
                   ) : null}
+                  <Tooltip title="Save markdown">
+                    <span>
+                      <IconButton
+                        size="small"
+                        aria-label="Save markdown"
+                        onClick={onSaveMarkdown}
+                        disabled={savingMd || draftMd === (selected.markdown_content || '')}
+                      >
+                        {savingMd ? <CircularProgress size={18} /> : <SaveOutlinedIcon fontSize="small" />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   <Tooltip title="Publish">
                     <span>
                       <IconButton size="small" onClick={onPublish} disabled={publishing}>
@@ -421,25 +472,9 @@ export default function Timelines() {
                 <Tab label="HTML" sx={{ minHeight: 40 }} />
               </Tabs>
 
-              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', p: previewTab === 0 ? 1.5 : 0 }}>
                 {previewTab === 0 ? (
-                  <Typography
-                    component="pre"
-                    className="themed-preview-scroll"
-                    sx={{
-                      m: 0,
-                      p: 2,
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'auto',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                      fontSize: 13,
-                    }}
-                  >
-                    {selected.markdown_content || ''}
-                  </Typography>
+                  <MarkdownEditor value={draftMd} onChange={setDraftMd} minRows={14} hint={false} />
                 ) : (
                   <Box
                     sx={{

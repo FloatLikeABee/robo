@@ -33,8 +33,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import ReactMarkdown from 'react-markdown';
 import api from '../services/api';
 import SystemPromptInput from '../components/SystemPromptInput';
+import { useConfirm } from '../components/ConfirmDialog';
 
 const AgentManager = ({ suppressModuleHeader = false }) => {
+  const { alert } = useConfirm();
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openRunDialog, setOpenRunDialog] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -187,7 +189,7 @@ const AgentManager = ({ suppressModuleHeader = false }) => {
       }
     } catch (error) {
       console.error('Error loading agent for editing:', error);
-      alert('Failed to load agent details. Please try again.');
+      await alert({ message: 'Failed to load agent details. Please try again.' });
     }
   };
 

@@ -1,5 +1,6 @@
 <script>
   import { mergePublishedContents } from '../lib/publishedContents.js'
+  import { confirm } from '../lib/confirmDialog.js'
 
   /** @type {{ apiBase: string, getAuthHeaders: (extra?: Record<string, string>) => Record<string, string>, notify?: (kind?: string, msg?: string) => void }} */
   let { apiBase, getAuthHeaders, notify = () => {} } = $props()
@@ -92,13 +93,30 @@
   }
 
   async function deleteDraft(id) {
-    if (!confirm('Delete this saved HTML draft?')) return
+    if (!(await confirm({ message: 'Delete this saved HTML draft?', danger: true, confirmLabel: 'Delete' }))) return
     try {
       await apiDelete(`/publish-drafts/${id}`)
       notify('info', 'Draft deleted.')
       await loadDrafts()
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Failed to delete draft')
+    }
+  }
+
+  async function removePublished(row) {
+    const msg = row.draftId
+      ? 'Remove this published page and its saved draft? The public page will no longer be available.'
+      : 'Remove this published page? The public page will no longer be available.'
+    if (!(await confirm({ message: msg, danger: true, confirmLabel: 'Remove' }))) return
+    try {
+      await apiDelete(`/publishes/${row.publishedId}`)
+      if (row.draftId) {
+        await apiDelete(`/publish-drafts/${row.draftId}`)
+      }
+      notify('info', 'Published page removed.')
+      await refreshAll()
+    } catch (err) {
+      notify('error', err instanceof Error ? err.message : 'Failed to remove published page')
     }
   }
 
@@ -144,7 +162,9 @@
                     {#if row.canView}
                       <button type="button" class="btn-ghost" onclick={() => openDraftDetail(row.draftId)}>View</button>
                     {/if}
-                    {#if row.canDelete}
+                    {#if row.canDelete && row.publishedId}
+                      <button type="button" class="btn-ghost btn-danger-lite" onclick={() => removePublished(row)}>Remove</button>
+                    {:else if row.canDelete}
                       <button type="button" class="btn-ghost btn-danger-lite" onclick={() => deleteDraft(row.draftId)}>Delete</button>
                     {/if}
                     {#if row.canOpen}

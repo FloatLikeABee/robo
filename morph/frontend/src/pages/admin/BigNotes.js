@@ -35,9 +35,11 @@ import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AnalyticsOutlinedIcon from '@mui/icons-material/AnalyticsOutlined';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { usePlatformUi } from '../../PlatformUiContext';
 import { useConfirm } from '../../components/ConfirmDialog';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 
 function publicNoteHref(note) {
@@ -84,6 +86,8 @@ export default function BigNotes() {
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [previewTab, setPreviewTab] = useState(0);
+  const [draftMd, setDraftMd] = useState('');
+  const [savingMd, setSavingMd] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [idea, setIdea] = useState('');
@@ -114,6 +118,15 @@ export default function BigNotes() {
 
   useEffect(() => {
     loadList()
+      .then((list) => {
+        setSelectedId((cur) => {
+          if (cur != null) return cur;
+          const ordered = [...list].sort((a, b) =>
+            String(b.last_updated || '').localeCompare(String(a.last_updated || ''))
+          );
+          return ordered[0]?.id ?? null;
+        });
+      })
       .catch((err) => setError(err.response?.data?.error || err.message || 'Failed to load notes'))
       .finally(() => setLoading(false));
   }, [loadList]);
@@ -145,6 +158,7 @@ export default function BigNotes() {
         const res = await tranApi.get(tranEndpoints.bigNote(id));
         const note = res.data || null;
         setSelected(note);
+        setDraftMd(note?.markdown_content || '');
         const qs = parseQuestions(note?.questions);
         const next = {};
         qs.forEach((q) => {
@@ -185,6 +199,7 @@ export default function BigNotes() {
     });
     setSelected(created);
     setSelectedId(created.id);
+    setDraftMd(created.markdown_content || '');
     setPreviewTab(0);
   };
 
@@ -232,6 +247,7 @@ export default function BigNotes() {
       });
       const updated = res.data || null;
       setSelected(updated);
+      setDraftMd(updated?.markdown_content || '');
       setRegenPrompt('');
       setInfo('Note regenerated.');
       if (updated?.id != null) {
@@ -277,14 +293,51 @@ export default function BigNotes() {
     setInfo('');
     try {
       await tranApi.delete(tranEndpoints.bigNote(selectedId));
-      setSelectedId(null);
-      setSelected(null);
       setInfo('Note deleted.');
-      await loadList();
+      const list = await loadList();
+      const ordered = [...list].sort((a, b) =>
+        String(b.last_updated || '').localeCompare(String(a.last_updated || ''))
+      );
+      setSelectedId(ordered[0]?.id ?? null);
+      if (!ordered[0]) {
+        setSelected(null);
+        setDraftMd('');
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Delete failed');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const onSaveMarkdown = async () => {
+    if (!selectedId || savingMd) return;
+    setSavingMd(true);
+    setError('');
+    setInfo('');
+    try {
+      const res = await tranApi.patch(tranEndpoints.bigNote(selectedId), { markdown_content: draftMd });
+      setSelected(res.data || null);
+      setDraftMd(res.data?.markdown_content ?? draftMd);
+      setInfo('Markdown saved.');
+      await loadList().catch(() => {});
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Save failed');
+    } finally {
+      setSavingMd(false);
+    }
+  };
+
+  const onSaveAnalysis = async (responseId, markdown) => {
+    try {
+      await tranApi.patch(`${tranEndpoints.bigNote(selectedId)}/responses/${responseId}`, {
+        analysis_markdown: markdown,
+      });
+      setResponses((prev) =>
+        prev.map((r) => (r.id === responseId ? { ...r, analysis_markdown: markdown } : r))
+      );
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to save analysis');
     }
   };
 
@@ -491,6 +544,14 @@ export default function BigNotes() {
                   ) : null}
                   <Button
                     size="small"
+                    startIcon={savingMd ? <CircularProgress size={14} /> : <SaveOutlinedIcon />}
+                    onClick={onSaveMarkdown}
+                    disabled={savingMd || draftMd === (selected.markdown_content || '')}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="small"
                     startIcon={<PublishOutlinedIcon />}
                     onClick={onPublish}
                     disabled={publishing}
@@ -535,22 +596,8 @@ export default function BigNotes() {
                   )
                 ) : null}
                 {previewTab === 1 ? (
-                  <Box
-                    component="pre"
-                    className="themed-preview-scroll"
-                    sx={{
-                      m: 0,
-                      p: 2,
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: 'auto',
-                      bgcolor: 'action.hover',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      fontSize: 13,
-                    }}
-                  >
-                    {selected.markdown_content || '(empty)'}
+                  <Box sx={{ flex: 1, minHeight: 0, p: 1.5, display: 'flex', flexDirection: 'column' }}>
+                    <MarkdownEditor value={draftMd} onChange={setDraftMd} minRows={14} hint={false} />
                   </Box>
                 ) : null}
                 {previewTab === 2 ? (
@@ -674,18 +721,8 @@ export default function BigNotes() {
                       </Button>
                     </Stack>
                     {allAnalysis ? (
-                      <Box
-                        component="pre"
-                        sx={{
-                          m: 0,
-                          p: 1.5,
-                          borderRadius: 1,
-                          bgcolor: 'action.hover',
-                          whiteSpace: 'pre-wrap',
-                          fontSize: 13,
-                        }}
-                      >
-                        {allAnalysis}
+                      <Box sx={{ minHeight: 160 }}>
+                        <MarkdownEditor value={allAnalysis} minRows={6} hint={false} />
                       </Box>
                     ) : null}
                     {responses.map((r) => (
@@ -710,19 +747,26 @@ export default function BigNotes() {
                           {JSON.stringify(r.answers || r.answers_json, null, 2)}
                         </Box>
                         {r.analysis_markdown ? (
-                          <Box
-                            component="pre"
-                            sx={{
-                              m: 0,
-                              mt: 1,
-                              p: 1,
-                              borderRadius: 1,
-                              bgcolor: 'action.hover',
-                              whiteSpace: 'pre-wrap',
-                              fontSize: 13,
-                            }}
-                          >
-                            {r.analysis_markdown}
+                          <Box sx={{ mt: 1, minHeight: 140 }}>
+                            <MarkdownEditor
+                              value={r.analysis_markdown}
+                              onChange={(next) =>
+                                setResponses((prev) =>
+                                  prev.map((row) =>
+                                    row.id === r.id ? { ...row, analysis_markdown: next } : row
+                                  )
+                                )
+                              }
+                              minRows={5}
+                              hint={false}
+                            />
+                            <Button
+                              size="small"
+                              sx={{ mt: 0.5, textTransform: 'none' }}
+                              onClick={() => onSaveAnalysis(r.id, r.analysis_markdown)}
+                            >
+                              Save analysis
+                            </Button>
                           </Box>
                         ) : null}
                       </Box>

@@ -15,7 +15,7 @@
 #   ./start-all.sh logs <service>          tail -f log file
 #   ./start-all.sh list                    list service names + aliases
 #
-# Aliases (API + UI): morph, morph-utils, bk, formx, composerx,
+# Aliases (API + UI): morph, morph-utils (shell + Data Access), bk, formx, composerx,
 #   morph-engi, sharpreport — or `all` for every service below.
 # Neo4j: full-stack start/restart ensures bolt port 7687 is up when `neo4j` CLI exists.
 # Auth: hosted by Morph (the standalone UsersPanel project has been removed).
@@ -37,6 +37,7 @@ ALL_SERVICES=(
   sharpreport-api
   morph-ui
   morph-utils-ui
+  invite-signup-ui
   bk-ui
   formx-ui
   composerx-ui
@@ -326,6 +327,9 @@ start_one() {
     morph-utils-ui)
       start_service morph-utils-ui "${ROOT}/morph-utils/frontend" npm run dev
       ;;
+    invite-signup-ui)
+      start_service invite-signup-ui "${ROOT}/invite-signup/frontend" npm run dev
+      ;;
     bk-ui)
       start_service bk-ui "${ROOT}/bk/frontend" npm start
       ;;
@@ -364,7 +368,7 @@ resolve_services() {
       echo "morph-api morph-ui"
       ;;
     morph-utils|utils)
-      echo "morph-utils-ui"
+      echo "morph-utils-ui sharpreport-api sharpreport-ui"
       ;;
     bk|ground-control)
       echo "bk-api bk-ui"
@@ -440,6 +444,7 @@ service_url() {
     morph-api)          echo "http://localhost:9090" ;;
     morph-ui)           echo "http://localhost:3031" ;;
     morph-utils-ui)     echo "http://localhost:3040" ;;
+    invite-signup-ui)   echo "http://localhost:3051" ;;
     bk-api)             echo "http://localhost:8000/docs" ;;
     bk-ui)              echo "http://localhost:3000" ;;
     formx-api)          echo "http://localhost:29909/swagger/index.html" ;;
@@ -479,6 +484,7 @@ Services (use with start | stop | restart | logs):
   morph-api            Morph / MorphData backend
   morph-ui             Morph React frontend
   morph-utils-ui       MorphUtils shell (Event Logs, Content Maker, Data Access, Project)
+  invite-signup-ui     Invite Signup (admin codes + user redeem)
   bk-api               AI tools API
   bk-ui                AI tools UI
   formx-api            Event Logs backend
@@ -492,7 +498,7 @@ Services (use with start | stop | restart | logs):
 
 Aliases (API + UI together):
 
-  morph, morph-utils, bk, formx, composerx, morph-engi, sharpreport
+  morph, morph-utils (shell + Data Access API/UI), bk, formx, composerx, morph-engi, sharpreport
   all                  every service above (same as start/stop/restart with no args)
 
 Examples:
@@ -511,6 +517,7 @@ do_install() {
   log "Installing dependencies..."
   (cd "${ROOT}/morph/frontend" && npm install)
   (cd "${ROOT}/morph-utils/frontend" && npm install)
+  (cd "${ROOT}/invite-signup/frontend" && npm install)
   (cd "${ROOT}/bk/frontend" && npm install)
   ensure_bk_venv || warn "bk-api Python deps not installed — run: python3 -m venv bk/.venv && bk/.venv/bin/pip install -r bk/requirements.txt"
   (cd "${ROOT}/morph" && go mod download)

@@ -56,3 +56,54 @@ func TestScanBigNoteAcceptsSQLiteTextTimestamps(t *testing.T) {
 		t.Fatalf("last_updated not parsed: %v", got.LastUpdated)
 	}
 }
+
+func TestPersistBigNoteMarkdownRegeneratesHTML(t *testing.T) {
+	db, err := sql.Open("sqlite", "file:bignote-md-patch?mode=memory&cache=shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	_, err = db.Exec(`CREATE TABLE big_note (
+		id INTEGER PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		owner_key TEXT NOT NULL,
+		title TEXT NOT NULL,
+		idea TEXT NOT NULL,
+		note_kind TEXT NOT NULL,
+		markdown_content TEXT NOT NULL,
+		html_content TEXT NOT NULL,
+		questions_json TEXT NULL,
+		theme TEXT NOT NULL,
+		published_slug TEXT NULL,
+		published_path TEXT NULL,
+		created_on TEXT,
+		last_updated TEXT
+	)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`INSERT INTO big_note (
+		id, user_id, owner_key, title, idea, note_kind, markdown_content, html_content,
+		questions_json, theme, created_on, last_updated
+	) VALUES (1, 1, 'o', 'Note', 'idea', 'note', 'old', 'old-html', NULL, 'dark', '2026-01-01 00:00:00', '2026-01-01 00:00:00')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := bigNote{ID: 1, Title: "Note", NoteKind: "note", Theme: "dark", MarkdownContent: "old"}
+	if err := persistBigNoteMarkdown(db, &n, "## Hello **world**"); err != nil {
+		t.Fatal(err)
+	}
+	if n.MarkdownContent != "## Hello **world**" {
+		t.Fatalf("note markdown: %q", n.MarkdownContent)
+	}
+	if n.HTMLContent == "old-html" || n.HTMLContent == "" {
+		t.Fatal("expected regenerated html")
+	}
+	var md, html string
+	if err := db.QueryRow(`SELECT markdown_content, html_content FROM big_note WHERE id = 1`).Scan(&md, &html); err != nil {
+		t.Fatal(err)
+	}
+	if md != "## Hello **world**" || html != n.HTMLContent {
+		t.Fatalf("db mismatch md=%q", md)
+	}
+}

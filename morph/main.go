@@ -76,6 +76,8 @@ func main() {
 
 	if err := tranSQL.EnsurePlatUsersTable(context.Background()); err != nil {
 		log.Printf("Warning: plat_users schema: %v", err)
+	} else if err := tranSQL.EnsurePlatInviteCodesTable(context.Background()); err != nil {
+		log.Printf("Warning: plat_invite_codes schema: %v", err)
 	} else if err := tranSQL.EnsureBootstrapAdmin(context.Background(), cfg.AdminEmail, cfg.AdminUsername, cfg.AdminPassword); err != nil {
 		log.Printf("Warning: bootstrap admin: %v", err)
 	} else {
@@ -91,6 +93,7 @@ func main() {
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
 	h.StartNeo4jIngestWorker(workerCtx)
+	h.StartResearchResume(workerCtx)
 
 	// Setup Gin router
 	r := gin.Default()

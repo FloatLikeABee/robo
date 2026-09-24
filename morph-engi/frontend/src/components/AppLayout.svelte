@@ -1,20 +1,14 @@
 <script lang="ts">
   import type { PageId } from '../lib/nav'
   import { NAV } from '../lib/nav'
-  import PlatformAssistantDrawer from './PlatformAssistantDrawer.svelte'
-  import type { AssistantState } from '@robo/platform-chat/usePlatformChat'
 
   let {
     page = $bindable('projects' as PageId),
-    getStateExtra,
     children,
   } = $props<{
     page?: PageId
-    getStateExtra?: () => AssistantState
     children?: import('svelte').Snippet
   }>()
-
-  let assistantOpen = $state(false)
 
   const pageLabel = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
   const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
@@ -28,11 +22,6 @@
         <div class="min-w-0">
           <div class="font-semibold leading-tight">Project</div>
         </div>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <button type="button" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-violet/30 hover:bg-violet/40" onclick={() => (assistantOpen = true)}>
-          AI Assistant
-        </button>
       </div>
     </div>
 
@@ -65,8 +54,6 @@
       </div>
     </footer>
   </div>
-
-  <PlatformAssistantDrawer bind:open={assistantOpen} {getStateExtra} />
 </div>
 
 <style>

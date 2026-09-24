@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { analysisDownloadFilename, renderAnalysisMarkdown } from '$lib/analysisMarkdown';
+	import { runMermaidIn } from '$lib/runMermaidIn';
 	import { requestTableAiAnalysis } from '$lib/dataTables';
 	import { Download, Loader2, X } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	let {
 		tableId,
@@ -19,6 +20,7 @@
 	let error = $state('');
 	let markdown = $state('');
 	let rendered = $state('');
+	let analysisEl = $state<HTMLElement | undefined>();
 	let abort: AbortController | null = null;
 
 	const downloadName = $derived(analysisDownloadFilename(tableName));
@@ -36,6 +38,11 @@
 		return () => {
 			cancelled = true;
 		};
+	});
+
+	$effect(() => {
+		rendered;
+		void tick().then(() => runMermaidIn(analysisEl ?? null));
 	});
 
 	function onBackdropClick(event: MouseEvent) {
@@ -142,7 +149,7 @@
 		{:else if error}
 			<p class="text-sm text-error">{error}</p>
 		{:else}
-			<div class="analysis-markdown text-sm text-text-primary">
+			<div class="analysis-markdown text-sm text-text-primary" bind:this={analysisEl}>
 				{@html rendered}
 			</div>
 		{/if}

@@ -2,16 +2,34 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-09-22 — Morph AI has no Files workspace
+
+- Trigger: Morph AI agent shell Files tab, Open folder, recents, local-folder pins, composer Files chip, IndexedDB `morphai-files-workspace`
+- Rule: Morph AI has no Files workspace. Context & Knowledge is the file/knowledge surface (HybridContext + Knowledge Library). Notes & TODOs stay. Do not restore a folder picker, recents, or pin-from-folder.
+- Source: [morphai-drop-files-workspace](current)
+
+## 2026-09-10 — Chat enlarge modal must fill the viewport
+
+- Trigger: mermaid, pixel art, or images opening in the Morph AI / Event Logs / Content Maker enlarge overlay
+- Rule: The overlay is a near-full viewport stage. Clone mermaid SVG without its bubble `width`/`height` so it scales to fit (`viewBox` + contain). Do not keep `width: auto` on the intrinsic pixel size — that leaves diagrams tiny.
+- Source: [chat-visual-enlarge-modal](current)
+
+## 2026-09-05 — MorphUtils Data Access down hint
+
+- Trigger: MorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
+- Rule: MorphUtils probes `VITE_DATAX_URL` (`no-cors` fetch). If down, show an in-shell hint (`./start-all.sh start sharpreport-ui`; `start morph-utils` also starts Data Access API+UI) and do not mount the iframe. Refused still means `sharpreport-ui` is down — keep Vite `server.host: true`. API on `SHARPREPORT_PORT` can be up while 5178 is dead.
+- Source: [fix-morphutils-project-data-access](current)
+
 ## 2026-09-02 — Morph AI webpack missing workspace modules
 
-- Trigger: CRA `Can't resolve` `AiToolsWorkspaceDrawer`, `agentContext`, `filesWorkspaceStore`, `AgentWorkspace`, `appliedAssistantChannel`, `ExtractJsonFromTextDialog`
-- Rule: Those modules must exist as tracked `.js` files under `morph/frontend/src/` matching the extensionless imports in `SkoolAiChat.js` / `AdminDataGrid.js`. Do not leave them untracked `.jsx` — `git stash -u` / reset drops them and webpack breaks. Compile Morph AI after git sync.
+- Trigger: CRA `Can't resolve` `AiToolsWorkspaceDrawer`, `agentContext`, `AgentWorkspace`, `appliedAssistantChannel`, `ExtractJsonFromTextDialog`
+- Rule: Those modules must exist as tracked `.js` files under `morph/frontend/src/` matching the extensionless imports in `SkoolAiChat.js` / `AdminDataGrid.js`. Do not leave them untracked `.jsx`. There is no `filesWorkspaceStore` / `AgentFilesTab` — do not restore them. Compile Morph AI after git sync.
 - Source: [webpack missing modules](current)
 
 ## 2026-08-31 — MorphUtils /datax connection refused
 
 - Trigger: MorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
-- Rule: The shell is MorphUtils; Data Access is the iframe at `VITE_DATAX_URL` (`localhost:5178`). Refused means `sharpreport-ui` is down or bound IPv6-only — start it (`./start-all.sh start sharpreport-ui`) and keep Vite `server.host: true`. Do not treat it as a MorphUtils route bug. API on `SHARPREPORT_PORT` (e.g. 3888) can be up while 5178 is dead.
+- Rule: See 2026-09-05 MorphUtils Data Access down hint (probe + start `sharpreport-ui`). Do not treat a down UI as a MorphUtils path/router bug.
 - Source: [datax refused](current)
 
 ## 2026-08-30 — Dark only, no theme switch
@@ -38,10 +56,16 @@ Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update 
 - Rule: Reuse the Morph AI JWT (`userspanel_session_token` / `userspanel_token`). Do not show a second credential form. Do not clear the shared cookie when Data Access `/auth/me` is down or returns 502 — only a real 401 invalidates the session.
 - Source: [Data Access Morph SSO](current)
 
+## 2026-09-19 — Event Logs has no Info Sheets tab
+
+- Trigger: Event Logs header tabs, MorphUtils Event Logs description, `/survey-bot`
+- Rule: Event Logs is Events & Info only. Do not restore an Info Sheets / AI Surveys tab. Old `/survey-bot` paths redirect to `/events-info`.
+- Source: [drop-info-sheets-graphs-skill-task-create](current)
+
 ## 2026-08-27 — Morph Utils Event Logs / Info Sheets
 
 - Trigger: sidebar, title bars, browser titles, landing Utils list in Morph Utils and SheetX
-- Rule: Module is Event Logs (not Survey Maker / SurveyX / SurveysX). Inner tabs: Events & Info then Info Sheets (not AI Surveys). Embed and default route `/events-info`. Keep ids `sheetx` and `/survey-bot`.
+- Rule: Module is Event Logs (not Survey Maker / SurveyX / SurveysX). Embed and default route `/events-info`. Keep id `sheetx`. Info Sheets tab is removed (see 2026-09-19).
 - Source: [morphutils-event-logs-info-sheets](b61bf1f4-55f9-46bb-9ee0-3f82db385107)
 
 ## 2026-08-17 — Verify Morph UI before claiming done

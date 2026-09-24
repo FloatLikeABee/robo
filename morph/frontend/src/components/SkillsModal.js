@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../apiBase';
 import { getMorphToken } from '../auth/morphSession';
+import { useConfirm } from './ConfirmDialog';
 
 async function skillsFetch(path, opts = {}) {
   const token = getMorphToken();
@@ -44,7 +45,9 @@ export function parseSkillMarkdown(text, filename = '') {
 
 /** Skills catalog body — used inside the modal and the /skills fallback page. */
 export function SkillsPanel({ onClose, embedded = false }) {
+  const { confirm } = useConfirm();
   const [skills, setSkills] = useState([]);
+  const [lessons, setLessons] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -59,6 +62,7 @@ export function SkillsPanel({ onClose, embedded = false }) {
     try {
       const data = await skillsFetch('/api/skills');
       setSkills(Array.isArray(data.skills) ? data.skills : Array.isArray(data) ? data : []);
+      setLessons(Array.isArray(data.lessons) ? data.lessons : []);
     } catch (e) {
       setError(e.message || 'Failed to load skills');
     } finally {
@@ -151,7 +155,7 @@ export function SkillsPanel({ onClose, embedded = false }) {
   }
 
   async function removeSkill(skill) {
-    if (!window.confirm(`Delete skill “${skill.name}”?`)) return;
+    if (!(await confirm({ message: `Delete skill “${skill.name}”?`, danger: true, confirmLabel: 'Delete' }))) return;
     try {
       await skillsFetch(`/api/skills/${encodeURIComponent(skill.id)}`, { method: 'DELETE' });
       await load();
@@ -251,6 +255,21 @@ export function SkillsPanel({ onClose, embedded = false }) {
             ))}
           </ul>
         )}
+        {lessons.length > 0 ? (
+          <>
+            <h3 className="skills-panel-catalog-title">Learned from sessions</h3>
+            <ul className="skills-panel-list">
+              {lessons.map((l) => (
+                <li key={l.id} className="skills-panel-item">
+                  <div className="skills-panel-item-main">
+                    <strong>{l.trigger}</strong>
+                    {l.rule ? <p className="skills-panel-item-desc">{l.rule}</p> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </section>
     </div>
   );

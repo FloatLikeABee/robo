@@ -168,3 +168,36 @@ export async function ensureSharedSession(): Promise<{ ok: boolean; reason: stri
     return { ok: true, reason: '' };
   }
 }
+
+export type AuthUser = { id?: string; email?: string; username?: string; is_admin?: boolean };
+
+export async function fetchAuthMe(): Promise<AuthUser> {
+  const token = getSharedToken();
+  if (!token) throw new Error('Not signed in');
+  const res = await fetch(morphAuthUrl('/api/auth/me'), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to load profile');
+  return (data.user || {}) as AuthUser;
+}
+
+export async function patchAuthMe(body: {
+  username?: string;
+  password?: string;
+  current_password?: string;
+}): Promise<AuthUser> {
+  const token = getSharedToken();
+  if (!token) throw new Error('Not signed in');
+  const res = await fetch(morphAuthUrl('/api/auth/me'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Update failed');
+  return (data.user || {}) as AuthUser;
+}

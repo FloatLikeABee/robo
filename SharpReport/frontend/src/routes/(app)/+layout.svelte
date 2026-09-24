@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import Sidebar from '$lib/components/ui/sidebar/Sidebar.svelte';
 	import UserMenu from '$lib/components/ui/user-menu/UserMenu.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -50,3 +51,5 @@
 		{@render children()}
 	</main>
 </div>
+
+<ConfirmDialog />

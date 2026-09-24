@@ -16,18 +16,28 @@ export type ConfirmOptions = {
   danger?: boolean;
 };
 
+type ConfirmContextValue = {
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  alert: (options: ConfirmOptions | string) => Promise<void>;
+};
+
+type PendingAlert = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  resolve: () => void;
+};
+
 type PendingConfirm = ConfirmOptions & {
   resolve: (value: boolean) => void;
 };
 
-type ConfirmContextValue = {
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-};
+type Pending = PendingConfirm | (PendingAlert & { alert: true });
 
 const ConfirmContext = createContext<ConfirmContextValue | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
-  const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
@@ -35,9 +45,27 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const alert = useCallback((options: ConfirmOptions | string) => {
+    const opts = typeof options === 'string' ? { message: options } : options;
+    return new Promise<void>((resolve) => {
+      setPending({
+        title: opts.title ?? 'Notice',
+        message: opts.message ?? '',
+        confirmLabel: opts.confirmLabel ?? 'OK',
+        alert: true,
+        resolve,
+      });
+    });
+  }, []);
+
   const finish = useCallback((result: boolean) => {
     setPending((p) => {
-      if (p) p.resolve(result);
+      if (!p) return null;
+      if ('alert' in p && p.alert) {
+        p.resolve();
+      } else {
+        (p as PendingConfirm).resolve(result);
+      }
       return null;
     });
   }, []);
@@ -54,11 +82,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const title = pending?.title ?? 'Confirm';
   const message = pending?.message ?? '';
   const confirmLabel = pending?.confirmLabel ?? 'OK';
-  const cancelLabel = pending?.cancelLabel ?? 'Cancel';
-  const danger = pending?.danger ?? false;
+  const cancelLabel = pending && !('alert' in pending && pending.alert) ? (pending.cancelLabel ?? 'Cancel') : null;
+  const danger = pending && !('alert' in pending && pending.alert) ? (pending.danger ?? false) : false;
+  const isAlert = Boolean(pending && 'alert' in pending && pending.alert);
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={{ confirm, alert }}>
       {children}
       {pending && (
         <div
@@ -79,17 +108,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 {title}
               </h2>
             </div>
-            <p id="confirm-dialog-desc" className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+            <p id="confirm-dialog-desc" className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
               {message}
             </p>
             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => finish(false)}
-                className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm hover:bg-slate-300 dark:hover:bg-slate-600"
-              >
-                {cancelLabel}
-              </button>
+              {cancelLabel ? (
+                <button
+                  type="button"
+                  onClick={() => finish(false)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm hover:bg-slate-300 dark:hover:bg-slate-600"
+                >
+                  {cancelLabel}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => finish(true)}

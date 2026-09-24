@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import VisualMarkdown from './VisualMarkdown';
 
 type MarkdownDetailEditorProps = {
   value: string;
@@ -61,7 +60,7 @@ export function MarkdownDetailEditor({
       ) : (
         <div className={`${previewClass} min-h-[6rem] overflow-auto`}>
           {value.trim() ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+            <VisualMarkdown text={value} />
           ) : (
             <span className={isPublic ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}>Nothing to preview yet.</span>
           )}
@@ -77,7 +76,7 @@ export function MarkdownDetailView({ value, className = '' }: { value: string; c
   }
   return (
     <div className={`prose dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-2 prose-a:text-violet-600 dark:prose-a:text-violet-300 ${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+      <VisualMarkdown text={value} />
     </div>
   );
 }

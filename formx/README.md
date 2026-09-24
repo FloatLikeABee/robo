@@ -1,6 +1,6 @@
 # Event Logs (`formx/`)
 
-User-facing product: **Event Logs**. Repository folder remains `formx`; MorphUtils embed id remains `sheetx`. Events & Info plus Info Sheets. Default embed route: `/events-info`.
+User-facing product: **Event Logs**. Repository folder remains `formx`; MorphUtils embed id remains `sheetx`. Events & Info only. Default embed route: `/events-info`. `/survey-bot` redirects there.
 
 Forms/questions live in embedded SQLite; responses and document collections live in Badger. Go packages may still be named `mysql` / `mongo` — they open SQLite and Badger. No MySQL or MongoDB server is required.
 

@@ -29,6 +29,7 @@ import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { runTextAssistProgress } from '../../lib/aiProgress';
 import AiProgressStatus from '../common/AiProgressStatus';
 import { useConfirm } from '../ConfirmDialog';
+import MarkdownEditor from '../admin/MarkdownEditor';
 
 export const MORPH_NOTES_TODOS_CHANGED = 'morph-notes-todos-changed';
 
@@ -700,32 +701,7 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
                   />
                 )}
                 <Box sx={{ flex: '1 1 0%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Content"
-                    multiline
-                    value={draftBody}
-                    onChange={(e) => setDraftBody(e.target.value)}
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      '& .MuiOutlinedInput-root': {
-                        height: '100%',
-                        alignItems: 'flex-start',
-                        py: 1,
-                        boxSizing: 'border-box',
-                      },
-                      '& textarea': {
-                        minHeight: '88px !important',
-                        height: '100% !important',
-                        maxHeight: '100%',
-                        overflow: 'auto !important',
-                        resize: 'none',
-                        boxSizing: 'border-box',
-                      },
-                    }}
-                  />
+                  <MarkdownEditor value={draftBody} onChange={setDraftBody} minRows={6} hint={false} />
                 </Box>
                 {composerType === 'todos' && (
                   <FormControlLabel
@@ -772,32 +748,7 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
                   />
                 )}
                 <Box sx={{ flex: '1 1 0%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Content"
-                    multiline
-                    value={draftBody}
-                    onChange={(e) => setDraftBody(e.target.value)}
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      '& .MuiOutlinedInput-root': {
-                        height: '100%',
-                        alignItems: 'flex-start',
-                        py: 1,
-                        boxSizing: 'border-box',
-                      },
-                      '& textarea': {
-                        minHeight: '88px !important',
-                        height: '100% !important',
-                        maxHeight: '100%',
-                        overflow: 'auto !important',
-                        resize: 'none',
-                        boxSizing: 'border-box',
-                      },
-                    }}
-                  />
+                  <MarkdownEditor value={draftBody} onChange={setDraftBody} minRows={8} hint={false} />
                 </Box>
                 {selected.item_type === 'todo' && (
                   <FormControlLabel
