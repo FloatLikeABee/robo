@@ -1,5 +1,7 @@
 ## Why
 
+**Superseded.** `remove-bk-tcp-mcp` removes the unfinished BK TCP MCP instead of finishing this registry. Do not implement this change.
+
 Refactor Ground Control's tool system so that built-in tools, custom tools, and external MCP host tools share a single registry. Unify tool discovery and invocation for both the internal agent runtime and external MCP clients.
 
 ## What Changes

@@ -15,7 +15,7 @@ This change is **planning-only**. Implementation will be split into smaller foll
 1. **Spec the target state** — baseline `assistant-module` spec defines the unified Assistant module and tool-less architecture.
 2. **Phase 1: Remove tool system**
    - Delete `src/tools.py` and `src/tool_registry.py`
-   - Remove `ToolManager` dependency from `agent_manager`, `mcp_service`, `gathering_service`, `scholar_forge_service`, `api.py`
+   - Remove `ToolManager` dependency from `agent_manager`, `gathering_service`, `scholar_forge_service`, `api.py`
    - Convert tool-enabled agents to direct LLM calls
    - Update MCP `tools/list` and `tools/call` to return/call only external host tools
 3. **Phase 2: Introduce Assistant module**
