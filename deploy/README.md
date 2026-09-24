@@ -24,7 +24,9 @@ docker compose -f deploy/docker-compose.yml up --build
 
 `deploy/.env.production` is gitignored. Compose loads it with `env_file`. It is not the compose interpolation file (that would be `deploy/.env`).
 
-The process listens on port 9090 inside the container. The host port is `MORPH_PUBLISH_PORT` (default 9090). Leave `PORT` unset so the image default stays 9090.
+The process listens on port 9090 inside the container. The container `PORT` must stay 9090. Leave it unset so the image default is used. The healthcheck follows `PORT`, and compose always maps the host port (`MORPH_PUBLISH_PORT`, default 9090) to container port 9090.
+
+The `tls` profile still publishes 9090 on the host as well as 80 and 443. Bind that host port to `127.0.0.1`, or firewall it. Issue #53 will finalize TLS and that publish.
 
 `GET /health` is the container healthcheck. `GET /` is the Morph AI UI. The API and the UI are the same origin.
 

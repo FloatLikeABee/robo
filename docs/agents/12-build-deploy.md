@@ -56,7 +56,7 @@ Start **Morph API** first when bringing apps up one by one (auth hub).
 
 - Local: one gitignored `.env` at the **repo root**
 - Nested leftover `.env` files are ignored
-- Production path remains `deploy/.env.production` **when that tree exists** (it is currently absent)
+- Hosted Morph: copy `deploy/.env.production.example` to gitignored `deploy/.env.production`. Runbook: [`deploy/README.md`](../../deploy/README.md).
 
 ## Per-app build (without the launcher)
 
