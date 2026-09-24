@@ -16,4 +16,4 @@
 
 ## 4. Integration check
 
-- [ ] 4.1 From `bk/`, run the existing pytest suite and confirm it passes, import the API app, and confirm a search of the repo finds no `mcp_service`, `mcp_host_manager`, `/mcp/start`, `/mcp/hosts`, or `MCPHosts` except this change's own specs and the archived refactor note. Run `npm run build` in `bk/frontend` and confirm exit 0.
+- [x] 4.1 From `bk/`, run the existing pytest suite and confirm it passes, import the API app, and confirm a search of the repo finds no `mcp_service`, `mcp_host_manager`, `/mcp/start`, `/mcp/hosts`, or `MCPHosts` except this change's own specs and the archived refactor note. Run `npm run build` in `bk/frontend` and confirm exit 0.

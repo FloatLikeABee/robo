@@ -40,4 +40,4 @@ Typical local keys (see `.env.example`): `API_PORT=8000`, Chroma persist directo
 
 Platform chat stays in Morph AI (`:3031`). This app is the RAG/assistants workbench, not a second MorphUtils module.
 
-AI tools does not speak the Model Context Protocol and does not listen on port 8196. The platform MCP server is `morph/cmd/morph-mcp`.
+AI tools does not speak the Model Context Protocol and does not listen on port 8196. The platform MCP server is [`morph/cmd/morph-mcp`](../docs/agents/14-morph-mcp.md).
