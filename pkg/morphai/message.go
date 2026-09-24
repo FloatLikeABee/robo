@@ -1,9 +1,14 @@
 package morphai
 
-// Message is a chat turn for DashScope text-generation.
+// Message is one chat turn. Content is plain text. ToolCalls, ToolCallID, and
+// Name carry function-calling state; each provider adapter translates them
+// into that provider's wire format.
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content"`
+	Name       string     `json:"name,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 }
 
 // Content part types for multimodal (vision) messages.

@@ -13,7 +13,13 @@ const (
 )
 
 // Config holds shared MorphAI model settings used across satellite apps.
+//
+// Leave Provider empty for the legacy single-endpoint path (today's callers).
+// Set Provider, and optionally Model, APIKey, and BaseURL, to select a named
+// provider. A later settings store can persist this struct per user or admin
+// and pass it to NewClient or CompletionRequest without another code change.
 type Config struct {
+	Provider     ProviderID // empty = legacy DashScope / MORPH_AI_* behavior
 	APIKey       string
 	Model        string
 	VisionModel  string // multimodal model for image reading
@@ -29,8 +35,13 @@ type Config struct {
 //   - MORPH_AI_MODEL (default qwen3-max)
 //   - MORPH_AI_API_URL (optional native endpoint override)
 //   - MORPH_AI_BASE_URL (optional compatible-mode base URL)
+//   - MORPH_AI_VISION_MODEL (optional; default qwen-vl-max)
 //
 // Legacy fallbacks: GEMINI_API_KEY, GEMINI_MODEL, TRAN_QWEN_*.
+//
+// Provider is left empty. Per-provider variables (OPENAI_API_KEY,
+// ANTHROPIC_API_KEY, and the rest) are not consulted here and do not change
+// which backend this config talks to.
 func LoadFromEnv() Config {
 	apiKey := firstNonEmpty(
 		os.Getenv("MORPH_AI_API_KEY"),
@@ -95,7 +106,14 @@ func (c Config) VisionModelOrDefault() string {
 
 // VisionSupported reports whether this configuration can serve image requests.
 func (c Config) VisionSupported() bool {
-	return c.Configured() && !c.UseNativeAPI
+	if strings.TrimSpace(string(c.Provider)) == "" {
+		return c.Configured() && !c.UseNativeAPI
+	}
+	rc, err := resolve(c)
+	if err != nil {
+		return false
+	}
+	return rc.supports(capVision)
 }
 
 func isNativeDashScopeURL(u string) bool {
@@ -103,8 +121,17 @@ func isNativeDashScopeURL(u string) bool {
 	return strings.Contains(u, "text-generation/generation")
 }
 
+// Configured reports whether a call can be made.
+//
+// An empty Provider is configured only when APIKey is set (the legacy rule).
+// A named provider is configured when resolve finds a key, or a base URL for
+// Ollama. Keys are not borrowed from a different provider.
 func (c Config) Configured() bool {
-	return strings.TrimSpace(c.APIKey) != ""
+	if strings.TrimSpace(string(c.Provider)) == "" {
+		return strings.TrimSpace(c.APIKey) != ""
+	}
+	_, err := resolve(c)
+	return err == nil
 }
 
 func firstNonEmpty(values ...string) string {

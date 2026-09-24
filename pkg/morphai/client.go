@@ -1,29 +1,29 @@
 package morphai
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 )
 
-// Client calls Alibaba DashScope text-generation (same stack as Morph Data).
+// Client calls the configured AI provider. An empty Config.Provider keeps
+// today's DashScope / MORPH_AI_* behavior.
 type Client struct {
-	cfg                  Config
-	httpClient           *http.Client
-	httpClientLong       *http.Client
-	lastRequestTime      time.Time
-	requestMutex         sync.Mutex
-	minRequestInterval   time.Duration
+	cfg                Config
+	httpClient         *http.Client
+	httpClientLong     *http.Client
+	lastRequestTime    time.Time
+	requestMutex       sync.Mutex
+	minRequestInterval time.Duration
+	maxRetries         int
+	retryBase          time.Duration
 }
 
-// NewClient builds a DashScope client from explicit config.
+// NewClient builds a client from explicit config.
 func NewClient(cfg Config) *Client {
 	return &Client{
 		cfg: cfg,
@@ -34,6 +34,8 @@ func NewClient(cfg Config) *Client {
 			Timeout: 300 * time.Second,
 		},
 		minRequestInterval: 200 * time.Millisecond,
+		maxRetries:         3,
+		retryBase:          2 * time.Second,
 	}
 }
 
@@ -42,7 +44,7 @@ func NewClientFromEnv() *Client {
 	return NewClient(LoadFromEnv())
 }
 
-// Configured reports whether an API key is set.
+// Configured reports whether a call can be made with this client's config.
 func (c *Client) Configured() bool {
 	if c == nil {
 		return false
@@ -63,171 +65,175 @@ func (c *Client) VisionModel() string {
 	if c == nil {
 		return ""
 	}
+	if normalizeProviderID(c.cfg.Provider) == "" {
+		return c.cfg.VisionModelOrDefault()
+	}
+	rc, _ := resolve(c.cfg)
+	if rc.VisionModel != "" {
+		return rc.VisionModel
+	}
 	return c.cfg.VisionModelOrDefault()
 }
 
-type dashScopeRequest struct {
-	Model string `json:"model"`
-	Input struct {
-		Messages []Message `json:"messages"`
-	} `json:"input"`
-}
-
-type dashScopeResponse struct {
-	Output struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	} `json:"output"`
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-}
-
-func (c *Client) rateLimit() {
-	c.requestMutex.Lock()
-	defer c.requestMutex.Unlock()
-	now := time.Now()
-	if wait := c.minRequestInterval - now.Sub(c.lastRequestTime); wait > 0 {
-		time.Sleep(wait)
+// ResolvedConfig returns the provider settings a call with this client would use.
+func (c *Client) ResolvedConfig() (ResolvedConfig, error) {
+	if c == nil {
+		return ResolvedConfig{}, fmt.Errorf("morphai client is nil")
 	}
-	c.lastRequestTime = time.Now()
+	return ResolveConfig(c.cfg)
 }
 
-// ChatCompletion sends messages to the configured model without caching.
+type outbound struct {
+	CompletionRequest
+	Multi    []MultiMessage
+	Long     bool
+	Vision   bool
+	UseModel string
+}
+
+type chatAdapter interface {
+	complete(ctx context.Context, c *Client, rc resolved, req outbound) (CompletionResponse, error)
+	stream(ctx context.Context, c *Client, rc resolved, req outbound) (<-chan StreamEvent, error)
+}
+
+func adapterFor(kind adapterKind) chatAdapter {
+	switch kind {
+	case adapterAnthropic:
+		return anthropicAdapter{}
+	case adapterDashScopeNative:
+		return dashScopeNativeAdapter{}
+	default:
+		return openAIAdapter{}
+	}
+}
+
+// ChatCompletion sends messages to the configured model and returns the reply text.
 func (c *Client) ChatCompletion(ctx context.Context, messages []Message) (string, error) {
-	return c.chatCompletionWithClient(ctx, messages, c.httpClient)
+	resp, err := c.complete(ctx, outbound{CompletionRequest: CompletionRequest{Messages: messages}})
+	if err != nil {
+		return "", err
+	}
+	return resp.Content, nil
 }
 
 // ChatCompletionLong uses a longer HTTP timeout for heavy generation tasks.
 func (c *Client) ChatCompletionLong(ctx context.Context, messages []Message) (string, error) {
-	return c.chatCompletionWithClient(ctx, messages, c.httpClientLong)
-}
-
-func (c *Client) chatCompletionWithClient(ctx context.Context, messages []Message, client *http.Client) (string, error) {
-	if len(messages) == 0 {
-		return "", fmt.Errorf("no messages")
-	}
-	if !c.cfg.Configured() {
-		return "", fmt.Errorf("MORPH_AI_API_KEY is not configured")
-	}
-	if !c.cfg.UseNativeAPI {
-		return c.chatOpenAICompat(ctx, messages, client)
-	}
-
-	reqBody := dashScopeRequest{Model: c.cfg.Model}
-	reqBody.Input.Messages = messages
-	jsonData, err := json.Marshal(reqBody)
+	resp, err := c.complete(ctx, outbound{CompletionRequest: CompletionRequest{Messages: messages}, Long: true})
 	if err != nil {
-		return "", fmt.Errorf("marshal request: %w", err)
+		return "", err
 	}
-
-	maxRetries := 3
-	baseDelay := 2 * time.Second
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if attempt > 0 {
-			delay := baseDelay * time.Duration(1<<uint(attempt-1))
-			time.Sleep(delay)
-		}
-		c.rateLimit()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.APIURL, bytes.NewBuffer(jsonData))
-		if err != nil {
-			return "", fmt.Errorf("create request: %w", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			if attempt < maxRetries {
-				continue
-			}
-			return "", fmt.Errorf("send request: %w", err)
-		}
-
-		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if readErr != nil {
-			if attempt < maxRetries {
-				continue
-			}
-			return "", fmt.Errorf("read response: %w", readErr)
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests && attempt < maxRetries {
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			var errResp struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-			}
-			if json.Unmarshal(body, &errResp) == nil && errResp.Message != "" {
-				return "", fmt.Errorf("API error (status %d): %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
-			}
-			return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
-		}
-
-		var parsed dashScopeResponse
-		if err := json.Unmarshal(body, &parsed); err != nil {
-			return "", fmt.Errorf("unmarshal response: %w", err)
-		}
-		if parsed.Code != "" && parsed.Code != "Success" {
-			return "", fmt.Errorf("API error: %s - %s", parsed.Code, parsed.Message)
-		}
-		if len(parsed.Output.Choices) == 0 {
-			return "", fmt.Errorf("no response from AI model")
-		}
-		return parsed.Output.Choices[0].Message.Content, nil
-	}
-
-	return "", fmt.Errorf("max retries exceeded")
+	return resp.Content, nil
 }
 
-type openAIChatRequest struct {
-	Model          string    `json:"model"`
-	Messages       []Message `json:"messages"`
-	EnableThinking *bool     `json:"enable_thinking,omitempty"`
+// Complete sends a chat request, including tools and JSON mode when set.
+func (c *Client) Complete(ctx context.Context, req CompletionRequest) (CompletionResponse, error) {
+	return c.complete(ctx, outbound{CompletionRequest: req})
 }
 
-type openAIVisionRequest struct {
-	Model    string         `json:"model"`
-	Messages []MultiMessage `json:"messages"`
+// CompleteLong is Complete with the longer HTTP timeout.
+func (c *Client) CompleteLong(ctx context.Context, req CompletionRequest) (CompletionResponse, error) {
+	return c.complete(ctx, outbound{CompletionRequest: req, Long: true})
 }
 
 // ChatCompletionVision sends multimodal messages (text plus images) to a
 // vision-capable model and returns the reply text.
 //
-// Only the OpenAI-compatible endpoint accepts a content array, so a client
-// configured for the native DashScope text-generation endpoint returns an error
-// rather than sending a payload the endpoint cannot parse.
+// A client configured for the native DashScope text-generation endpoint returns
+// an error rather than sending a payload that endpoint cannot parse.
 //
 // Pass an empty model to use the configured vision model.
 func (c *Client) ChatCompletionVision(ctx context.Context, messages []MultiMessage, model string) (string, error) {
-	if len(messages) == 0 {
-		return "", fmt.Errorf("no messages")
+	resp, err := c.complete(ctx, outbound{
+		CompletionRequest: CompletionRequest{Model: model},
+		Multi:             messages,
+		Vision:            true,
+		Long:              true,
+	})
+	if err != nil {
+		return "", err
 	}
-	if !c.cfg.Configured() {
-		return "", fmt.Errorf("MORPH_AI_API_KEY is not configured")
+	return resp.Content, nil
+}
+
+// Stream sends a streaming chat request. The channel is closed after a
+// terminal event. Setup failures return a nil channel and an error.
+func (c *Client) Stream(ctx context.Context, req CompletionRequest) (<-chan StreamEvent, error) {
+	if c == nil {
+		return nil, fmt.Errorf("morphai client is nil")
 	}
-	if c.cfg.UseNativeAPI {
-		return "", fmt.Errorf(
-			"vision requests need an OpenAI-compatible endpoint; MORPH_AI_API_URL is set to the native DashScope text-generation endpoint. " +
-				"Unset MORPH_AI_API_URL (or point it at a /v1 compatible base URL) and set MORPH_AI_BASE_URL to enable image reading")
+	if len(req.Messages) == 0 {
+		return nil, fmt.Errorf("no messages")
+	}
+	rc, err := resolve(c.cfg.applyCall(req))
+	if err != nil {
+		return nil, err
+	}
+	if err := rc.reject(capStream); err != nil {
+		return nil, err
+	}
+	if len(req.Tools) > 0 {
+		if err := rc.reject(capTools); err != nil {
+			return nil, err
+		}
+	}
+	if req.JSONMode {
+		if err := rc.reject(capJSON); err != nil {
+			return nil, err
+		}
+	}
+	out := outbound{CompletionRequest: req, UseModel: rc.Model}
+	return adapterFor(rc.Kind).stream(ctx, c, rc, out)
+}
+
+func (c *Client) complete(ctx context.Context, req outbound) (CompletionResponse, error) {
+	if c == nil {
+		return CompletionResponse{}, fmt.Errorf("morphai client is nil")
+	}
+	if req.Vision {
+		if len(req.Multi) == 0 {
+			return CompletionResponse{}, fmt.Errorf("no messages")
+		}
+	} else if len(req.Messages) == 0 {
+		return CompletionResponse{}, fmt.Errorf("no messages")
 	}
 
-	if strings.TrimSpace(model) == "" {
-		model = c.cfg.VisionModelOrDefault()
+	call := req.CompletionRequest
+	visionModel := ""
+	if req.Vision {
+		// The vision model argument must not replace the chat model.
+		visionModel = strings.TrimSpace(call.Model)
+		call.Model = ""
 	}
-	reqBody := openAIVisionRequest{Model: model, Messages: messages}
-	jsonData, err := json.Marshal(reqBody)
+	rc, err := resolve(c.cfg.applyCall(call))
 	if err != nil {
-		return "", fmt.Errorf("marshal request: %w", err)
+		return CompletionResponse{}, err
 	}
-	return c.postOpenAIChat(ctx, jsonData, c.httpClientLong)
+	if req.Vision {
+		if err := rc.reject(capVision); err != nil {
+			return CompletionResponse{}, err
+		}
+		if visionModel != "" {
+			req.UseModel = visionModel
+		} else {
+			req.UseModel = rc.VisionModel
+		}
+	} else {
+		if err := rc.reject(capChat); err != nil {
+			return CompletionResponse{}, err
+		}
+		if len(req.Tools) > 0 {
+			if err := rc.reject(capTools); err != nil {
+				return CompletionResponse{}, err
+			}
+		}
+		if req.JSONMode {
+			if err := rc.reject(capJSON); err != nil {
+				return CompletionResponse{}, err
+			}
+		}
+		req.UseModel = rc.Model
+	}
+	return adapterFor(rc.Kind).complete(ctx, c, rc, req)
 }
 
 // DataURL renders raw bytes as a base64 data URL for a multimodal image part.
@@ -237,100 +243,4 @@ func DataURL(mimeType string, raw []byte) string {
 		m = "image/jpeg"
 	}
 	return "data:" + m + ";base64," + base64.StdEncoding.EncodeToString(raw)
-}
-
-type openAIChatResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-	Error *struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
-		Code    string `json:"code"`
-	} `json:"error,omitempty"`
-}
-
-func (c *Client) chatOpenAICompat(ctx context.Context, messages []Message, client *http.Client) (string, error) {
-	// Qwen3.x reasoning models otherwise spend minutes on chain-of-thought before content.
-	thinkingOff := false
-	reqBody := openAIChatRequest{Model: c.cfg.Model, Messages: messages, EnableThinking: &thinkingOff}
-	jsonData, err := json.Marshal(reqBody)
-	if err != nil {
-		return "", fmt.Errorf("marshal request: %w", err)
-	}
-	return c.postOpenAIChat(ctx, jsonData, client)
-}
-
-func (c *Client) postOpenAIChat(ctx context.Context, jsonData []byte, client *http.Client) (string, error) {
-	endpoint := c.cfg.BaseURL + "/chat/completions"
-
-	maxRetries := 3
-	baseDelay := 2 * time.Second
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if attempt > 0 {
-			delay := baseDelay * time.Duration(1<<uint(attempt-1))
-			time.Sleep(delay)
-		}
-		c.rateLimit()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewBuffer(jsonData))
-		if err != nil {
-			return "", fmt.Errorf("create request: %w", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			if attempt < maxRetries {
-				continue
-			}
-			return "", fmt.Errorf("send request: %w", err)
-		}
-
-		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if readErr != nil {
-			if attempt < maxRetries {
-				continue
-			}
-			return "", fmt.Errorf("read response: %w", readErr)
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests && attempt < maxRetries {
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			var parsed openAIChatResponse
-			if json.Unmarshal(body, &parsed) == nil && parsed.Error != nil && parsed.Error.Message != "" {
-				code := parsed.Error.Code
-				if code == "" {
-					code = parsed.Error.Type
-				}
-				return "", fmt.Errorf("API error (status %d): %s - %s", resp.StatusCode, code, parsed.Error.Message)
-			}
-			var errResp struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-			}
-			if json.Unmarshal(body, &errResp) == nil && errResp.Message != "" {
-				return "", fmt.Errorf("API error (status %d): %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
-			}
-			return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
-		}
-
-		var parsed openAIChatResponse
-		if err := json.Unmarshal(body, &parsed); err != nil {
-			return "", fmt.Errorf("unmarshal response: %w", err)
-		}
-		if len(parsed.Choices) == 0 {
-			return "", fmt.Errorf("no response from AI model")
-		}
-		return parsed.Choices[0].Message.Content, nil
-	}
-
-	return "", fmt.Errorf("max retries exceeded")
 }
