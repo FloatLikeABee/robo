@@ -251,6 +251,73 @@ func TestAgentLessonMultiUserDecisionStaysAfterAccountRemoved(t *testing.T) {
 	}
 }
 
+func TestAgentLessonClaimKeepsHarvestedLessonWhenSessionCollides(t *testing.T) {
+	sqlDB := openMemorySQLite(t)
+	_, err := sqlDB.Exec(`
+		CREATE TABLE agent_lesson (
+			id TEXT NOT NULL PRIMARY KEY,
+			trigger TEXT NOT NULL,
+			rule TEXT NOT NULL,
+			source_session_id TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sqlDB.Exec(`CREATE UNIQUE INDEX idx_agent_lesson_session ON agent_lesson(source_session_id)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at)
+		VALUES ('legacy', 'when old', 'legacy rule', 'default', '2020-01-01T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	if _, owner := lessonEnabledOwner(t, sqlDB, "legacy"); owner != "" {
+		t.Fatalf("zero accounts must wait, owner=%q", owner)
+	}
+	insertPlatUser(t, sqlDB, "only-user", "2024-06-01T00:00:00Z")
+	if _, err := sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at, enabled, owner_user_id)
+		VALUES ('harvested', 'when chatting', 'harvested rule', 'default', '2026-01-01T00:00:00Z', 1, 'only-user')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatalf("claim must not fail startup: %v", err)
+	}
+	var legacyCount int
+	if err := sqlDB.QueryRow(`SELECT COUNT(*) FROM agent_lesson WHERE id='legacy'`).Scan(&legacyCount); err != nil {
+		t.Fatal(err)
+	}
+	if legacyCount != 0 {
+		t.Fatal("conflicting legacy row should be dropped")
+	}
+	enabled, owner := lessonEnabledOwner(t, sqlDB, "harvested")
+	if enabled != 1 || owner != "only-user" {
+		t.Fatalf("harvested lesson: enabled=%d owner=%q", enabled, owner)
+	}
+	var rule string
+	if err := sqlDB.QueryRow(`SELECT rule FROM agent_lesson WHERE id='harvested'`).Scan(&rule); err != nil {
+		t.Fatal(err)
+	}
+	if rule != "harvested rule" {
+		t.Fatalf("claim overwrote the harvested lesson: %q", rule)
+	}
+	if _, err := sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at, enabled, owner_user_id)
+		VALUES ('later', 'when later', 'do not adopt', 'sess-later', '2026-02-01T00:00:00Z', 1, '')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTranSQLiteSchema(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	if _, owner := lessonEnabledOwner(t, sqlDB, "later"); owner != "" {
+		t.Fatalf("decision should already be recorded, owner=%q", owner)
+	}
+}
+
 func lessonEnabledOwner(t *testing.T, db *sql.DB, id string) (int, string) {
 	t.Helper()
 	var enabled int

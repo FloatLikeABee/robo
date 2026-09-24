@@ -300,6 +300,39 @@ func TestAgentLessonBearerWithoutStoreIsUnavailable(t *testing.T) {
 	}
 }
 
+func TestAgentLessonPatchRejectsUnknownFields(t *testing.T) {
+	sqlDB := openHarnessSQL(t)
+	h, userA, _ := lessonHandlers(t, sqlDB)
+	insertAgentLesson(t, sqlDB, "lesson-a", userA.ID, "sess-a", "rule-a", true)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/api/agent-lessons/lesson-a", strings.NewReader(`{"enabled":false,"rule":"rewritten"}`))
+	req.Header.Set("Content-Type", "application/json")
+	setBearer(t, h, req, userA)
+	agentLessonRouter(h).ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("unknown field: %d %s", w.Code, w.Body.String())
+	}
+	row, err := h.TranMySQL.GetAgentLessonForOwner(context.Background(), userA.ID, "lesson-a")
+	if err != nil || row == nil || !row.Enabled || row.Rule != "rule-a" {
+		t.Fatalf("lesson changed: %+v err=%v", row, err)
+	}
+}
+
+func TestAgentLessonMiddlewareUnauthorizedWhenStoreMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &Handlers{}
+	r := gin.New()
+	r.Use(h.AuthzMiddleware())
+	r.GET("/api/agent-lessons", h.ListAgentLessons)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/agent-lessons", nil)
+	req.Header.Set("Authorization", "Bearer not-a-real-token")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("middleware with no store and no header: %d %s", w.Code, w.Body.String())
+	}
+}
+
 func TestAgentLessonsRequireSameAuthAsOperatorAPIs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := &Handlers{}

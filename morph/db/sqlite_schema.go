@@ -1,6 +1,9 @@
 package db
 
-import "database/sql"
+import (
+	"database/sql"
+	"log"
+)
 
 // ensureTranSQLiteSchema creates Morph-owned relational tables for embedded SQLite.
 // Column sets follow openspec/changes/morph-embedded-dbs/inventory.md (handler current usage).
@@ -490,7 +493,11 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 // If plat_users is missing, the claim is skipped and startup continues.
 // Distillation records the owner for lessons created after this migration.
 // Uniqueness is per owner and source session so two users can each keep a
-// lesson from session id "default".
+// lesson from session id "default". The composite unique index is created
+// before the old session-only index is dropped, so a failure in between does
+// not leave the table without a unique key. A legacy row whose session the
+// claimed user already owns is deleted inside the claim; the user's lesson
+// stays. A claim error is logged and does not fail startup.
 func migrateAgentLessonColumns(db *sql.DB) error {
 	if err := sqliteAddColumnIfMissing(db, "agent_lesson", "enabled", "INTEGER NOT NULL DEFAULT 1"); err != nil {
 		return err
@@ -498,10 +505,10 @@ func migrateAgentLessonColumns(db *sql.DB) error {
 	if err := sqliteAddColumnIfMissing(db, "agent_lesson", "owner_user_id", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
-	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_agent_lesson_session`); err != nil {
+	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_owner_session ON agent_lesson(owner_user_id, source_session_id)`); err != nil {
 		return err
 	}
-	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_owner_session ON agent_lesson(owner_user_id, source_session_id)`); err != nil {
+	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_agent_lesson_session`); err != nil {
 		return err
 	}
 	// ensureTranSQLiteSchema creates plat_users before this runs, including on a
@@ -511,7 +518,11 @@ func migrateAgentLessonColumns(db *sql.DB) error {
 	if err != nil || !hasUsers {
 		return err
 	}
-	return claimLegacyAgentLessonOwners(db)
+	if err := claimLegacyAgentLessonOwners(db); err != nil {
+		log.Printf("agent lesson owner claim skipped: %v", err)
+		return nil
+	}
+	return nil
 }
 
 // claimLegacyAgentLessonOwners assigns pre-ownership lessons at most once.
@@ -551,6 +562,9 @@ func claimLegacyAgentLessonOwners(db *sql.DB) error {
 		if err := tx.QueryRow(`SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1`).Scan(&claimed); err != nil {
 			return err
 		}
+		if err := deleteLegacyLessonsConflictingWithOwner(tx, claimed); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(`UPDATE agent_lesson SET owner_user_id = ? WHERE owner_user_id = ''`, claimed); err != nil {
 			return err
 		}
@@ -562,4 +576,43 @@ func claimLegacyAgentLessonOwners(db *sql.DB) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// deleteLegacyLessonsConflictingWithOwner removes unowned rows whose session
+// the claimed user already has a lesson for. The owned row is the one harvest
+// stored after the account existed; assigning the legacy row would violate
+// idx_agent_lesson_owner_session and stop startup.
+func deleteLegacyLessonsConflictingWithOwner(tx *sql.Tx, ownerID string) error {
+	rows, err := tx.Query(`
+		SELECT legacy.id
+		FROM agent_lesson AS legacy
+		INNER JOIN agent_lesson AS owned
+		  ON owned.source_session_id = legacy.source_session_id
+		 AND owned.owner_user_id = ?
+		WHERE legacy.owner_user_id = ''`, ownerID)
+	if err != nil {
+		return err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if _, err := tx.Exec(`DELETE FROM agent_lesson WHERE id = ? AND owner_user_id = ''`, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }

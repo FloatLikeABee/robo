@@ -16,7 +16,7 @@ The system MUST store an enabled flag on each agent lesson. Existing rows MUST r
 - **THEN** the stored lesson is enabled
 
 ### Requirement: Legacy lessons are claimed once
-Lessons stored before ownership MUST stay unowned until the system makes a one-shot decision. When platform accounts are missing or there are zero accounts, the system MUST leave those rows unowned and MUST try again on a later startup. The first time at least one account exists, if there is exactly one account the system MUST assign every still-unowned lesson to that account and MUST NOT assign again later. If more than one account exists at that decision, the system MUST leave unowned rows unowned forever. A database that has lessons but no platform-account table MUST still start, and those lessons MUST stay unowned.
+Lessons stored before ownership MUST stay unowned until the system makes a one-shot decision. When platform accounts are missing or there are zero accounts, the system MUST leave those rows unowned and MUST try again on a later startup. The first time at least one account exists, if there is exactly one account the system MUST assign every still-unowned lesson to that account and MUST NOT assign again later. If that account already has a lesson for the same source session, the system MUST keep the account's lesson and MUST delete the conflicting unowned row. The claim MUST finish without failing startup. If more than one account exists at that decision, the system MUST leave unowned rows unowned forever. A database that has lessons but no platform-account table MUST still start, and those lessons MUST stay unowned.
 
 #### Scenario: Single account keeps historical lessons
 - **WHEN** migration runs and exactly one platform account exists
@@ -28,6 +28,14 @@ Lessons stored before ownership MUST stay unowned until the system makes a one-s
 - **WHEN** the first ownership decision runs and more than one platform account exists
 - **THEN** unowned lessons stay unowned
 - **AND** after accounts are later reduced to one, those lessons stay unowned
+
+#### Scenario: Harvested lesson wins a session collision
+- **WHEN** migration has already run while there are zero accounts
+- **AND** the only account then stores a lesson for a source session that an unowned lesson also uses
+- **AND** migration runs again
+- **THEN** startup succeeds
+- **AND** the account keeps its lesson
+- **AND** the unowned row is gone
 
 #### Scenario: Missing account table does not block startup
 - **WHEN** the lesson table is migrated and the platform-account table is absent
@@ -56,7 +64,7 @@ The system MUST allow two users to each store one lesson for the same source ses
 - **AND** that user's lessons are unchanged
 
 ### Requirement: Owner can disable or delete only their lesson
-`PATCH /api/agent-lessons/:id` with `enabled` MUST change that flag only when the caller owns the lesson. `DELETE /api/agent-lessons/:id` MUST remove the lesson only when the caller owns it. A missing id and another user's id MUST both return 404 with the same error. The caller MUST be a verified bearer user.
+`PATCH /api/agent-lessons/:id` with `enabled` MUST change that flag only when the caller owns the lesson. The PATCH body MUST NOT contain any field other than `enabled`. `DELETE /api/agent-lessons/:id` MUST remove the lesson only when the caller owns it. A missing id and another user's id MUST both return 404 with the same error. The caller MUST be a verified bearer user. Disabling or deleting a lesson MUST change the next management-chat answer for the same prompt so a previously cached reply is not returned. The management-chat exact cache MUST be keyed by the verified bearer user and that user's enabled lessons. A client `X-User-ID` MUST NOT read or write that cache.
 
 #### Scenario: Owner disables a lesson
 - **WHEN** the owner patches the lesson with enabled false

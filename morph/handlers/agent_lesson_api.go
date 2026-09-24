@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -12,9 +13,11 @@ import (
 )
 
 // trustedLessonUserID is the platform user id from a verified bearer token
-// whose subject still exists in plat_users. Client X-User-ID and the
-// auth_user_id value middleware copies from that header are not accepted.
-// ok is false when no trusted identity exists. This does not write a response.
+// whose subject still exists in plat_users. Client X-User-ID is not accepted.
+// auth_user_id is not accepted either: after #22 the middleware still copies
+// a client X-User-ID into that value when no bearer was verified, and it does
+// not set a separate trusted-user flag. ok is false when no bearer identity
+// exists. This does not write a response.
 func (h *Handlers) trustedLessonUserID(c *gin.Context) (string, bool) {
 	if h == nil || c == nil || h.TranMySQL == nil {
 		return "", false
@@ -106,7 +109,9 @@ func (h *Handlers) PatchAgentLesson(c *gin.Context) {
 		return
 	}
 	var body agentLessonPatchBody
-	if err := c.ShouldBindJSON(&body); err != nil {
+	dec := json.NewDecoder(c.Request.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
 		return
 	}
