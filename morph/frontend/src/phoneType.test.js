@@ -55,20 +55,27 @@ test('phone error dismiss controls are at least 44px', () => {
 
 test('sign-in labels and errors are body sized and the error can be dismissed', () => {
   const page = read('pages/LoginPage.js');
-  expect(page).not.toMatch(/fontSize:\s*12/);
-  expect(page).not.toMatch(/fontSize:\s*14/);
-  expect(page).toMatch(/lineHeight:\s*1\.5/);
+  const css = read('pages/LoginPage.css');
+  expect(page).toMatch(/className="login-shell"/);
+  expect(page).toMatch(/authKeyboardOverlap/);
   expect(page).toMatch(/role="alert"/);
   expect(page).toMatch(/aria-label="Dismiss error"/);
-  expect(page).toMatch(/minHeight:\s*44/);
-  expect(page).toMatch(/minWidth:\s*44/);
+  expect(page).toMatch(/className="login-error-dismiss"/);
+  expect(css).toMatch(/\.login-brand p\s*\{[^}]*font-size:\s*16px/);
+  expect(css).toMatch(/\.login-brand p\s*\{[^}]*line-height:\s*1\.5/);
+  expect(css).toMatch(/\.login-field\s*\{[^}]*font-size:\s*16px/);
+  expect(css).toMatch(/\.login-field\s*\{[^}]*line-height:\s*1\.5/);
+  expect(css).toMatch(/\.login-error\s*\{[^}]*font-size:\s*16px/);
+  expect(css).toMatch(/\.login-error\s*\{[^}]*line-height:\s*1\.5/);
+  expect(css).toMatch(/\.login-error-dismiss\s*\{[^}]*min-width:\s*44px/);
+  expect(css).toMatch(/\.login-error-dismiss\s*\{[^}]*min-height:\s*44px/);
 });
 
 test('chat and notes error banners expose a dismiss control', () => {
   const chat = read('SkoolAiChat.js');
   expect(chat).toMatch(/className="error-bubble-dismiss"/);
   expect(chat).toMatch(/aria-label="Dismiss error"/);
-  expect(chat).not.toMatch(/bindKeyboardInset/);
+  expect(chat).toMatch(/bindKeyboardInset/);
 
   for (const rel of ['pages/admin/CaseTasks.js', 'pages/admin/StoryBoard.js']) {
     const tags = read(rel).match(/<Alert severity="error"[\s\S]*?>/g) || [];

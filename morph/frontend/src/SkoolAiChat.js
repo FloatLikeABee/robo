@@ -32,6 +32,7 @@ import {
 import { getMorphToken, clearMorphSession } from './auth/morphSession';
 import { HEADER_APP_ICONS, morphUtilsBaseURL } from './lib/headerAppLinks';
 import { onSheetKeyDown } from './lib/phoneSheet';
+import { bindKeyboardInset } from './lib/keyboardInset';
 import HeaderMoreMenu from './components/chat/HeaderMoreMenu';
 import { useConfirm } from './components/ConfirmDialog';
 import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
@@ -168,6 +169,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const abortControllerRef = useRef(null);
   const lastContextFpRef = useRef('');
   const didRestoreSessionRef = useRef(!isAgentShell);
+
+  useEffect(() => bindKeyboardInset(), []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-chat-theme', theme);

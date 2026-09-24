@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../apiBase';
+import { authKeyboardOverlap, scrollDelta } from '../auth/authKeyboard';
 import { loginMorph, setMorphToken, setMorphAuthSnapshot } from '../auth/morphSession';
 import { safeReturnPath } from '../auth/returnTo';
 import { releaseStuckOverlays } from '../utils/releaseStuckOverlays';
+import './LoginPage.css';
 
 function returnTarget(location) {
   const fromQuery = new URLSearchParams(location.search).get('returnTo') || '';
@@ -18,6 +20,12 @@ function returnTarget(location) {
   return chosen;
 }
 
+function visibleViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return null;
+  return { height: vv.height, offsetTop: vv.offsetTop };
+}
+
 /** UsersPanel-backed login — same session cookie as TranForm / TranMail when on same site. */
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -27,6 +35,69 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const shell = document.querySelector('.login-shell');
+    if (!shell) return undefined;
+    const vv = window.visualViewport;
+    let focused = false;
+
+    function reveal() {
+      const view = visibleViewport();
+      if (!view) return;
+      const active = document.activeElement;
+      const submit = shell.querySelector('button[type="submit"]');
+      const field =
+        active instanceof HTMLElement && shell.contains(active) ? active : null;
+      const target =
+        field && scrollDelta(field.getBoundingClientRect(), view)
+          ? field
+          : submit && scrollDelta(submit.getBoundingClientRect(), view)
+            ? submit
+            : null;
+      if (!target) return;
+      const delta = scrollDelta(target.getBoundingClientRect(), view);
+      if (delta) window.scrollBy(0, delta);
+    }
+
+    function apply() {
+      const overlap = authKeyboardOverlap({
+        innerHeight: window.innerHeight,
+        visualViewport: vv,
+        focused,
+      });
+      shell.style.setProperty('--auth-keyboard-inset', `${overlap}px`);
+      if (focused) requestAnimationFrame(reveal);
+    }
+
+    function onFocusIn(event) {
+      const field = event.target;
+      if (!(field instanceof HTMLElement) || !field.closest('input, textarea')) return;
+      focused = true;
+      apply();
+    }
+
+    function onFocusOut() {
+      requestAnimationFrame(() => {
+        if (!shell.contains(document.activeElement)) {
+          focused = false;
+          apply();
+        }
+      });
+    }
+
+    shell.addEventListener('focusin', onFocusIn);
+    shell.addEventListener('focusout', onFocusOut);
+    vv?.addEventListener('resize', apply);
+    vv?.addEventListener('scroll', apply);
+    return () => {
+      shell.style.setProperty('--auth-keyboard-inset', '0px');
+      shell.removeEventListener('focusin', onFocusIn);
+      shell.removeEventListener('focusout', onFocusOut);
+      vv?.removeEventListener('resize', apply);
+      vv?.removeEventListener('scroll', apply);
+    };
+  }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -45,142 +116,64 @@ export default function LoginPage() {
     }
   }
 
-  const inputStyle = {
-    width: '100%',
-    borderRadius: 8,
-    border: '1px solid rgba(106, 163, 191, 0.45)',
-    background: '#1e3044',
-    color: '#f0f7fc',
-    padding: '10px 12px',
-    fontSize: 16,
-    boxSizing: 'border-box',
-  };
-
-  const pageBg =
-    'radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.14), transparent 45%), radial-gradient(circle at 85% 88%, rgba(37, 99, 235, 0.12), transparent 48%), linear-gradient(165deg, #1a2636 0%, #1f354a 52%, #1a2839 100%)';
-
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        display: 'grid',
-        placeItems: 'center',
-        background: pageBg,
-        colorScheme: 'dark',
-        padding: 'max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))',
-        color: '#eaf4fb',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          borderRadius: 16,
-          border: '1px solid rgba(106, 174, 204, 0.38)',
-          background: 'rgba(28, 42, 58, 0.94)',
-          padding: 'clamp(20px, 5vw, 32px)',
-          boxShadow: '0 16px 42px rgba(8, 14, 24, 0.42)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-brand">
           <span style={{ fontSize: 24 }} aria-hidden>
             🤖
           </span>
           <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: 1.3, color: '#eaf4fb' }}>Morph AI</h1>
-            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: '#93adc4' }}>
-              Sign in once — MorphNotes and MorphUtils use this session
-            </p>
+            <h1>Morph AI</h1>
+            <p>Sign in once — MorphNotes and MorphUtils use this session</p>
           </div>
         </div>
-        <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
-          <label style={{ display: 'grid', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.5, color: '#b8cfe0' }}>
+        <form className="login-form" onSubmit={onSubmit}>
+          <label className="login-field" htmlFor="username">
             Username or email
             <input
+              id="username"
+              name="username"
               type="text"
               autoComplete="username"
+              enterKeyHint="next"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={inputStyle}
             />
           </label>
-          <label style={{ display: 'grid', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.5, color: '#b8cfe0' }}>
+          <label className="login-field" htmlFor="current-password">
             Password
             <input
+              id="current-password"
+              name="password"
               type="password"
               autoComplete="current-password"
+              enterKeyHint="go"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={inputStyle}
             />
           </label>
           {error ? (
-            <div
-              role="alert"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                borderRadius: 8,
-                border: '1px solid rgba(248, 113, 113, 0.45)',
-                background: 'rgba(88, 28, 28, 0.35)',
-                padding: '8px 8px 8px 12px',
-                fontSize: 16,
-                lineHeight: 1.5,
-                color: '#fecaca',
-                maxWidth: '100%',
-                overflowWrap: 'anywhere',
-                boxSizing: 'border-box',
-              }}
-            >
-              <span style={{ flex: '1 1 auto', minWidth: 0 }}>{error}</span>
+            <div className="login-error" role="alert">
+              <span className="login-error-text">{error}</span>
               <button
                 type="button"
+                className="login-error-dismiss"
                 aria-label="Dismiss error"
                 onClick={() => setError('')}
-                style={{
-                  flex: '0 0 auto',
-                  width: 44,
-                  height: 44,
-                  minWidth: 44,
-                  minHeight: 44,
-                  border: 'none',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  color: '#fecaca',
-                  fontSize: 22,
-                  lineHeight: 1,
-                  cursor: 'pointer',
-                }}
               >
                 ×
               </button>
             </div>
           ) : null}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 4,
-              minWidth: 44,
-              minHeight: 44,
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 16px',
-              fontSize: 16,
-              lineHeight: 1.5,
-              fontWeight: 500,
-              color: '#fff',
-              background: loading ? '#0e7490' : '#0284c7',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button className="login-submit" type="submit" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </div>
+      <div className="login-keyboard-spacer" aria-hidden="true" />
     </div>
   );
 }

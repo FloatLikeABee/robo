@@ -3554,4 +3554,102 @@ html[data-chat-theme='light'] .skills-panel-alert {
   .app.app--sidebar-open {
     overflow-x: clip;
   }
+
+  .app-outer,
+  .app {
+    min-height: 0;
+    height: calc(100dvh - var(--keyboard-inset, 0px));
+    max-height: calc(100dvh - var(--keyboard-inset, 0px));
+  }
+
+  .messages-container {
+    overflow-x: hidden;
+    overflow-x: clip;
+    overflow-y: auto;
+    touch-action: pan-y;
+  }
+
+  .message,
+  .message-content,
+  .message-bubble,
+  .chat-markdown,
+  .welcome-message {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .chat-markdown p,
+  .chat-markdown li,
+  .message-bubble {
+    overflow-wrap: break-word;
+  }
+
+  .welcome-message,
+  .error-bubble {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .chat-markdown pre,
+  .chat-markdown table,
+  .chat-markdown .chat-mermaid,
+  .chat-markdown .chat-pixel-grid,
+  .chat-markdown pre:has(.chat-mermaid),
+  .chat-markdown pre:has(.chat-pixel-grid) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .chat-markdown .chat-mermaid svg,
+  .chat-generated-image {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .input-container {
+    flex-wrap: wrap;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .input-container > .applied-assistant-chip,
+  .input-container > .hybrid-context-attach-bar,
+  .input-container > .attached-file-tag {
+    flex: 1 0 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .chat-icon-button,
+  .chat-icon-button--input,
+  .clear-input-button,
+  .send-button,
+  .visual-lightbox-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .app.app--agent {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 28dvh);
+  }
+
+  .app.app--agent.app--workspace-collapsed {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  html[data-keyboard-open] .app.app--agent,
+  html[data-keyboard-open] .app.app--agent.app--workspace-collapsed {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'chat';
+  }
+
+  html[data-keyboard-open] .app.app--agent .agent-workspace {
+    display: none;
+  }
 }
