@@ -31,6 +31,8 @@ import {
 } from './lib/appliedAssistantChannel';
 import { getMorphToken, clearMorphSession } from './auth/morphSession';
 import { HEADER_APP_ICONS, morphUtilsBaseURL } from './lib/headerAppLinks';
+import { onSheetKeyDown } from './lib/phoneSheet';
+import HeaderMoreMenu from './components/chat/HeaderMoreMenu';
 import { useConfirm } from './components/ConfirmDialog';
 import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
 import './App.css';
@@ -136,6 +138,9 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   );
   const theme = 'dark';
   const [sidebarNavOpen, setSidebarNavOpen] = useState(false);
+  const sessionsSheetRef = useRef(null);
+  const sessionsCloseRef = useRef(null);
+  const sessionsToggleRef = useRef(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(() => (isAgentShell ? readWorkspaceOpen() : true));
   const [workspaceTab, setWorkspaceTab] = useState('knowledge');
   const [includeNotes, setIncludeNotes] = useState(true);
@@ -698,9 +703,34 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     window.location.assign('/login');
   };
 
+  const closeSessions = useCallback(() => {
+    setSidebarNavOpen(false);
+    sessionsToggleRef.current?.focus();
+  }, []);
+
   const toggleSessionsNav = () => {
     setSidebarNavOpen((v) => !v);
   };
+
+  useEffect(() => {
+    if (!sidebarNavOpen) return undefined;
+    const phone = window.matchMedia('(max-width: 768px)');
+    if (!phone.matches) {
+      setSidebarNavOpen(false);
+      return undefined;
+    }
+    sessionsCloseRef.current?.focus();
+    const onKey = (event) => onSheetKeyDown(event, sessionsSheetRef.current, closeSessions);
+    const onChange = () => {
+      if (!phone.matches) setSidebarNavOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    phone.addEventListener('change', onChange);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      phone.removeEventListener('change', onChange);
+    };
+  }, [sidebarNavOpen, closeSessions]);
 
   const sessionColorById = useMemo(() => {
     const used = new Set();
@@ -722,7 +752,22 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
         />
       )}
       {!singleSession && (
-        <aside className={`chat-sidebar${sidebarNavOpen ? ' is-open' : ''}`}>
+        <aside
+          ref={sessionsSheetRef}
+          className={`chat-sidebar${sidebarNavOpen ? ' is-open' : ''}`}
+          role={sidebarNavOpen ? 'dialog' : undefined}
+          aria-modal={sidebarNavOpen ? 'true' : undefined}
+          aria-label="Sessions"
+        >
+          <button
+            type="button"
+            className="sidebar-sheet-close"
+            ref={sessionsCloseRef}
+            aria-label="Close sessions menu"
+            onClick={closeSessions}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
           <div className="sidebar-split-top">
             <button
               type="button"
@@ -795,6 +840,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           {!singleSession && (
             <button
               type="button"
+              ref={sessionsToggleRef}
               className="chat-nav-toggle"
               aria-label={sidebarNavOpen ? 'Close sessions menu' : 'Open sessions menu'}
               aria-expanded={sidebarNavOpen}
@@ -838,48 +884,32 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 </svg>
               </button>
             ) : null}
-            <div className="header-app-links" aria-label="App links">
-              <button
-                type="button"
-                className="header-app-link header-app-link--button"
-                style={{ '--header-app-color': '#38bdf8' }}
-                title="Skills"
-                aria-haspopup="dialog"
-                aria-expanded={skillsOpen}
-                onClick={() => setSkillsOpen(true)}
-              >
-                <span className="header-app-link-label">Skills</span>
-              </button>
-              <button
-                type="button"
-                className="header-app-link header-app-link--button"
-                style={{ '--header-app-color': '#059669' }}
-                title="AI tools — Assistants, RAG, Documents & more"
-                aria-haspopup="dialog"
-                aria-expanded={aiToolsOpen}
-                onClick={() => setAiToolsOpen(true)}
-              >
-                <img src={HEADER_APP_ICONS.bk} alt="" className="header-app-link-icon" aria-hidden />
-                <span className="header-app-link-label">AI tools</span>
-              </button>
-              {headerAppLinks.map((app) => (
-                <a
-                  key={app.id}
-                  href={app.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="header-app-link"
-                  style={{ '--header-app-color': app.color }}
-                  title={app.label}
-                >
-                  <img src={app.icon} alt="" className="header-app-link-icon" aria-hidden />
-                  <span className="header-app-link-label">{app.label}</span>
-                </a>
-              ))}
-            </div>
+            <HeaderMoreMenu
+              items={[
+                {
+                  id: 'skills',
+                  label: 'Skills',
+                  color: '#38bdf8',
+                  hasPopup: 'dialog',
+                  expanded: skillsOpen,
+                  onClick: () => setSkillsOpen(true),
+                },
+                {
+                  id: 'bk',
+                  label: 'AI tools',
+                  color: '#059669',
+                  icon: HEADER_APP_ICONS.bk,
+                  hasPopup: 'dialog',
+                  expanded: aiToolsOpen,
+                  onClick: () => setAiToolsOpen(true),
+                },
+                ...headerAppLinks,
+              ]}
+              onClear={handleClearConversation}
+            />
             <button
               type="button"
-              className="chat-icon-button"
+              className="chat-icon-button header-action-clear"
               onClick={handleClearConversation}
               title="Clear messages in this chat"
               aria-label="Clear chat"
