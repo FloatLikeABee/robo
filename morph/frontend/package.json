@@ -10,7 +10,7 @@
     "@mui/x-data-grid": "^7.22.0",
     "@mui/x-date-pickers": "^7.22.0",
     "axios": "^1.6.0",
-    "dayjs": "^1.11.20",
+    "dayjs": "^1.11.23",
     "dompurify": "^3.4.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

@@ -1,6 +1,8 @@
 # Morph AI and MorphNotes
 
-Go API + React SPA. **Morph AI** is the system chat (port **3031**). **MorphNotes** is Tasks, Timelines, Big notes, Generic data, and Settings at `/morphdata`.
+Go API + React SPA. **Morph AI** is the system chat (port **3031**). **MorphNotes** at `/morphdata` is Tasks, Timelines, Big notes, Research, and Generic data.
+
+New accounts are created in Invite Signup at `http://localhost:3051` (`invite-signup-ui`). Nav, Research publish, and redeem/admin flows: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
 
 This is not a Transfinder, school, or SQL Server product. Agent notes: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
 
@@ -37,6 +39,10 @@ Repo-root `.env` (nested leftover `.env` is ignored):
 | `TRAN_SQLITE_PATH` | `./data/tran.sqlite` | MorphNotes + `plat_users` |
 | `DB_PATH` | app Badger | Chat / forms KV |
 | `MORPH_AI_API_KEY` | _(empty)_ | DashScope / Qwen |
+| `MORPH_ENV` | unset (local) | `production` refuses development JWT/admin secrets. See [`docs/security-hosting-checklist.md`](../docs/security-hosting-checklist.md) |
+| `JWT_SECRET` | development default in `.env.example` | Signing key. Production requires 32+ unique characters |
+| `ADMIN_PASSWORD` | development default in `.env.example` | Bootstrap password. Production requires 12+ unique characters |
+| `JWT_EXPIRY_HOURS` | `876000` local | Production default 24; allowed 1–168 |
 | `USERS_PANEL_BASE_URL` | n/a on Morph itself | Other apps point this **at** Morph `:9090` |
 
 Relative `./data/...` paths are cwd-relative.

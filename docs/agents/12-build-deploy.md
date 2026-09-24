@@ -2,7 +2,7 @@
 
 ## Local development (supported)
 
-Source of truth: **`start-all.sh`**. Remaining services: morph, formx, composerx, morph-engi, bk, SharpReport, morph-utils.
+Source of truth: **`start-all.sh`**. Remaining services: morph, formx, composerx, morph-engi, bk, SharpReport, morph-utils, invite-signup (`invite-signup-ui` at http://localhost:3051; no separate API process and no alias).
 
 ### Prerequisites
 
@@ -44,6 +44,7 @@ cp .env.example .env
 | `sharpreport-api` | `sharpreport-ui` | `sharpreport` |
 | `bk-api` | `bk-ui` | `bk` |
 | — | `morph-utils-ui` | `morph-utils` |
+| — | `invite-signup-ui` | — |
 
 Logs: `.robo-dev/logs/<service>.log`. macOS Morph API is built before run.
 
@@ -74,7 +75,38 @@ cd SharpReport/frontend && npm run build
 cd bk/frontend && npm run build
 ```
 
-Tests: `go test ./...` in morph / formx/backend / composerx/backend; `cargo test` in the Rust backends.
+Tests: `go vet ./...` and `go test ./...` in morph, formx/backend, composerx/backend, and pkg/morphai (see CI below); `cargo test` in the Rust backends.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to `main` and on every push to `main`. Jobs run in parallel. A newer run on the same pull request cancels the one it replaces. Runs for different pull requests do not cancel each other.
+
+Every check below runs on every pull request. There are no path filters: `morph`, `formx/backend`, and `composerx/backend` `replace` sibling packages, so a `pkg/morphai` edit can break an app whose own directory did not change. The five check names are stable (they are what branch protection should require). Do not rename them in the workflow without updating that protection.
+
+There is no `go.work`. Each Go module is tested from its own directory, using the `go` version in that module's `go.mod`. `actions/setup-go` caches modules and build outputs, keyed by that module's `go.sum` (`go.mod` for `pkg/morphai`, which has no third-party requirements). `MORPH_AI_API_KEY` is unset; nothing in these jobs should call an AI provider.
+
+| Check | Directory | Commands |
+|-------|-----------|----------|
+| Go / Morph API | `morph` | `go vet ./...` then `go test ./...` |
+| Go / Event Logs | `formx/backend` | `go vet ./...` then `go test ./...` |
+| Go / Content Maker | `composerx/backend` | `go vet ./...` then `go test ./...` |
+| Go / morphai | `pkg/morphai` | `go vet ./...` then `go test ./...` |
+| Morph frontend | `morph/frontend` | `npm ci`, then `CI=true npm test -- --watchAll=false`, then `CI=true npm run build` |
+
+The frontend job uses Node.js 22 (the repo `engines.node` is `>=20`) and caches npm from `morph/frontend/package-lock.json`.
+
+Reproduce locally from the repo root. Leave `MORPH_AI_API_KEY` unset (do not export a key, and do not rely on a root `.env` for these commands):
+
+```bash
+unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+
+( cd morph && go vet ./... && go test ./... )
+( cd formx/backend && go vet ./... && go test ./... )
+( cd composerx/backend && go vet ./... && go test ./... )
+( cd pkg/morphai && go vet ./... && go test ./... )
+
+( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
+```
 
 ## Production / cloud
 

@@ -13,7 +13,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Stack,
   Tab,
   Tabs,
@@ -521,12 +520,10 @@ export default function CaseTasks() {
     setDetailError('');
     setDetailInfo('');
     try {
-      let id = editing?.id;
       if (editing) {
         await tranApi.put(tranEndpoints.caseTask(editing.id), payload);
       } else {
-        const res = await tranApi.post(tranEndpoints.caseTasks, payload);
-        id = res.data?.id || res.data?.ID;
+        await tranApi.post(tranEndpoints.caseTasks, payload);
       }
       await load();
       setDialogOpen(false);
