@@ -20,6 +20,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Parser-blocking on purpose. Vite hoists the module into head; this classic script still runs first. -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

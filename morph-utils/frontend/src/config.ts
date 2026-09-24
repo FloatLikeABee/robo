@@ -1,3 +1,5 @@
+import { readRuntimeConfig, resolvePublicUrl } from './publicUrl';
+
 export type UtilsModuleId = 'sheetx' | 'composerx' | 'datax' | 'projects';
 
 export type UtilsModule = {
@@ -10,16 +12,43 @@ export type UtilsModule = {
   embedUrl?: string;
 };
 
-const sheetxUrl = (
-  import.meta.env.VITE_SHEETX_URL ?? import.meta.env.VITE_FORMSX_URL ?? 'http://localhost:19909'
-).replace(/\/$/, '');
-const composerxUrl = (import.meta.env.VITE_COMPOSERX_URL ?? 'http://localhost:8044').replace(/\/$/, '');
-export const DATAX_URL = (import.meta.env.VITE_DATAX_URL ?? 'http://localhost:5178').replace(/\/$/, '');
-const projectsUrl = (
-  import.meta.env.VITE_PROJECTS_URL ?? import.meta.env.VITE_MORPH_ENGI_URL ?? 'http://localhost:5179'
-).replace(/\/$/, '');
+const runtimeConfig = readRuntimeConfig();
 
-export const MORPH_AI_URL = (import.meta.env.VITE_MORPH_AI_URL ?? 'http://localhost:3031').replace(/\/$/, '');
+const sheetxUrl = resolvePublicUrl({
+  runtime: runtimeConfig.sheetxUrl,
+  runtimeAlias: runtimeConfig.formsxUrl,
+  built: import.meta.env.VITE_SHEETX_URL,
+  builtAlias: import.meta.env.VITE_FORMSX_URL,
+  devFallback: import.meta.env.DEV ? 'http://localhost:19909' : '',
+  dev: import.meta.env.DEV,
+});
+const composerxUrl = resolvePublicUrl({
+  runtime: runtimeConfig.composerxUrl,
+  built: import.meta.env.VITE_COMPOSERX_URL,
+  devFallback: import.meta.env.DEV ? 'http://localhost:8044' : '',
+  dev: import.meta.env.DEV,
+});
+export const DATAX_URL = resolvePublicUrl({
+  runtime: runtimeConfig.dataxUrl,
+  built: import.meta.env.VITE_DATAX_URL,
+  devFallback: import.meta.env.DEV ? 'http://localhost:5178' : '',
+  dev: import.meta.env.DEV,
+});
+const projectsUrl = resolvePublicUrl({
+  runtime: runtimeConfig.projectsUrl,
+  runtimeAlias: runtimeConfig.morphEngiUrl,
+  built: import.meta.env.VITE_PROJECTS_URL,
+  builtAlias: import.meta.env.VITE_MORPH_ENGI_URL,
+  devFallback: import.meta.env.DEV ? 'http://localhost:5179' : '',
+  dev: import.meta.env.DEV,
+});
+
+export const MORPH_AI_URL = resolvePublicUrl({
+  runtime: runtimeConfig.morphAiUrl,
+  built: import.meta.env.VITE_MORPH_AI_URL,
+  devFallback: import.meta.env.DEV ? 'http://localhost:3031' : '',
+  dev: import.meta.env.DEV,
+});
 
 export const UTILS_MODULES: UtilsModule[] = [
   {

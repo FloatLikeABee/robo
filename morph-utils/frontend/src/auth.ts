@@ -1,13 +1,20 @@
+import { readRuntimeConfig, resolvePublicUrl } from './publicUrl';
+
 /** Shared Morph JWT cookie used across Morph AI / MorphUtils / embedded apps. */
 export const SHARED_SESSION_COOKIE = 'userspanel_session_token';
 const AUTH_TOKEN_KEY = 'morph_auth_token';
 /** Persist signed-in sessions without a short logout TTL (~100 years). Cleared only on Sign out. */
 const SESSION_MAX_AGE_SECONDS = 100 * 365 * 24 * 3600;
 
-const MORPH_API = (import.meta.env.VITE_MORPH_API_URL ?? import.meta.env.VITE_USERS_PANEL_API_URL ?? '').replace(
-  /\/$/,
-  '',
-);
+const runtimeConfig = readRuntimeConfig();
+const MORPH_API = resolvePublicUrl({
+  runtime: runtimeConfig.morphApiUrl,
+  runtimeAlias: runtimeConfig.usersPanelApiUrl,
+  built: import.meta.env.VITE_MORPH_API_URL,
+  builtAlias: import.meta.env.VITE_USERS_PANEL_API_URL,
+  devFallback: '',
+  dev: false,
+});
 
 /** Prefer same-origin Vite proxy to Morph (`/api` → :9090). */
 function morphAuthUrl(path: string): string {
