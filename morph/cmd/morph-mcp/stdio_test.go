@@ -16,7 +16,9 @@ import (
 	"testing"
 	"time"
 
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"idongivaflyinfa/auth"
+	morphdb "idongivaflyinfa/db"
 )
 
 func TestMain(m *testing.M) {
@@ -34,6 +36,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	dbPath := seedStdioDB(t, "user-stdio", "ada@example.com", "Ada stdio task", "Bea stdio secret")
 
 	// Cancel kills a child that is still running when the test returns or times out.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,6 +47,9 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		"MORPH_MCP_STDIO_CHILD=1",
 		"JWT_SECRET="+secret,
 		"MORPH_MCP_TOKEN="+tok,
+		"TRAN_SQLITE_PATH="+dbPath,
+		"ENTITY_DETAILS_BADGER="+filepath.Join(t.TempDir(), "no-badger"),
+		"DB_PATH="+filepath.Join(t.TempDir(), "no-badger-db"),
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -67,7 +73,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		_ = cmd.Wait()
 	})
 
-	lines := startLineReader(stdout)
+	lines := startLineReader(t.Context(), stdout)
 	if err := writeLine(stdin, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"stdio-test","version":"0"}}}`); err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +111,21 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	listLine := waitID(t, lines, "2")
 	assertJSONRPC(t, listLine, tok)
 	tools := resultObject(t, listLine)["tools"].([]any)
-	if len(tools) != 1 || tools[0].(map[string]any)["name"] != "whoami" {
+	names := map[string]bool{}
+	for _, tool := range tools {
+		item := tool.(map[string]any)
+		names[item["name"].(string)] = true
+		ann, _ := item["annotations"].(map[string]any)
+		if ann["readOnlyHint"] != true {
+			t.Fatalf("%v annotations = %#v", item["name"], ann)
+		}
+	}
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {
+		if !names[name] {
+			t.Fatalf("missing %s in %#v", name, tools)
+		}
+	}
+	if len(tools) != 3 {
 		t.Fatalf("tools = %#v", tools)
 	}
 
@@ -119,6 +139,15 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	}
 	if strings.Contains(initLine+listLine+callLine, "server ready") {
 		t.Fatal("stdout included a log line")
+	}
+
+	if err := writeLine(stdin, `{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"list_my_tasks","arguments":{}}}`); err != nil {
+		t.Fatal(err)
+	}
+	tasksLine := waitID(t, lines, "4")
+	assertJSONRPC(t, tasksLine, tok)
+	if !strings.Contains(tasksLine, "Ada stdio task") || strings.Contains(tasksLine, "Bea stdio secret") {
+		t.Fatalf("list_my_tasks = %s", tasksLine)
 	}
 
 	if err := stdin.Close(); err != nil {
@@ -153,8 +182,31 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	}
 }
 
+func TestLineReaderExitsWhenConsumerStops(t *testing.T) {
+	pr, pw := io.Pipe()
+	ctx, cancel := context.WithCancel(context.Background())
+	lines := startLineReader(ctx, pr)
+	if _, err := io.WriteString(pw, "hello\n"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+	done := make(chan struct{})
+	go func() {
+		for range lines {
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("reader goroutine did not exit")
+	}
+	_ = pw.Close()
+}
+
 func TestLineReaderReportsScanError(t *testing.T) {
-	lines := startLineReader(errReader{err: io.ErrUnexpectedEOF})
+	lines := startLineReader(context.Background(), errReader{err: io.ErrUnexpectedEOF})
 	res, ok := <-lines
 	if !ok {
 		t.Fatal("channel closed without a scan error")
@@ -170,7 +222,7 @@ func TestLineReaderReportsScanError(t *testing.T) {
 func TestStdioRejectsMissingIdentity(t *testing.T) {
 	cmd := exec.Command(os.Args[0], "-test.run=^$")
 	cmd.Dir = t.TempDir()
-	cmd.Env = childEnv("MORPH_MCP_STDIO_CHILD=1", "MORPH_MCP_TOKEN=")
+	cmd.Env = childEnv("MORPH_MCP_STDIO_CHILD=1", "JWT_SECRET=stdio-test-secret", "MORPH_MCP_TOKEN=")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -214,11 +266,222 @@ func TestStdioRejectsInvalidIdentity(t *testing.T) {
 	}
 }
 
+func TestSDKClientOverStdio(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok, err := auth.EncodeToken(cfg, "sdk-stdio", "ada@example.com", "ada", []string{"employee"}, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbPath := seedStdioDB(t, "sdk-stdio", "ada@example.com", "Ada sdk task", "Bea sdk secret")
+	bin := filepath.Join(t.TempDir(), "morph-mcp")
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin)
+	cmd.Env = childEnv(
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+tok,
+		"TRAN_SQLITE_PATH="+dbPath,
+	)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waited := false
+	t.Cleanup(func() {
+		if waited {
+			return
+		}
+		cancel()
+		_ = cmd.Wait()
+	})
+
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "morph-mcp-e2e", Version: "0"}, nil)
+	session, err := client.Connect(ctx, &sdkmcp.IOTransport{Reader: stdout, Writer: stdin}, nil)
+	if err != nil {
+		t.Fatalf("connect: %v\nstderr: %s", err, stderr.String())
+	}
+
+	listed, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, tool := range listed.Tools {
+		names = append(names, tool.Name)
+	}
+	listedText, _ := json.Marshal(names)
+	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "list_my_tasks",
+		Arguments: map[string]any{"status": "open", "limit": 10},
+	})
+	if err != nil || res.IsError {
+		t.Fatalf("list err=%v res=%+v stderr=%s", err, res, stderr.String())
+	}
+	listText := redactToken(toolTextSDK(t, res), tok)
+	if !strings.Contains(listText, "Ada sdk task") || strings.Contains(listText, "Bea sdk secret") {
+		t.Fatalf("list = %s", listText)
+	}
+
+	var adaID float64
+	raw, _ := json.Marshal(res.StructuredContent)
+	var page struct {
+		Tasks []struct {
+			ID int `json:"id"`
+		} `json:"tasks"`
+	}
+	if err := json.Unmarshal(raw, &page); err != nil || len(page.Tasks) == 0 {
+		t.Fatalf("structured %s: %v", raw, err)
+	}
+	adaID = float64(page.Tasks[0].ID)
+	got, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": adaID},
+	})
+	if err != nil || got.IsError {
+		t.Fatalf("get err=%v res=%+v", err, got)
+	}
+	getText := redactToken(toolTextSDK(t, got), tok)
+	foreign, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": adaID + 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !foreign.IsError {
+		t.Fatalf("foreign get succeeded: %+v", foreign)
+	}
+	foreignText := redactToken(toolTextSDK(t, foreign), tok)
+	if strings.Contains(foreignText, "Bea sdk secret") || strings.Contains(foreignText, "forbidden") {
+		t.Fatalf("foreign = %s", foreignText)
+	}
+	if err := session.Close(); err != nil {
+		t.Fatal(err)
+	}
+	waited = true
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("exit: %v\nstderr: %s", err, stderr.String())
+	}
+	if strings.Contains(stderr.String(), tok) {
+		t.Fatal("stderr included the token")
+	}
+
+	t.Logf("MCP Inspector-equivalent go-sdk stdio transcript (token redacted)\ntools/list names: %s\ntools/call list_my_tasks: %s\ntools/call get_task: %s\ntools/call get_task other id: %s",
+		listedText, listText, getText, foreignText)
+}
+
+func toolTextSDK(t *testing.T, res *sdkmcp.CallToolResult) string {
+	t.Helper()
+	var b strings.Builder
+	for _, c := range res.Content {
+		tc, ok := c.(*sdkmcp.TextContent)
+		if !ok {
+			continue
+		}
+		b.WriteString(tc.Text)
+	}
+	return b.String()
+}
+
+func redactToken(text, token string) string {
+	return strings.ReplaceAll(text, token, "[redacted]")
+}
+
+func TestStdioRejectsDeletedUser(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok, err := auth.EncodeToken(cfg, "gone-stdio", "gone@example.com", "gone", nil, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbPath := seedStdioDB(t, "gone-stdio", "gone@example.com", "Gone task", "Other task")
+	store, err := morphdb.NewTranSQL(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.DB.Exec(`DELETE FROM plat_users WHERE id = 'gone-stdio'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=^$")
+	cmd.Dir = t.TempDir()
+	cmd.Env = childEnv(
+		"MORPH_MCP_STDIO_CHILD=1",
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+tok,
+		"TRAN_SQLITE_PATH="+dbPath,
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err == nil {
+		t.Fatal("expected non-zero exit")
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+	if strings.Contains(stderr.String(), tok) {
+		t.Fatal("stderr included the token")
+	}
+}
+
+func seedStdioDB(t *testing.T, subject, email, ownTitle, otherTitle string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "tran.sqlite")
+	store, err := morphdb.NewTranSQL(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	now := "2026-09-24T00:00:00Z"
+	_, err = store.DB.Exec(`INSERT INTO plat_users (
+		id, email, username, is_verified, roles, permissions, default_channel_id, created_at, updated_at
+	) VALUES
+		(?, ?, 'own', 1, '["employee"]', '[]', 'ch', ?, ?),
+		('other-stdio', 'other@example.com', 'other', 1, '["employee"]', '[]', 'ch', ?, ?)`,
+		subject, email, now, now, now, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.DB.Exec(`INSERT INTO "User" (LoginID, FirstName, LastName, Email, Deactivated) VALUES
+		('own', 'Own', 'User', ?, 0),
+		('other', 'Other', 'User', 'other@example.com', 0)`, email); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.DB.Exec(`INSERT INTO user_note_todo (UserID, ItemType, Title, Body, Completed) VALUES
+		(1, 'todo', ?, 'own body', 0),
+		(2, 'todo', ?, 'other body', 0)`, ownTitle, otherTitle); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 func childEnv(extra ...string) []string {
 	drop := map[string]bool{
 		"MORPH_MCP_TOKEN":       true,
 		"JWT_SECRET":            true,
 		"MORPH_MCP_STDIO_CHILD": true,
+		"TRAN_SQLITE_PATH":      true,
 	}
 	var out []string
 	for _, entry := range os.Environ() {
@@ -249,17 +512,27 @@ func (r errReader) Read([]byte) (int, error) {
 	return 0, r.err
 }
 
-func startLineReader(r io.Reader) <-chan scanResult {
+func startLineReader(ctx context.Context, r io.Reader) <-chan scanResult {
 	ch := make(chan scanResult)
 	go func() {
 		defer close(ch)
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 64*1024), 4*1024*1024)
+		send := func(res scanResult) bool {
+			select {
+			case ch <- res:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
 		for sc.Scan() {
-			ch <- scanResult{line: sc.Text()}
+			if !send(scanResult{line: sc.Text()}) {
+				return
+			}
 		}
 		if err := sc.Err(); err != nil {
-			ch <- scanResult{err: err}
+			send(scanResult{err: err})
 		}
 	}()
 	return ch

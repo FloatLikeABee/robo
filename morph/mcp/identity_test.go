@@ -141,6 +141,7 @@ func TestIdentityFromEnv(t *testing.T) {
 }
 
 func TestIdentityFromEnvMissing(t *testing.T) {
+	t.Setenv("JWT_SECRET", "stdio-test-secret")
 	t.Setenv(mcp.TokenEnv, "  ")
 	_, err := mcp.IdentityFromEnv()
 	if err == nil {

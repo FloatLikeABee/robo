@@ -1,23 +1,6 @@
-# morph-mcp-stdio Specification
+# Spec Delta
 
-## Purpose
-
-Let a local MCP client attach to Morph over stdio, complete the handshake, see which Morph user the server is acting as, and list and read that user's own Notes and TODOs. The process opens SQLite read-only and does not open Badger.
-
-## Requirements
-
-### Requirement: Stdio initialize
-The Morph module MUST build a stdio server that speaks MCP JSON-RPC on stdin and stdout. An `initialize` request at protocol revision 2025-06-18 MUST return that revision, a serverInfo name and version, and server capabilities. The process MUST NOT listen on a network port. A newer protocol revision the server supports MAY be negotiated when the client requests it.
-
-#### Scenario: Initialize at 2025-06-18
-- **WHEN** a client sends `initialize` with protocol version 2025-06-18
-- **THEN** the response protocolVersion is 2025-06-18
-- **AND** serverInfo includes a non-empty name and version
-- **AND** capabilities include tools and resources
-
-#### Scenario: No network listener
-- **WHEN** the server process is running a stdio session
-- **THEN** it does not bind a TCP or UDP port for MCP
+## MODIFIED Requirements
 
 ### Requirement: Tools and an empty resource list
 The server MUST advertise the tools capability and the resources capability. `tools/list` MUST include exactly three tools, `whoami`, `list_my_tasks`, and `get_task`, each marked read-only. `resources/list` MUST succeed and return no resources. The server MUST NOT expose write tools, prompts, Engi project tools, or BK TCP tools.
@@ -31,14 +14,6 @@ The server MUST advertise the tools capability and the resources capability. `to
 - **WHEN** a client calls `resources/list` after initialize
 - **THEN** the call succeeds
 - **AND** the resource list is empty
-
-### Requirement: Whoami returns the verified Morph user
-`whoami` MUST return the Morph user id, email, username, and roles taken from the verified session token. The result MUST NOT include the token or a password.
-
-#### Scenario: Call whoami
-- **WHEN** a client calls `whoami` with a verified token for a known user
-- **THEN** the result id, email, username, and roles match that token's claims
-- **AND** the token string is absent from the result
 
 ### Requirement: Identity fails closed
 The server MUST treat `MORPH_MCP_TOKEN` as a Morph session JWT and verify it with the same HS256 secret the Morph API uses. If the token is missing, invalid, expired, or has no subject, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the token text. A user id supplied without a valid token MUST NOT be accepted. If `JWT_SECRET` is empty or equal to the built-in development default the API substitutes when the variable is unset, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the secret. On startup the process MUST confirm the token subject still exists in `plat_users` and MUST exit non-zero when it does not. Each tool call MUST verify the token again, and an expired or invalid token MUST be a tool error that does not contain the token text.
@@ -83,15 +58,6 @@ The stdio process MUST NOT open the Morph Badger directories. It MUST NOT call `
 - **THEN** the read succeeds
 - **AND** the writer can still commit
 
-### Requirement: Logs stay off stdout
-Stdout MUST contain only MCP JSON-RPC messages. Diagnostic logs, including the resolved user id, MUST go to stderr. Stderr MUST NOT contain the session token.
-
-#### Scenario: Handshake bytes are JSON-RPC
-- **WHEN** a client completes initialize, tools/list, and whoami
-- **THEN** every non-empty stdout line is a JSON-RPC message
-- **AND** log text is on stderr
-- **AND** the token is on neither stream
-
 ### Requirement: Cursor run instructions
 The repository MUST document how to build the stdio server and a Cursor `mcp.json` snippet that launches it with `MORPH_MCP_TOKEN`, `JWT_SECRET`, and `TRAN_SQLITE_PATH`. The doc MUST name `whoami`, `list_my_tasks`, and `get_task`, and MUST state that the HTTP JSON tool catalogs are not MCP. The documented examples MUST NOT contain a real token or secret.
 
@@ -100,6 +66,8 @@ The repository MUST document how to build the stdio server and a Cursor `mcp.jso
 - **THEN** it shows the build command and a Cursor `mcp.json` example including `TRAN_SQLITE_PATH`
 - **AND** it names the three tools
 - **AND** it states that `/ai/mcp-tools` style catalogs are not the Model Context Protocol
+
+## ADDED Requirements
 
 ### Requirement: List and get return only the caller's notes and todos
 `list_my_tasks` and `get_task` MUST read `user_note_todo` rows whose `UserID` is the active Tran `User` row for the token email (case-insensitive trimmed email, `Deactivated = 0`). They MUST NOT use a request user id, an `X-User-ID` header, or a default user id, and they MUST NOT create a `User` row. `list_my_tasks` MUST accept optional `type` (`all`, `note`, or `todo`), optional `status` (`all`, `open`, or `done`), and optional `limit`. The default limit is 50 and the applied limit MUST NOT exceed 100. Each task object MUST include id, title, status (`open` or `done`), item type, and the text body stored in SQLite, plus deadline, created, and updated timestamps when present. `get_task` for an id the caller does not own, or that does not exist, MUST be a not-found tool error and MUST NOT say the row is forbidden or include the other user's title or body. MorphNotes `CaseTask` rows MUST NOT be returned.
