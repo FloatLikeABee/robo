@@ -17,7 +17,7 @@ This change is **planning-only**. Implementation will be split into smaller foll
    - Delete `src/tools.py` and `src/tool_registry.py`
    - Remove `ToolManager` dependency from `agent_manager`, `gathering_service`, `scholar_forge_service`, `api.py`
    - Convert tool-enabled agents to direct LLM calls
-   - Update MCP `tools/list` and `tools/call` to return/call only external host tools
+   - Do not restore BK `tools/list` or `tools/call`. That TCP surface was removed in #40 (PR #73). Protocol MCP is `morph/cmd/morph-mcp`.
 3. **Phase 2: Introduce Assistant module**
    - Create `src/assistant_manager.py` and `AssistantProfile` model
    - Add `src/assistants.py` service facade

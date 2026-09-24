@@ -16,4 +16,4 @@
 
 ## 4. Integration check
 
-- [x] 4.1 From `bk/`, run the existing pytest suite and confirm it passes, import the API app, and confirm a search of the repo finds no `mcp_service`, `mcp_host_manager`, `/mcp/start`, `/mcp/hosts`, or `MCPHosts` except this change's own specs and the archived refactor note. Run `npm run build` in `bk/frontend` and confirm exit 0.
+- [x] 4.1 From `bk/`, run the existing pytest suite, import the API app, and confirm a search of the repo finds no `mcp_service`, `mcp_host_manager`, `/mcp/start`, `/mcp/hosts`, or `MCPHosts` except this change's own specs and the archived refactor note. Pytest was 9 passed and 1 failed: `tests/test_assistant_refactor.py::test_assistant_manager_crud` (`Failed to create LLM caller for preferred provider gemini`, no API key). That failure was already on main. `npm run build` in `bk/frontend` exited 1 because `../lib/appliedAssistantChannel` was already missing on main. Those two results are pre-existing, not a clean pass.

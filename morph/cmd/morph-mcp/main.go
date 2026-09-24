@@ -1,7 +1,8 @@
 // Command morph-mcp is a local Model Context Protocol server over stdio.
 //
 // Stdout is reserved for MCP JSON-RPC messages. Logs go to stderr.
-// The process does not listen on a port and does not open Badger or SQLite.
+// The process does not listen on a port and does not open Badger.
+// It opens TRAN_SQLITE_PATH read-only.
 package main
 
 import (
@@ -31,12 +32,13 @@ func run() error {
 	if err := repoenv.Load(); err != nil {
 		return err
 	}
-	id, err := mcp.IdentityFromEnv()
+	id, tasks, err := mcp.CheckStartup(context.Background())
 	if err != nil {
 		return err
 	}
+	defer tasks.Close()
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	server, err := mcp.NewServer(id, logger)
+	server, err := mcp.NewServer(id, tasks, mcp.RecheckFromEnv, logger)
 	if err != nil {
 		return err
 	}
