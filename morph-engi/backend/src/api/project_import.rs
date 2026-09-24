@@ -181,7 +181,7 @@ pub async fn analyze(
     .map_err(db_err)?;
     let session_id = ins.last_insert_rowid();
 
-    let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
+    let upload_dir = PathBuf::from(&state.settings.upload_dir).join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir)
         .await
         .map_err(server_err)?;
@@ -903,6 +903,7 @@ mod tests {
             cors_origin: "*".into(),
             users_panel_base_url: "http://localhost".into(),
             static_dir: String::new(),
+            upload_dir: "uploads".into(),
             preview_demo: false,
         };
         Arc::new(AppState {
@@ -1066,7 +1067,9 @@ mod tests {
                 .unwrap();
         for name in stored {
             let _ = tokio::fs::remove_file(
-                PathBuf::from("uploads").join(ORG.to_string()).join(name),
+                PathBuf::from(&state.settings.upload_dir)
+                    .join(ORG.to_string())
+                    .join(name),
             )
             .await;
         }

@@ -1373,7 +1373,7 @@ use axum::body::Bytes;
 use std::path::PathBuf;
 
 pub async fn upload_resource_file(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     AuthUser(auth): AuthUser,
     mut multipart: axum::extract::Multipart,
 ) -> ApiResult {
@@ -1398,7 +1398,7 @@ pub async fn upload_resource_file(
     }
 
     let bytes = file_bytes.ok_or(json_err("file required"))?;
-    let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
+    let upload_dir = PathBuf::from(&state.settings.upload_dir).join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -1428,9 +1428,12 @@ pub async fn upload_resource_file(
 }
 
 pub async fn serve_upload(
+    State(state): State<Arc<AppState>>,
     Path((org_id, filename)): Path<(i64, String)>,
 ) -> Result<axum::response::Response, (StatusCode, Json<Value>)> {
-    let path = PathBuf::from("uploads").join(org_id.to_string()).join(&filename);
+    let path = PathBuf::from(&state.settings.upload_dir)
+        .join(org_id.to_string())
+        .join(&filename);
     if !path.exists() {
         return Err((
             StatusCode::NOT_FOUND,
@@ -1503,6 +1506,7 @@ mod tests {
             cors_origin: "*".into(),
             users_panel_base_url: "http://localhost".into(),
             static_dir: String::new(),
+            upload_dir: "uploads".into(),
             preview_demo: false,
         };
         Arc::new(AppState {

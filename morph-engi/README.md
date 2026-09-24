@@ -72,8 +72,44 @@ npm run vercel-build
 
 | Variable | Default |
 |----------|---------|
-| `DATABASE_URL` | `sqlite://morph_engi.db` |
-| `APP_PORT` | `9096` |
-| `CORS_ORIGIN` | `http://localhost:5179` |
+| `MORPH_ENGI_DATABASE_URL` | `sqlite://morph_engi.db` |
+| `MORPH_ENGI_PORT` | `9096` (falls back to `PORT`) |
+| `MORPH_ENGI_CORS_ORIGIN` | `http://localhost:5179` |
 | `USERS_PANEL_BASE_URL` | `http://127.0.0.1:9090` (Morph auth) |
 | `MORPH_AI_API_KEY` | _(empty — deterministic help only)_ |
+| `MORPH_ENGI_UPLOAD_DIR` | `uploads` (relative to the process working directory) |
+
+`MORPH_ENGI_PORT` wins over `PORT` when both are set. The container image sets only `PORT`.
+
+## Container
+
+One image serves the API and the built UI. From the repo root:
+
+```bash
+docker build -f morph-engi/Dockerfile -t morph-engi:local .
+```
+
+That command does not use Render or `render.yaml`. `GET /health` is the healthcheck (`wget` on `http://127.0.0.1:${PORT}/health`). The image default `PORT` is `9096`. `sh morph-engi/deploy/check-container-contract.sh` checks the Dockerfile and Blueprint without a daemon.
+
+Copy `morph-engi/deploy/.env.production.example` to a gitignored file and pass it with `--env-file`. Leave secrets empty in the example.
+
+| Variable | Production value |
+|----------|------------------|
+| `APP_ENV` | `production` |
+| `PORT` | `9096` |
+| `STATIC_DIR` | `/app/frontend/dist` |
+| `MORPH_ENGI_DATABASE_URL` | `sqlite:///data/morph_engi.db` |
+| `MORPH_ENGI_UPLOAD_DIR` | `/data/uploads` |
+| `USERS_PANEL_BASE_URL` | `https://<morph public host>` (no path). It is not a secret. |
+| `JWT_SECRET` | Same value as Morph, at least 32 characters. Not committed. |
+| `MORPH_AI_API_KEY` | Optional for `/health`. Not committed. |
+
+`APP_ENV=production` refuses a development `JWT_SECRET` and a loopback Morph API base before the process listens.
+
+## Hosted on Render
+
+The product owner creates the service. This repo does not call Render. After merge, sync `render.yaml` on `main` in Render project `prj-dahc33dbedkc73a1v8n0`. That adds the Docker web service `morph-engi`. The same steps are in `deploy/README.md`.
+
+Disk `morph-engi-data` is mounted at `/data` (1 GB) and is a single instance. `GET /health` must return HTTP 200.
+
+The MorphUtils module id is `projects`. The placeholder for story #114 is `https://<morph-engi public host>`. #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL`. This change does not set those variables.

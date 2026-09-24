@@ -80,8 +80,8 @@ if any(line.startswith("projects:") for line in lines):
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils"]:
-    errors.append("service names must be morph then morph-utils, got " + ", ".join(names))
+if names[:2] != ["morph", "morph-utils"]:
+    errors.append("services must start with morph then morph-utils, got " + ", ".join(names))
 
 utils = next((block for block in blocks if service_name(block) == "morph-utils"), None)
 if utils is None:

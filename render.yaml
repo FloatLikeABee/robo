@@ -119,3 +119,47 @@ services:
       # Public Morph origin, filled in the dashboard. Not a secret.
       - key: VITE_MORPH_API_URL
         sync: false
+
+  # Project (MorphUtils module id projects). Do not set VITE_PROJECTS_URL
+  # or VITE_MORPH_ENGI_URL here; story #114 wires the public origin.
+  - type: web
+    runtime: docker
+    name: morph-engi
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./morph-engi/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - morph-engi/**
+        - pkg/morphai-rs/**
+        - morph-engi/Dockerfile
+        - morph-engi/Dockerfile.dockerignore
+        - morph-engi/deploy/docker-entrypoint.sh
+        - render.yaml
+    disk:
+      name: morph-engi-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PORT
+        value: "9096"
+      - key: STATIC_DIR
+        value: /app/frontend/dist
+      - key: MORPH_ENGI_DATABASE_URL
+        value: sqlite:///data/morph_engi.db
+      - key: MORPH_ENGI_UPLOAD_DIR
+        value: /data/uploads
+      # Public Morph origin, filled in the dashboard. Not a secret.
+      - key: USERS_PANEL_BASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MORPH_AI_API_KEY
+        sync: false

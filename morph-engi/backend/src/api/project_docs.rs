@@ -274,7 +274,7 @@ pub async fn generate_document(
         return Err(bad_request("paste content too long"));
     }
 
-    let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
+    let upload_dir = PathBuf::from(&state.settings.upload_dir).join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir)
         .await
         .map_err(server_err)?;

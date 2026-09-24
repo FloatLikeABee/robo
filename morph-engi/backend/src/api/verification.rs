@@ -401,7 +401,7 @@ pub async fn run_verification(
     .map_err(db_err)?;
 
     let session_id = ins.last_insert_rowid();
-    let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
+    let upload_dir = PathBuf::from(&state.settings.upload_dir).join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
