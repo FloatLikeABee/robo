@@ -2,8 +2,9 @@
 # Data Access, and Project. Attach this file to the existing Render project.
 # Secrets and public origins that are filled in the dashboard are prompts. Do
 # not put values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are
-# public origin prompts, not secrets. Do not set VITE_SHEETX_URL, VITE_DATAX_URL,
-# VITE_PROJECTS_URL, VITE_MORPH_ENGI_URL, or REACT_APP_MORPH_UTILS_URL here.
+# public origin prompts, not secrets. REACT_APP_MORPH_UTILS_URL is a morph
+# dashboard prompt with no value. Do not set VITE_SHEETX_URL, VITE_DATAX_URL,
+# VITE_PROJECTS_URL, or VITE_MORPH_ENGI_URL here.
 services:
   - type: web
     runtime: docker
@@ -29,8 +30,8 @@ services:
       name: morph-data
       mountPath: /data
       sizeGB: 1
-    # Optional Docker build arg: REACT_APP_MORPH_UTILS_URL. Unset or loopback
-    # omits the MorphUtils header link. Set a public URL when Utils is hosted.
+    # REACT_APP_MORPH_UTILS_URL is a Docker build arg. CRA inlines it. Empty or
+    # loopback omits the MorphUtils header chip. Do not put a URL on the key.
     envVars:
       - key: MORPH_ENV
         value: production
@@ -54,6 +55,8 @@ services:
         value: /data/knowledge
       - key: TRAN_ENTITY_ATTACHMENT_DIR
         value: /data/uploads/entity_attachments
+      - key: REACT_APP_MORPH_UTILS_URL
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: ADMIN_PASSWORD

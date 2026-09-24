@@ -8,6 +8,9 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        # Shell or deploy/.env only. env_file is runtime and CRA already inlined this.
+        REACT_APP_MORPH_UTILS_URL: ${REACT_APP_MORPH_UTILS_URL:-}
     image: morph:local
     env_file:
       - .env.production

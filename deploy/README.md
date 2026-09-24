@@ -10,6 +10,12 @@ From the repo root:
 docker build -t morph:local .
 ```
 
+That build leaves `REACT_APP_MORPH_UTILS_URL` unset, so the production UI omits the MorphUtils header chip. To inline a public origin, pass it as a build arg and rebuild. There is no default host:
+
+```bash
+docker build --build-arg REACT_APP_MORPH_UTILS_URL=https://<morph-utils public host> -t morph:local .
+```
+
 The context is the repo root so `pkg/` (Go `replace` directives) and `scripts/with-root-env.cjs` are available. `.dockerignore` keeps env files, `node_modules`, local `data/`, and the other apps out. There are no secret build args.
 
 `sh deploy/check-container-contract.sh` checks the Dockerfile, compose file, and CI job names without a daemon.
@@ -161,7 +167,7 @@ Do not put a JWT, password, or API key in git. Fill those prompts in the dashboa
 
 ### 4. Rebuild Morph after the MorphUtils origin exists
 
-Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not add this key to `render.yaml`. Do not commit the URL.
+Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. The Blueprint already lists that key with `sync: false` and no value. Fill the dashboard prompt. Do not put a value in `render.yaml`. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not commit the URL.
 
 ### 5. Env matrix for story #114
 
@@ -175,7 +181,7 @@ Leave these `VITE_*` keys unset on `morph-utils` in this change. Story #114 sets
 | `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
 | `VITE_PROJECTS_URL` (alias `VITE_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
 
-The sections below keep the per-service port, disk, and secret tables. Those sections still do not set `REACT_APP_MORPH_UTILS_URL` in the Blueprint.
+The sections below keep the per-service port, disk, and secret tables. Those sections still do not put a value for `REACT_APP_MORPH_UTILS_URL` in the Blueprint. The `morph` service lists the key as a dashboard prompt.
 
 ## MorphUtils on Render
 
@@ -204,11 +210,11 @@ No JWT, password, or API key is set on this service.
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `morph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that value as `REACT_APP_MORPH_UTILS_URL` on the Morph service. This change does not set `REACT_APP_MORPH_UTILS_URL`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `morph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder is `https://<morph-utils public host>`. The `morph` service lists `REACT_APP_MORPH_UTILS_URL` as a dashboard prompt with no value. Fill that prompt and rebuild Morph. This MorphUtils section does not set `REACT_APP_MORPH_UTILS_URL` on `morph-utils`. Do not guess an `onrender.com` host from the service name.
 
 ## Event Logs on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, or `REACT_APP_MORPH_UTILS_URL` in this Blueprint.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` in this Blueprint. Do not set `REACT_APP_MORPH_UTILS_URL` on `formx`. The `morph` service lists that key as a dashboard prompt with no value.
 
 ### Env
 

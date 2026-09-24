@@ -179,8 +179,10 @@ else:
             errors.append(key + " must set sync: false")
         if "value:" in body_env:
             errors.append(key + " must not have a value")
+    if "REACT_APP_MORPH_UTILS_URL" in env:
+        errors.append("formx must not set REACT_APP_MORPH_UTILS_URL")
 
-for forbidden in ("VITE_SHEETX_URL", "VITE_FORMSX_URL", "REACT_APP_MORPH_UTILS_URL"):
+for forbidden in ("VITE_SHEETX_URL", "VITE_FORMSX_URL"):
     if any(line.strip() == "- key: " + forbidden for line in lines):
         errors.append("must not set " + forbidden)
 

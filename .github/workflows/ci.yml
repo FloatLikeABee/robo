@@ -99,4 +99,8 @@ jobs:
       - name: Production build
         run: |
           unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          unset REACT_APP_MORPH_UTILS_URL
           CI=true npm run build
+          node scripts/check-morph-utils-bundle.js unset
+          REACT_APP_MORPH_UTILS_URL=https://utils.example.com CI=true npm run build
+          node scripts/check-morph-utils-bundle.js set https://utils.example.com
