@@ -100,8 +100,11 @@ if "generateValue:" in text:
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx", "morph-engi"]:
-    errors.append("service names must be morph, morph-utils, formx, composerx, morph-engi, got " + ", ".join(names))
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport", "morph-engi"]:
+    errors.append(
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, morph-engi, got "
+        + ", ".join(names)
+    )
 
 def env_map(block):
     env = {}

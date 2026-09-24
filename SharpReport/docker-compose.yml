@@ -1,0 +1,19 @@
+# Local Data Access image. Secrets stay in deploy/.env.production (gitignored).
+services:
+  sharpreport:
+    build:
+      context: ..
+      dockerfile: SharpReport/Dockerfile
+    env_file:
+      - path: deploy/.env.production
+        required: false
+    environment:
+      PORT: "3050"
+      SHARPREPORT_PORT: "3050"
+    ports:
+      - "127.0.0.1:${SHARPREPORT_PUBLISH_PORT:-3050}:3050"
+    volumes:
+      - sharpreport-data:/data
+
+volumes:
+  sharpreport-data:

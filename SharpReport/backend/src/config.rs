@@ -108,9 +108,15 @@ impl Settings {
             }
         }
 
-        if let Ok(p) = std::env::var("SHARPREPORT_PORT") {
-            if let Ok(port) = p.trim().parse() {
-                settings.server.port = port;
+        settings.server.port = select_listen_port(
+            std::env::var("SHARPREPORT_PORT").ok().as_deref(),
+            std::env::var("PORT").ok().as_deref(),
+            settings.server.port,
+        );
+        if let Ok(secret) = std::env::var("JWT_SECRET") {
+            let secret = secret.trim();
+            if !secret.is_empty() {
+                settings.jwt.secret = secret.to_string();
             }
         }
         if let Ok(url) = std::env::var("SHARPREPORT_DATABASE_URL") {
@@ -122,6 +128,22 @@ impl Settings {
 
         Ok(settings)
     }
+}
+
+/// `SHARPREPORT_PORT` wins. `PORT` is the fallback Render injects. `0` and junk are ignored.
+pub fn select_listen_port(sharpreport_port: Option<&str>, port: Option<&str>, fallback: u16) -> u16 {
+    for candidate in [sharpreport_port, port] {
+        let Some(raw) = candidate else {
+            continue;
+        };
+        let raw = raw.trim();
+        if let Ok(n) = raw.parse::<u16>() {
+            if n != 0 {
+                return n;
+            }
+        }
+    }
+    fallback
 }
 
 /// Turn relative `sqlite:` URLs into absolute paths so the DB file is stable regardless of how the
@@ -140,6 +162,10 @@ pub fn resolve_database_url(url: &str) -> String {
         .strip_prefix("sqlite://")
         .or_else(|| main.strip_prefix("sqlite:"))
         .unwrap_or(main);
+    // sqlite:///data/file is absolute. Stripping the slash first made it cwd-relative.
+    if path_part.starts_with('/') {
+        return trimmed.to_string();
+    }
     let path_part = path_part.trim_start_matches('/');
     if path_part.is_empty()
         || path_part.eq_ignore_ascii_case(":memory:")
@@ -209,5 +235,29 @@ impl Default for Settings {
                 base_url: default_academi_base(),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{resolve_database_url, select_listen_port};
+
+    #[test]
+    fn sharpreport_port_wins_over_port() {
+        assert_eq!(select_listen_port(Some("3050"), Some("9090"), 1), 3050);
+    }
+
+    #[test]
+    fn port_is_the_fallback_when_sharpreport_port_is_empty() {
+        assert_eq!(select_listen_port(Some("  "), Some("3050"), 1), 3050);
+        assert_eq!(select_listen_port(None, None, 3050), 3050);
+    }
+
+    #[test]
+    fn absolute_sqlite_url_stays_on_that_path() {
+        assert_eq!(
+            resolve_database_url("sqlite:///data/datapulse.db"),
+            "sqlite:///data/datapulse.db"
+        );
     }
 }
