@@ -15,11 +15,15 @@
 #   ./start-all.sh logs <service>          tail -f log file
 #   ./start-all.sh list                    list service names + aliases
 #
-# Stop and restart signal the service's whole process group (TERM, then
-# KILL). Bash job control creates that group, so macOS bash 3.2 does not
-# need a setsid binary. Children from `go run`, cargo, and npm are not
-# left listening or holding the Badger lock. The next start waits until
-# that service's port is free.
+# Stop and restart signal the process group this launcher recorded for that
+# service (TERM, then KILL). Bash job control creates that group, so macOS
+# bash 3.2 does not need a setsid binary. Children from `go run`, cargo, and
+# npm are not left listening or holding the Badger lock. The next start waits
+# until that service's port is free. PID 0, PID 1, and an empty PID are never
+# signaled. A listener this launcher did not record is stopped as that
+# process tree only, never as a process group. morph-api start and restart
+# wait until /health succeeds. Service names match exactly (not as a regex).
+# Port checks use lsof and warn if it is missing.
 #
 # Aliases (API + UI): morph, morph-utils (shell + Data Access), bk, formx, composerx,
 #   morph-engi, sharpreport — or `all` for every service below.
@@ -32,6 +36,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_DIR="${ROOT}/.robo-dev"
 LOG_DIR="${RUN_DIR}/logs"
 PID_FILE="${RUN_DIR}/pids"
+# Warn once per process when port checks cannot see listeners.
+LSOF_MISSING_WARNED=0
 
 # Default stack — auth + user admin live in Morph (UsersPanel project removed).
 ALL_SERVICES=(
@@ -116,13 +122,34 @@ ensure_formx_binary() {
   fi
 }
 
+# A PID we may signal. Rejects empty, non-numeric, 0, and 1.
+# kill -0 0 is true (it checks the caller's process group). child_pids 0
+# matches PPID 0 and returns PID 1. kill -TERM 0 signals that group.
+valid_target_pid() {
+  local pid="$1"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  [[ "$pid" -gt 1 ]] || return 1
+}
+
+known_service() {
+  local name="$1"
+  local candidate
+  for candidate in "${ALL_SERVICES[@]}"; do
+    [[ "$candidate" == "$name" ]] && return 0
+  done
+  return 1
+}
+
 pid_of() {
   local name="$1"
   [[ -f "$PID_FILE" ]] || return 1
   local line pid
-  line="$(grep -E "^${name}:" "$PID_FILE" 2>/dev/null | tail -1 || true)"
+  # Exact service name. grep -E would treat `.*` as a regex and select a real row.
+  line="$(awk -F: -v n="$name" '$1 == n { found=$0 } END { if (found != "") print found }' "$PID_FILE" 2>/dev/null || true)"
   [[ -n "$line" ]] || return 1
-  pid="${line##*:}"
+  pid="${line#*:}"
+  pid="${pid%%:*}"
+  valid_target_pid "$pid" || return 1
   if kill -0 "$pid" 2>/dev/null; then
     echo "$pid"
     return 0
@@ -133,7 +160,7 @@ pid_of() {
 remove_pid_entry() {
   local name="$1"
   [[ -f "$PID_FILE" ]] || return 0
-  grep -v "^${name}:" "$PID_FILE" > "${PID_FILE}.tmp" 2>/dev/null || true
+  awk -F: -v n="$name" '$1 != n { print }' "$PID_FILE" > "${PID_FILE}.tmp" 2>/dev/null || true
   mv "${PID_FILE}.tmp" "$PID_FILE"
   [[ -s "$PID_FILE" ]] || rm -f "$PID_FILE"
 }
@@ -141,10 +168,22 @@ remove_pid_entry() {
 record_pid() {
   local name="$1"
   local pid="$2"
+  if ! valid_target_pid "$pid"; then
+    err "refusing to record unsafe pid '${pid}' for ${name}"
+    return 1
+  fi
   ensure_run_dirs
   touch "$PID_FILE"
   remove_pid_entry "$name"
   echo "${name}:${pid}" >>"$PID_FILE"
+}
+
+# True when this launcher wrote the PID into the pid file.
+pid_is_recorded() {
+  local pid="$1"
+  [[ -f "$PID_FILE" ]] || return 1
+  valid_target_pid "$pid" || return 1
+  awk -F: -v p="$pid" '$2 == p { found=1 } END { exit (found ? 0 : 1) }' "$PID_FILE"
 }
 
 ensure_run_dirs() {
@@ -159,11 +198,14 @@ pgid_of() {
 
 child_pids() {
   local pid="$1"
-  ps -A -o pid= -o ppid= 2>/dev/null | awk -v p="$pid" '$2+0 == p+0 { print $1 }' || true
+  # Empty and 0 both become 0 in awk arithmetic, which lists PID 1.
+  valid_target_pid "$pid" || return 0
+  ps -A -o pid= -o ppid= 2>/dev/null | awk -v p="$pid" '$2+0 == p+0 && $1+0 > 1 { print $1 }' || true
 }
 
 group_alive() {
   local pgid="$1"
+  valid_target_pid "$pgid" || return 1
   ps -A -o pgid= 2>/dev/null | awk -v g="$pgid" '$1+0 == g+0 { found=1; exit } END { exit (found ? 0 : 1) }'
 }
 
@@ -171,6 +213,7 @@ group_alive() {
 signal_group() {
   local sig="$1"
   local pgid="$2"
+  valid_target_pid "$pgid" || return 0
   kill -"$sig" -"$pgid" 2>/dev/null || true
 }
 
@@ -192,10 +235,11 @@ wait_group_exit() {
 kill_process_group() {
   local pgid="$1"
   local self
-  [[ "$pgid" =~ ^[0-9]+$ ]] || return 0
-  [[ "$pgid" -gt 1 ]] || return 0
+  valid_target_pid "$pgid" || return 0
   self="$(pgid_of "$$")"
-  if [[ -n "$self" && "$pgid" == "$self" ]]; then
+  # Unknown launcher group: fail closed. An empty self used to compare unequal
+  # and signal the target group anyway.
+  if [[ -z "$self" || "$pgid" == "$self" ]]; then
     return 1
   fi
   signal_group TERM "$pgid"
@@ -211,29 +255,18 @@ kill_tree() {
   local pid="$1"
   local sig="$2"
   local child
+  valid_target_pid "$pid" || return 0
   for child in $(child_pids "$pid"); do
     kill_tree "$child" "$sig"
   done
   kill -"$sig" "$pid" 2>/dev/null || true
 }
 
-# Stop one recorded process. If it leads its own process group (how
-# start_service launches), signal the whole group. Otherwise kill only its
-# descendant tree — never the launcher group shared by older runs.
-kill_recorded_pid() {
+# TERM the descendant tree, then KILL if the PID is still alive.
+kill_pid_tree() {
   local pid="$1"
-  local pgid self
   local i=0
-  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
-  if ! kill -0 "$pid" 2>/dev/null; then
-    return 0
-  fi
-  pgid="$(pgid_of "$pid")"
-  self="$(pgid_of "$$")"
-  if [[ -n "$pgid" && "$pgid" == "$pid" && "$pgid" != "$self" ]]; then
-    kill_process_group "$pgid"
-    return 0
-  fi
+  valid_target_pid "$pid" || return 0
   kill_tree "$pid" TERM
   while [[ "$i" -lt 25 ]]; do
     if ! kill -0 "$pid" 2>/dev/null; then
@@ -245,9 +278,37 @@ kill_recorded_pid() {
   kill_tree "$pid" KILL
 }
 
+# Stop one recorded process. If it leads its own process group (how
+# start_service launches), signal the whole group. Otherwise kill only its
+# descendant tree — never the launcher group shared by older runs.
+# Group-kill only when this launcher's own PGID is known.
+kill_recorded_pid() {
+  local pid="$1"
+  local pgid self
+  valid_target_pid "$pid" || return 0
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  pgid="$(pgid_of "$pid")"
+  self="$(pgid_of "$$")"
+  if [[ -n "$self" && -n "$pgid" && "$pgid" == "$pid" && "$pgid" != "$self" ]]; then
+    kill_process_group "$pgid"
+    return 0
+  fi
+  kill_pid_tree "$pid"
+}
+
 listening_pids() {
   local port="$1"
   [[ -n "$port" ]] || return 0
+  if ! command -v lsof >/dev/null 2>&1; then
+    if [[ "$LSOF_MISSING_WARNED" != 1 ]]; then
+      # stderr: callers capture stdout as a PID list.
+      echo -e "${YELLOW}!${NC} lsof is not installed; port checks cannot see listeners. Stop cannot prove a port is free, and a leftover process may keep the port or the Badger lock. Install lsof (macOS: already in the system; Debian/Ubuntu: apt install lsof)." >&2
+      LSOF_MISSING_WARNED=1
+    fi
+    return 0
+  fi
   lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true
 }
 
@@ -264,7 +325,9 @@ wait_until_port_free() {
   return 1
 }
 
-# Kill any process listening on a TCP port (orphaned dev servers not tracked in pids).
+# Clear a leftover listener. Group-kill only a PID this launcher recorded.
+# Anything else is one process tree: group-killing an unrelated leader on
+# :3000 or :8000 would take down that application's other processes.
 free_listening_port() {
   local port="$1"
   local pids pid
@@ -272,12 +335,22 @@ free_listening_port() {
   [[ -n "$pids" ]] || return 0
   warn "Freeing port ${port} (stale listener pid(s): ${pids//$'\n'/ })"
   for pid in $pids; do
-    kill_recorded_pid "$pid"
+    if pid_is_recorded "$pid"; then
+      kill_recorded_pid "$pid"
+    else
+      warn "port ${port}: listener ${pid} was not started by this launcher; stopping that process tree only, not its process group"
+      kill_pid_tree "$pid"
+    fi
   done
   if ! wait_until_port_free "$port"; then
     pids="$(listening_pids "$port")"
     for pid in $pids; do
-      kill -KILL "$pid" 2>/dev/null || true
+      valid_target_pid "$pid" || continue
+      if pid_is_recorded "$pid"; then
+        kill_recorded_pid "$pid"
+      else
+        kill_tree "$pid" KILL
+      fi
     done
     wait_until_port_free "$port" || true
   fi
@@ -515,6 +588,33 @@ stop_service() {
   fi
 }
 
+# morph-api restart is not done until GET /health succeeds.
+wait_morph_api_healthy() {
+  local port url i=0 attempts interval
+  port="$(service_port morph-api)"
+  url="http://127.0.0.1:${port}/health"
+  attempts="${START_ALL_HEALTH_ATTEMPTS:-90}"
+  interval="${START_ALL_HEALTH_INTERVAL:-1}"
+  if ! command -v curl >/dev/null 2>&1; then
+    err "curl is not installed; cannot confirm morph-api is healthy at ${url}"
+    return 1
+  fi
+  while [[ "$i" -lt "$attempts" ]]; do
+    if curl -fsS --max-time 2 "$url" >/dev/null 2>&1; then
+      ok "morph-api healthy (${url})"
+      return 0
+    fi
+    if ! pid_of morph-api >/dev/null; then
+      err "morph-api exited before ${url} returned success"
+      return 1
+    fi
+    sleep "$interval"
+    i=$((i + 1))
+  done
+  err "morph-api did not become healthy at ${url}"
+  return 1
+}
+
 start_one() {
   local name="$1"
   case "$name" in
@@ -525,6 +625,7 @@ start_one() {
       else
         start_service morph-api "${ROOT}/morph" go run main.go
       fi
+      wait_morph_api_healthy
       ;;
     formx-api)
       load_root_env
@@ -821,6 +922,10 @@ case "$CMD" in
   logs)
     [[ -n "${1:-}" ]] || { err "Usage: ./start-all.sh logs <service>"; exit 1; }
     name="$(expand_services "$1" | head -1)"
+    if ! known_service "$name"; then
+      err "Unknown service: ${name}"
+      exit 1
+    fi
     logfile="${LOG_DIR}/${name}.log"
     [[ -f "$logfile" ]] || { err "No log yet: ${logfile}"; exit 1; }
     exec tail -f "$logfile"
@@ -830,6 +935,11 @@ case "$CMD" in
       stop_all
     else
       while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        if ! known_service "$name"; then
+          err "Unknown service: ${name}"
+          exit 1
+        fi
         stop_service "$name"
       done < <(expand_services "$@")
     fi
@@ -844,6 +954,11 @@ case "$CMD" in
       print_status
     else
       while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        if ! known_service "$name"; then
+          err "Unknown service: ${name}"
+          exit 1
+        fi
         start_one "$name"
       done < <(expand_services "$@")
     fi
@@ -854,6 +969,11 @@ case "$CMD" in
       restart_all
     else
       while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        if ! known_service "$name"; then
+          err "Unknown service: ${name}"
+          exit 1
+        fi
         restart_one "$name"
       done < <(expand_services "$@")
     fi

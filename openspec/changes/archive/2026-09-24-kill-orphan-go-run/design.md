@@ -40,7 +40,7 @@ Stop sends SIGTERM to that group (`kill -TERM -PGID`), polls until the group is 
 
 **Rejected: walk the process tree and kill descendants.** If the parent exits before the walk, children reparent to init and are missed. That is the original bug the moment `go run` dies.
 
-**Rejected: kill every listener on the port and that listener's whole process group.** Frees `:9090` when the listener holds Badger, but services started by the old launcher share one PGID. Killing that group would stop every sibling and, if the foreground launcher is still the leader, the launcher itself. Port cleanup stays, limited to the listener PID unless that PID is itself a group leader.
+**Rejected: kill every listener on the port and that listener's whole process group.** Frees `:9090` when the listener holds Badger, but services started by the old launcher share one PGID. Killing that group would stop every sibling and, if the foreground launcher is still the leader, the launcher itself. Port cleanup stays, and it tree-kills only that listener PID. Group-kill is reserved for a PID this launcher recorded.
 
 **Rejected: `go build` on Linux for the Go APIs.** Removes one class of child and leaves npm and cargo broken. Darwin already builds those three APIs; group stop still covers them.
 
@@ -50,7 +50,7 @@ Some non-interactive macOS shells refuse monitor mode. If `set -m` fails, replac
 
 ### 3. Wait for the group to die, then for the port
 
-Badger's directory lock is released when the process exits, which is not the same moment the listen socket closes. Stop waits until the group has no processes, then polls `lsof` for a TCP listener (about 5 seconds). A remaining listener is killed (its group only if that PID leads it). If the port is still taken, stop returns an error and restart does not start a second copy.
+Badger's directory lock is released when the process exits, which is not the same moment the listen socket closes. Stop waits until the group has no processes, then polls `lsof` for a TCP listener (about 5 seconds). A remaining listener is tree-killed. Its process group is signaled only when that PID is one this launcher recorded. If `lsof` is not on `PATH`, the launcher warns once that it cannot prove the port is free. If the port is still taken, stop returns an error and restart does not start a second copy.
 
 TIME_WAIT is not a listener. Gin sets `SO_REUSEADDR`, so a closed listener does not block the next bind.
 
@@ -81,7 +81,7 @@ The `pid == PGID` rule, the HUP ignore, and the group-then-port wait are what le
 
 - [Risk] `set -m` fails and perl/python/`setsid` are missing → Mitigation: descendant walk plus port listener kill. The shell test covers the job-control path; the fallback is the old behavior plus the port backstop.
 - [Risk] A service ignores SIGTERM and exits slowly → Mitigation: about 5 seconds, then SIGKILL, then the port poll. Stop errors if the port is still taken.
-- [Risk] An unrelated process already bound the dev port → Mitigation: restart kills that listener. These ports are the dev stack's. Documented as launcher behavior, not a general process manager.
+- [Risk] An unrelated process already bound the dev port → Mitigation: restart tree-kills that listener and warns that it was not started by this launcher. It does not signal that listener's process group, so a foreign leader on `:3000` or `:8000` does not take its siblings with it.
 - [Risk] A child calls `setsid` and leaves the group → Mitigation: out of scope for dev servers. The port backstop still clears the listener. Non-listening daemonized grandchildren are not tracked.
 - [Risk] Test-only port override env vars are read by the launcher → Mitigation: names are specific (`START_ALL_PORT_OVERRIDE`, `START_ALL_PORT_OVERRIDE_NAME`). They are not written to `.env`.
 
@@ -92,3 +92,15 @@ Replace `start-all.sh` in place. The next `stop` or `restart` uses the new path.
 ## Open Questions
 
 None. CI registration of `scripts/test-start-all-process-group.sh` waits for the existing CI change and does not change this design.
+
+## Review follow-up
+
+A review of the first process-group stop found three ways the stop path could signal the wrong processes. These rules are part of the design:
+
+1. **Never signal PID 0, PID 1, or an empty PID.** `kill -0 0` is true because it checks the caller's process group. `child_pids` of `0` or of an empty value matches PPID 0 and returns PID 1, and `kill -TERM 0` signals that group. `pid_of`, `kill_recorded_pid`, and `kill_tree` reject those values before any signal. The launcher also refuses to record them.
+2. **Fail closed when the launcher's own PGID is empty.** Group-kill runs only when the recorded PID equals its PGID, that PGID is greater than 1, and it is different from a known launcher PGID. If the launcher cannot read its own PGID, it tree-kills the recorded PID and does not signal a group.
+3. **Group-kill only PIDs this launcher recorded.** `free_listening_port` used to call the recorded-pid group kill for every listener. An unrelated leader on a dev port would lose its whole group. Unrecorded listeners are tree-killed, with a warning that they were not started here.
+4. **The shell test must fail if group kill becomes a parent-only kill.** The fixture forks a listener and a non-listening child. The non-listening child is asserted dead after `kill_recorded_pid` and inside `restart_one`, before port cleanup runs. Port cleanup cannot mask a parent-only kill, because it does not see that child.
+5. **`restart morph-api` waits until `GET /health` succeeds** (about 90 seconds). Restart is not finished while the new process is still coming up, so a following status is one healthy Morph API.
+6. **Service names match the whole field**, not a regular expression. `stop '.*'` does not select the last pid-file row. Unknown names are rejected before stop, start, restart, or logs.
+7. **Missing `lsof` warns on stderr**, once, and does not look like an empty listener list on stdout.
