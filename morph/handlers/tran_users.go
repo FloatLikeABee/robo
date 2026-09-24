@@ -15,7 +15,9 @@ import (
 
 const tranUserSelectCols = `UserID, LoginID, FirstName, LastName, Email, Phone, Title, Administrator, Deactivated`
 
-func scanTranUserRow(scanner interface{ Scan(dest ...interface{}) error }) (models.TranUser, error) {
+func scanTranUserRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (models.TranUser, error) {
 	var u models.TranUser
 	var login, fn, em, ph, tit sql.NullString
 	var admin, deact int
@@ -73,6 +75,45 @@ func (h *Handlers) ListTranUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// errAmbiguousTranUser means more than one active row matches. Callers must
+// not pick one and must not insert a replacement row.
+var errAmbiguousTranUser = errors.New("ambiguous tran user")
+
+// tranUserByColumn returns the only active row whose column equals value.
+// column is Email or LoginID. Zero rows is sql.ErrNoRows. Two or more is
+// errAmbiguousTranUser.
+func tranUserByColumn(h *Handlers, column, value string) (models.TranUser, error) {
+	var none models.TranUser
+	if column != "Email" && column != "LoginID" {
+		return none, errors.New("invalid tran user column")
+	}
+	rows, err := h.TranMySQL.DB.Query(
+		"SELECT "+tranUserSelectCols+" FROM `User` WHERE "+column+" IS NOT NULL AND LOWER(TRIM("+column+")) = LOWER(?) AND Deactivated = 0",
+		value)
+	if err != nil {
+		return none, err
+	}
+	defer rows.Close()
+	var found []models.TranUser
+	for rows.Next() {
+		u, err := scanTranUserRow(rows)
+		if err != nil {
+			return none, err
+		}
+		found = append(found, u)
+		if len(found) > 1 {
+			return none, errAmbiguousTranUser
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return none, err
+	}
+	if len(found) == 0 {
+		return none, sql.ErrNoRows
+	}
+	return found[0], nil
+}
+
 func tranUserByEmail(h *Handlers, email string) (models.TranUser, error) {
 	var u models.TranUser
 	if h.TranMySQL == nil {
@@ -82,20 +123,11 @@ func tranUserByEmail(h *Handlers, email string) (models.TranUser, error) {
 	if email == "" {
 		return u, errors.New("email required")
 	}
-	row := h.TranMySQL.DB.QueryRow(
-		"SELECT "+tranUserSelectCols+" FROM `User` WHERE Email IS NOT NULL AND LOWER(TRIM(Email)) = LOWER(?) AND Deactivated = 0 LIMIT 1",
-		email)
-	u, err := scanTranUserRow(row)
-	if err == nil {
-		return u, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	u, err := tranUserByColumn(h, "Email", email)
+	if err == nil || !errors.Is(err, sql.ErrNoRows) {
 		return u, err
 	}
-	row = h.TranMySQL.DB.QueryRow(
-		"SELECT "+tranUserSelectCols+" FROM `User` WHERE LoginID IS NOT NULL AND LOWER(TRIM(LoginID)) = LOWER(?) AND Deactivated = 0 LIMIT 1",
-		email)
-	return scanTranUserRow(row)
+	return tranUserByColumn(h, "LoginID", email)
 }
 
 func deriveNamesFromEmail(email string) (firstName, lastName string) {
@@ -141,10 +173,12 @@ func ensureTranUserByAuthEmail(h *Handlers, email string) (models.TranUser, erro
 	return scanTranUserRow(row)
 }
 
+// email is not self-writable. It follows the login account. A body that only
+// sends email therefore has no fields to update and returns 400. administrator
+// and deactivated are not in this map.
 var allowedTranUserSelfWrite = map[string]string{
 	"first_name": "FirstName",
 	"last_name":  "LastName",
-	"email":      "Email",
 	"phone":      "Phone",
 }
 
@@ -161,6 +195,10 @@ func (h *Handlers) GetTranUserMe(c *gin.Context) {
 	}
 	u, err := ensureTranUserByAuthEmail(h, email)
 	if err != nil {
+		if errors.Is(err, errAmbiguousTranUser) {
+			c.JSON(http.StatusConflict, gin.H{"error": "multiple active users match this email"})
+			return
+		}
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "profile not found"})
 			return
@@ -190,6 +228,10 @@ func (h *Handlers) UpdateTranUserMe(c *gin.Context) {
 	}
 	current, err := ensureTranUserByAuthEmail(h, email)
 	if err != nil {
+		if errors.Is(err, errAmbiguousTranUser) {
+			c.JSON(http.StatusConflict, gin.H{"error": "multiple active users match this email"})
+			return
+		}
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "profile not found"})
 			return
@@ -280,8 +322,7 @@ func (h *Handlers) GetTranUser(c *gin.Context) {
 
 // CreateTranUser inserts a user (password not set; sign-in integration can follow).
 func (h *Handlers) CreateTranUser(c *gin.Context) {
-	if h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+	if !h.requireAuthDB(c) || !h.requireAdmin(c) {
 		return
 	}
 	var in struct {
@@ -335,8 +376,7 @@ var allowedTranUserWrite = map[string]string{
 
 // UpdateTranUser updates profile fields; deactivated toggles soft-offboarding (DeactivatedDate).
 func (h *Handlers) UpdateTranUser(c *gin.Context) {
-	if h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+	if !h.requireAuthDB(c) || !h.requireAdmin(c) {
 		return
 	}
 	id, err := strconv.Atoi(c.Param("id"))
@@ -428,8 +468,7 @@ func (h *Handlers) UpdateTranUser(c *gin.Context) {
 
 // DeleteTranUser soft-deactivates a user (keeps history and foreign keys).
 func (h *Handlers) DeleteTranUser(c *gin.Context) {
-	if h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Tran SQL store not configured"})
+	if !h.requireAuthDB(c) || !h.requireAdmin(c) {
 		return
 	}
 	id, err := strconv.Atoi(c.Param("id"))

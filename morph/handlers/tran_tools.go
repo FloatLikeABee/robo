@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,8 +14,9 @@ import (
 )
 
 // tranUserIDFromContext resolves Tran `User.UserID` for tables keyed by that column.
-// Order: ?user_id=, Tran User row by auth_email (UsersPanel profile), numeric X-User-ID,
+// Order: ?user_id=, one active Tran User row by auth_email, numeric X-User-ID,
 // else 1 for backwards-compatible demo installs.
+// Two or more active email matches return 0 and do not fall through.
 func (h *Handlers) tranUserIDFromContext(c *gin.Context) int {
 	if id := c.Query("user_id"); id != "" {
 		if n, err := strconv.Atoi(id); err == nil && n > 0 {
@@ -26,12 +28,12 @@ func (h *Handlers) tranUserIDFromContext(c *gin.Context) int {
 			if s, ok := v.(string); ok {
 				s = strings.TrimSpace(s)
 				if s != "" {
-					var uid int
-					err := h.TranMySQL.DB.QueryRow(
-						"SELECT UserID FROM `User` WHERE Email IS NOT NULL AND LOWER(TRIM(Email)) = LOWER(?) AND Deactivated = 0 LIMIT 1",
-						s).Scan(&uid)
-					if err == nil && uid > 0 {
-						return uid
+					u, err := tranUserByColumn(h, "Email", s)
+					if errors.Is(err, errAmbiguousTranUser) {
+						return 0
+					}
+					if err == nil && u.ID > 0 {
+						return u.ID
 					}
 				}
 			}
