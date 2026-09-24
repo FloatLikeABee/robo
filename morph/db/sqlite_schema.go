@@ -54,6 +54,7 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			Title TEXT NULL,
 			Administrator INTEGER NOT NULL DEFAULT 0,
 			Deactivated INTEGER NOT NULL DEFAULT 0,
+			DeactivatedDate TEXT NULL,
 			MessageAiAutoReplyEnabled INTEGER NOT NULL DEFAULT 0,
 			MessageAiAutoReplyPrompt TEXT NULL
 		)`,
@@ -475,6 +476,7 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 	_ = sqliteAddColumnIfMissing(db, "big_note", "note_kind", "TEXT NOT NULL DEFAULT 'note'")
 	_ = sqliteAddColumnIfMissing(db, "big_note", "questions_json", "TEXT NULL")
 	_ = sqliteAddColumnIfMissing(db, "user_note_todo", "DeadlineAt", "TEXT NULL")
+	_ = sqliteAddColumnIfMissing(db, "User", "DeactivatedDate", "TEXT NULL")
 	_ = sqliteAddColumnIfMissing(db, "research", "round_target", "INTEGER NOT NULL DEFAULT 5")
 	_, _ = db.Exec(`UPDATE research SET round_target = 20 WHERE current_round > 5 OR id IN (SELECT research_id FROM research_piece GROUP BY research_id HAVING COUNT(*) > 5)`)
 	if err := migrateAgentLessonColumns(db); err != nil {
