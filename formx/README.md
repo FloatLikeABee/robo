@@ -98,6 +98,48 @@ From `formx/backend`:
 
 If `go install github.com/swaggo/swag/cmd/swag@latest` cannot reach `proxy.golang.org`, try `GOPROXY=https://goproxy.cn,direct`.
 
+## Container
+
+One image serves the API and the UI. Build context is the repo root:
+
+```bash
+docker build -f formx/Dockerfile -t formx:local .
+docker run --rm -p 127.0.0.1:29909:29909 \
+  -e USERS_PANEL_BASE_URL=http://host.docker.internal:9090 \
+  -v formx-data:/data \
+  formx:local
+```
+
+`PORT` inside the container is `29909`. The entrypoint copies it to `SERVER_PORT`. A checkout `.env` with `PORT=9090` does not apply inside the image. `GET /health` returns `{"status":"healthy"}` and does not call Morph or MorphUtils. `GET /events-info` is the UI. `GET /api/` stays the API.
+
+Optional compose, from `formx/`:
+
+```bash
+cp deploy/.env.production.example deploy/.env.production
+docker compose up --build
+```
+
+`deploy/.env.production` is gitignored. Secret keys in the example are empty.
+
+| Variable | Image default |
+|----------|----------------|
+| `PORT` / `SERVER_PORT` | `29909` |
+| `FORMSX_SQLITE_PATH` | `/data/formsx.sqlite` |
+| `FORMSX_BADGER_PATH` | `/data/formsx_badger` |
+| `UPLOAD_DIR` | `/data/uploads` |
+
+Named volume `formx-data` is mounted at `/data`. Run one replica. SQLite and Badger are single-writer. `start-all.sh` still uses `./data` and `./uploads` under the working directory.
+
+`sh formx/deploy/check-container-contract.sh` checks the Dockerfile, Blueprint, and this section without a daemon.
+
+## Deploy on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync `render.yaml` on `main`. That adds web service `formx` (Singapore, starter) beside `morph` and MorphUtils. `PORT` is `29909`. `FORMSX_SQLITE_PATH`, `FORMSX_BADGER_PATH`, and `UPLOAD_DIR` are the `/data` paths above.
+
+`USERS_PANEL_BASE_URL` is required and is not a secret: set it to `https://<morph public host>` (no path). `MORPH_AI_API_KEY` and `SMTP_PASSWORD` are optional prompts with no value in git. A disk (`formx-data` at `/data`, 1 GB) is a single instance. Do not scale it out.
+
+`GET /health` does not call MorphUtils. After the deploy is live, copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<event-logs public host>`. #114 sets that origin as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. This change does not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on Morph or MorphUtils, and it does not set `REACT_APP_MORPH_UTILS_URL`.
+
 ## Project layout
 
 ```

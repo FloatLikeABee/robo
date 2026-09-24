@@ -34,6 +34,10 @@ type PendingConfirm = ConfirmOptions & {
 
 type Pending = PendingConfirm | (PendingAlert & { alert: true });
 
+function isConfirmPending(pending: Pending): pending is PendingConfirm {
+  return !('alert' in pending && pending.alert);
+}
+
 const ConfirmContext = createContext<ConfirmContextValue | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
@@ -82,9 +86,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const title = pending?.title ?? 'Confirm';
   const message = pending?.message ?? '';
   const confirmLabel = pending?.confirmLabel ?? 'OK';
-  const cancelLabel = pending && !('alert' in pending && pending.alert) ? (pending.cancelLabel ?? 'Cancel') : null;
-  const danger = pending && !('alert' in pending && pending.alert) ? (pending.danger ?? false) : false;
-  const isAlert = Boolean(pending && 'alert' in pending && pending.alert);
+  const cancelLabel = pending && isConfirmPending(pending) ? (pending.cancelLabel ?? 'Cancel') : null;
+  const danger = pending && isConfirmPending(pending) ? (pending.danger ?? false) : false;
 
   return (
     <ConfirmContext.Provider value={{ confirm, alert }}>
