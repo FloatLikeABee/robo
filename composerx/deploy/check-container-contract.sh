@@ -82,8 +82,6 @@ if "generateValue:" in text:
     errors.append("must not generate secret values")
 if "VITE_COMPOSERX_URL" in text:
     errors.append("must not set VITE_COMPOSERX_URL")
-if "REACT_APP_MORPH_UTILS_URL" in text and "key: REACT_APP_MORPH_UTILS_URL" in text:
-    errors.append("must not set REACT_APP_MORPH_UTILS_URL")
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
@@ -164,6 +162,8 @@ else:
             errors.append(key + " must set sync: false")
         if "value:" in body_env:
             errors.append(key + " must not have a value")
+    if "REACT_APP_MORPH_UTILS_URL" in env:
+        errors.append("composerx must not set REACT_APP_MORPH_UTILS_URL")
 
 for doc in (backend_readme, deploy_readme):
     doc_text = open(doc, encoding="utf-8").read()

@@ -27,6 +27,10 @@ fi
 if grep -E '^[[:space:]]*ARG[[:space:]]+(JWT_SECRET|ADMIN_PASSWORD|MORPH_AI_API_KEY|GEMINI_API_KEY|BOOTSTRAP_ADMIN_PASSWORD)\b' "$df" >/dev/null; then
   fail "Dockerfile must not take secrets as ARG"
 fi
+grep -q '^ARG REACT_APP_MORPH_UTILS_URL$' "$df" || fail "Dockerfile must declare ARG REACT_APP_MORPH_UTILS_URL with no default"
+if grep -F 'onrender.com' "$df" >/dev/null; then
+  fail "Dockerfile must not contain a production host"
+fi
 if grep -E '^[[:space:]]*COPY[[:space:]].*composerx' "$df" >/dev/null; then
   fail "Morph Dockerfile must not copy composerx"
 fi
@@ -44,6 +48,10 @@ compose="$root/deploy/docker-compose.yml"
 [ -f "$compose" ] || fail "missing deploy/docker-compose.yml"
 grep -q '/data' "$compose" || fail "compose must mount /data"
 grep -q 'morph-data' "$compose" || fail "compose must name the data volume"
+grep -q 'REACT_APP_MORPH_UTILS_URL' "$compose" || fail "compose must pass REACT_APP_MORPH_UTILS_URL"
+if grep -F 'onrender.com' "$compose" >/dev/null; then
+  fail "compose must not contain a production host"
+fi
 grep -q 'env_file' "$compose" || fail "compose must use env_file"
 grep -q '.env.production' "$compose" || fail "env_file must point at .env.production"
 grep -q 'tls' "$compose" || fail "Caddy must be on the tls profile"
@@ -212,6 +220,15 @@ for key in secrets:
         errors.append(key + " must set sync: false")
     if "value:" in body:
         errors.append(key + " must not have a value")
+
+utils = parsed.get("REACT_APP_MORPH_UTILS_URL")
+if utils is None:
+    errors.append("missing env REACT_APP_MORPH_UTILS_URL")
+else:
+    if "sync: false" not in utils:
+        errors.append("REACT_APP_MORPH_UTILS_URL must set sync: false")
+    if "value:" in utils:
+        errors.append("REACT_APP_MORPH_UTILS_URL must not have a value")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)

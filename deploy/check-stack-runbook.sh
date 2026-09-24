@@ -83,8 +83,24 @@ examples = (
 for host in examples:
     if host in blueprint:
         errors.append("render.yaml must not contain example host " + host)
-if "key: REACT_APP_MORPH_UTILS_URL" in blueprint:
-    errors.append("render.yaml must not list key: REACT_APP_MORPH_UTILS_URL")
+morph_at = blueprint.find("\n    name: morph\n")
+utils_at = blueprint.find("\n    name: morph-utils\n")
+key_at = blueprint.find("key: REACT_APP_MORPH_UTILS_URL")
+if morph_at < 0 or utils_at < 0 or not (morph_at < key_at < utils_at):
+    errors.append("REACT_APP_MORPH_UTILS_URL must be on the morph service")
+elif blueprint.count("key: REACT_APP_MORPH_UTILS_URL") != 1:
+    errors.append("REACT_APP_MORPH_UTILS_URL must be listed once")
+else:
+    body = []
+    for line in blueprint[key_at:].splitlines()[1:]:
+        if line.startswith("      - key:") or (line and not line.startswith("        ")):
+            break
+        body.append(line)
+    prompt = "\n".join(body)
+    if "sync: false" not in prompt:
+        errors.append("REACT_APP_MORPH_UTILS_URL must set sync: false")
+    if "value:" in prompt:
+        errors.append("REACT_APP_MORPH_UTILS_URL must not have a value")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)

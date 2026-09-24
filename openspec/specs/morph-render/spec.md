@@ -37,7 +37,7 @@ The service MUST set `maxShutdownDelaySeconds` to a whole number from 60 through
 - **AND** `render.yaml` and `.dockerignore` are listed as well
 
 ### Requirement: Production env is explicit and secrets are empty
-The service env list MUST set `MORPH_ENV` to `production`, `PORT` to `9090`, `GIN_MODE` to `release`, and `MORPH_AI_PROVIDER` to `dashscope`. It MUST set `ADMIN_USERNAME` and `ADMIN_EMAIL` to plain values. It MUST set `DB_PATH`, `TRAN_SQLITE_PATH`, `ENTITY_DETAILS_BADGER`, `MORPH_KNOWLEDGE_DIR`, and `TRAN_ENTITY_ATTACHMENT_DIR` to the image defaults under `/data`. Every secret the Morph API can read, including `JWT_SECRET`, `ADMIN_PASSWORD`, and `MORPH_AI_API_KEY`, MUST appear as `sync: false` and MUST NOT have a `value`. The committed file MUST NOT contain a usable JWT secret, admin password, or API key.
+The service env list MUST set `MORPH_ENV` to `production`, `PORT` to `9090`, `GIN_MODE` to `release`, and `MORPH_AI_PROVIDER` to `dashscope`. It MUST set `ADMIN_USERNAME` and `ADMIN_EMAIL` to plain values. It MUST set `DB_PATH`, `TRAN_SQLITE_PATH`, `ENTITY_DETAILS_BADGER`, `MORPH_KNOWLEDGE_DIR`, and `TRAN_ENTITY_ATTACHMENT_DIR` to the image defaults under `/data`. Every secret the Morph API can read, including `JWT_SECRET`, `ADMIN_PASSWORD`, and `MORPH_AI_API_KEY`, MUST appear as `sync: false` and MUST NOT have a `value`. The committed file MUST NOT contain a usable JWT secret, admin password, or API key. The `morph` service MUST list `REACT_APP_MORPH_UTILS_URL` with `sync: false` and MUST NOT give that key a `value`. The committed file MUST NOT contain a URL for that key.
 
 #### Scenario: Port is pinned
 - **WHEN** a reviewer reads the `PORT` entry
@@ -46,6 +46,10 @@ The service env list MUST set `MORPH_ENV` to `production`, `PORT` to `9090`, `GI
 #### Scenario: Secrets are dashboard-only
 - **WHEN** a reviewer reads `JWT_SECRET`, `ADMIN_PASSWORD`, and `MORPH_AI_API_KEY`
 - **THEN** each has `sync: false` and no value
+
+#### Scenario: MorphUtils URL is a dashboard prompt
+- **WHEN** a reviewer reads `REACT_APP_MORPH_UTILS_URL` on `morph`
+- **THEN** it has `sync: false` and no value
 
 ### Requirement: Render runbook names the dashboard secrets
 `deploy/README.md` MUST include a Deploy on Render section that tells the product owner to create the service from the Blueprint, to set `JWT_SECRET` to at least 32 random characters, and to set `ADMIN_PASSWORD` to at least 12 characters and not `admin123`. It MUST state that the disk makes deploys single-instance and not zero-downtime, that `/data` is backed up with Render disk snapshots, and that `GET /health` is how to check the service after a deploy.

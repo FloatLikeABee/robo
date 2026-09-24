@@ -38,15 +38,16 @@ The `formx` service MUST set `PORT` to `29909`. It MUST set `FORMSX_SQLITE_PATH`
 - **THEN** its value is `29909`
 
 ### Requirement: Morph auth origin is prompted and secrets are empty
-The `formx` service MUST list `USERS_PANEL_BASE_URL` with `sync: false` and MUST NOT give that key a `value`. `MORPH_AI_API_KEY`, `SMTP_PASSWORD`, and `PUBLIC_FORM_BASE_URL`, when listed, MUST use `sync: false` and MUST NOT have a `value`. The committed Blueprint MUST NOT contain a usable JWT, password, or API key. It MUST NOT set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, or `REACT_APP_MORPH_UTILS_URL` on any service.
+The `formx` service MUST list `USERS_PANEL_BASE_URL` with `sync: false` and MUST NOT give that key a `value`. `MORPH_AI_API_KEY`, `SMTP_PASSWORD`, and `PUBLIC_FORM_BASE_URL`, when listed, MUST use `sync: false` and MUST NOT have a `value`. The committed Blueprint MUST NOT contain a usable JWT, password, or API key. It MUST NOT set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on any service. It MUST NOT set `REACT_APP_MORPH_UTILS_URL` on the `formx` service.
 
 #### Scenario: Morph auth origin is a dashboard prompt
 - **WHEN** a reviewer reads `USERS_PANEL_BASE_URL` on `formx`
 - **THEN** it has `sync: false` and no value
 
 #### Scenario: Embed URL is not wired here
-- **WHEN** a reviewer reads env keys in `render.yaml`
+- **WHEN** a reviewer reads env keys on `formx`
 - **THEN** `VITE_SHEETX_URL` and `REACT_APP_MORPH_UTILS_URL` are not set
+- **AND** `VITE_SHEETX_URL` is not set on any service
 
 ### Requirement: The runbook names env, the disk, and the public URL placeholder
 `deploy/README.md` and `formx/README.md` MUST tell the product owner to create the `formx` service from the root Blueprint in Render project `prj-dahc33dbedkc73a1v8n0` without this repository calling Render. They MUST say to set `USERS_PANEL_BASE_URL` to `https://<morph public host>` and that this value is not a secret. They MUST document the `/data` disk (SQLite, Badger, uploads), that a disk is a single instance, and that `GET /health` does not call MorphUtils. They MUST use the placeholder `https://<event-logs public host>` for the origin story #114 sets as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. They MUST NOT set that variable on Morph or MorphUtils in this change.

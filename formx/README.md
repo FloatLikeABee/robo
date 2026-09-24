@@ -138,7 +138,7 @@ The product owner creates the service. This repo does not call Render. After mer
 
 `USERS_PANEL_BASE_URL` is required and is not a secret: set it to `https://<morph public host>` (no path). `MORPH_AI_API_KEY` and `SMTP_PASSWORD` are optional prompts with no value in git. A disk (`formx-data` at `/data`, 1 GB) is a single instance. Do not scale it out.
 
-`GET /health` does not call MorphUtils. After the deploy is live, copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<event-logs public host>`. #114 sets that origin as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. This change does not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on Morph or MorphUtils, and it does not set `REACT_APP_MORPH_UTILS_URL`.
+`GET /health` does not call MorphUtils. After the deploy is live, copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<event-logs public host>`. #114 sets that origin as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. This change does not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on Morph or MorphUtils. Event Logs does not set `REACT_APP_MORPH_UTILS_URL`. The `morph` service lists that key as a dashboard prompt with no value.
 
 ## Project layout
 

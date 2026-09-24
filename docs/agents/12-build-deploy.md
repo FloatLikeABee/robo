@@ -93,7 +93,7 @@ There is no `go.work`. Each Go module is tested from its own directory, using th
 | Go / Event Logs | `formx/backend` | `go vet ./...` then `go test ./...` |
 | Go / Content Maker | `composerx/backend` | `go vet ./...` then `go test ./...` |
 | Go / morphai | `pkg/morphai` | `go vet ./...` then `go test ./...` |
-| Morph frontend | `morph/frontend` | `python3 openspec/check_files_workspace_archive.py` once from the repo root, then `npm ci`, then `CI=true npm test -- --watchAll=false`, then `CI=true npm run build` |
+| Morph frontend | `morph/frontend` | `python3 openspec/check_files_workspace_archive.py` once from the repo root, then `npm ci`, then `CI=true npm test -- --watchAll=false`, then an unset `CI=true npm run build` checked with `node scripts/check-morph-utils-bundle.js unset`, then `REACT_APP_MORPH_UTILS_URL=https://utils.example.com CI=true npm run build` checked with `node scripts/check-morph-utils-bundle.js set https://utils.example.com` |
 
 The frontend job uses Node.js 22 (the repo `engines.node` is `>=20`) and caches npm from `morph/frontend/package-lock.json`.
 
@@ -108,14 +108,21 @@ unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
 ( cd pkg/morphai && go vet ./... && go test ./... )
 
 python3 openspec/check_files_workspace_archive.py
-( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
+(
+  cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false \
+    && unset REACT_APP_MORPH_UTILS_URL \
+    && CI=true npm run build \
+    && node scripts/check-morph-utils-bundle.js unset \
+    && REACT_APP_MORPH_UTILS_URL=https://utils.example.com CI=true npm run build \
+    && node scripts/check-morph-utils-bundle.js set https://utils.example.com
+)
 ```
 
 The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image. That workflow also validates `render.yaml` against the Render Blueprint schema and runs `sh SharpReport/deploy/check-container-contract.sh`. It does not add a check name to `ci.yml`.
 
 ## Production / cloud
 
-Morph API and the Morph AI UI ship as one image. Content Maker ships as `composerx/Dockerfile` (API and UI on port 8043). The runbook is [`deploy/README.md`](../../deploy/README.md): local compose, and **Deploy on Render** for the hosted services (`render.yaml` at the repo root). Content Maker image details are in [`composerx/backend/README.md`](../../composerx/backend/README.md). The product owner creates services from the Blueprint after merge. The ordered create, URL record, and Morph image rebuild are under `MorphUtils stack on Render` in [`deploy/README.md`](../../deploy/README.md). `scripts/deploy.sh` still talks about Alibaba and removed apps. Do not follow that script.
+Morph API and the Morph AI UI ship as one image. Content Maker ships as `composerx/Dockerfile` (API and UI on port 8043). The runbook is [`deploy/README.md`](../../deploy/README.md): local compose, and **Deploy on Render** for the hosted services (`render.yaml` at the repo root). Content Maker image details are in [`composerx/backend/README.md`](../../composerx/backend/README.md). The product owner creates services from the Blueprint after merge. The ordered create, URL record, and Morph image rebuild are under `MorphUtils stack on Render` in [`deploy/README.md`](../../deploy/README.md). `render.yaml` lists `REACT_APP_MORPH_UTILS_URL` on `morph` with `sync: false` and no value. The product owner fills `https://<morph-utils public host>` in the dashboard and rebuilds the Morph image. A restart without that rebuild leaves the header chip unset. Do not commit the URL. `scripts/deploy.sh` still talks about Alibaba and removed apps. Do not follow that script.
 
 ### What does exist
 

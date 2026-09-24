@@ -28,15 +28,15 @@ The `composerx` service MUST attach one disk named `composerx-data`, mounted at 
 - **AND** the disk name is `composerx-data`, the mount path is `/data`, and the size is 1 GB
 
 ### Requirement: Morph auth URL and secrets are prompted and not invented
-The `composerx` service MUST list `USERS_PANEL_BASE_URL`, `MORPH_AI_API_KEY`, `TRAN_QWEN_API_KEY`, and `TRAN_OPENAI_API_KEY` with `sync: false` and MUST NOT give those keys a `value`. The committed Blueprint MUST NOT contain a JWT, password, API key, or a guessed public host. It MUST NOT list `VITE_COMPOSERX_URL` or `REACT_APP_MORPH_UTILS_URL` as an env key.
+The `composerx` service MUST list `USERS_PANEL_BASE_URL`, `MORPH_AI_API_KEY`, `TRAN_QWEN_API_KEY`, and `TRAN_OPENAI_API_KEY` with `sync: false` and MUST NOT give those keys a `value`. The committed Blueprint MUST NOT contain a JWT, password, API key, or a guessed public host. It MUST NOT list `VITE_COMPOSERX_URL` as an env key. It MUST NOT list `REACT_APP_MORPH_UTILS_URL` on the `composerx` service.
 
 #### Scenario: Morph auth base URL is a dashboard prompt
 - **WHEN** a reviewer reads `USERS_PANEL_BASE_URL` on `composerx`
 - **THEN** it has `sync: false` and no value
 
 #### Scenario: Embed URL is not set here
-- **WHEN** a reviewer reads env keys in `render.yaml`
-- **THEN** `VITE_COMPOSERX_URL` is not one of them
+- **WHEN** a reviewer reads env keys on `composerx`
+- **THEN** `VITE_COMPOSERX_URL` and `REACT_APP_MORPH_UTILS_URL` are not set
 
 ### Requirement: Build filter tracks the Content Maker image inputs
 The `composerx` `buildFilter.paths` MUST include `composerx/**`, `pkg/**`, `composerx/Dockerfile`, `.dockerignore`, `composerx/deploy/docker-entrypoint.sh`, and `render.yaml`.
