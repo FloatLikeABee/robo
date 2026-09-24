@@ -125,6 +125,9 @@ export default function LoginPage() {
                 padding: '8px 12px',
                 fontSize: 14,
                 color: '#fecaca',
+                maxWidth: '100%',
+                overflowWrap: 'anywhere',
+                boxSizing: 'border-box',
               }}
             >
               {error}

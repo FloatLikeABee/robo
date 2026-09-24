@@ -6,6 +6,9 @@
 
 html {
   height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -20,6 +23,9 @@ body {
   background: #020408;
   min-height: 100%;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   touch-action: manipulation;
 }
 
@@ -35,6 +41,9 @@ code {
 #root {
   min-height: 100%;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   display: block;
 }
 
@@ -90,5 +99,14 @@ body[data-theme='light'] *::-webkit-scrollbar-thumb {
 
 body[data-theme='light'] *::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Phone-width banners stay inside the column. */
+.MuiAlert-root,
+.skills-panel-alert,
+.alert {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
 }
 

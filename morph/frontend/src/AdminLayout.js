@@ -6,7 +6,6 @@ import {
   Box,
   IconButton,
   Typography,
-  useMediaQuery,
 } from '@mui/material';
 import { getAdminTheme, setStoredThemeMode } from './theme';
 import { PlatformUiProvider, usePlatformUi } from './PlatformUiContext';
@@ -21,7 +20,6 @@ function AdminLayoutInner() {
   const themeMode = 'dark';
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const theme = useMemo(() => getAdminTheme(themeMode), [themeMode]);
-  const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
 
   const isDark = true;
 
@@ -51,14 +49,17 @@ function AdminLayoutInner() {
     <ThemeProvider theme={theme}>
       <CssBaseline enableColorScheme />
       <Box
-        sx={{
-          display: 'flex',
-          minHeight: '100dvh',
-          height: '100dvh',
-          maxHeight: '100dvh',
-          overflow: 'hidden',
-          bgcolor: 'background.default',
-        }}
+          sx={{
+            display: 'flex',
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
+            minHeight: '100dvh',
+            height: '100dvh',
+            maxHeight: '100dvh',
+            overflow: 'hidden',
+            bgcolor: 'background.default',
+          }}
       >
         <AppDrawer mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
         <Box
@@ -77,8 +78,10 @@ function AdminLayoutInner() {
           <Box
             sx={{
               display: { xs: 'flex', md: 'none' },
-              minHeight: 56,
-              px: { xs: 1, sm: 2 },
+              boxSizing: 'border-box',
+              minHeight: 'calc(56px + env(safe-area-inset-top))',
+              pl: 'max(8px, env(safe-area-inset-left))',
+              pr: 'max(8px, env(safe-area-inset-right))',
               pt: 'env(safe-area-inset-top)',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -146,8 +149,12 @@ function AdminLayoutInner() {
               © {new Date().getFullYear()} {labels.product_name}
             </Typography>
           </Box>
-          {/* Phone: reserve home-indicator space without a tall footer strip */}
-          {isPhone ? <Box sx={{ height: 'env(safe-area-inset-bottom)', flexShrink: 0 }} aria-hidden /> : null}
+          {/* Phone: reserve home-indicator space without a tall footer strip.
+              Display breakpoint so the spacer is in the first paint. */}
+          <Box
+            sx={{ display: { xs: 'block', sm: 'none' }, height: 'env(safe-area-inset-bottom)', flexShrink: 0 }}
+            aria-hidden
+          />
         </Box>
       </Box>
     </ThemeProvider>
