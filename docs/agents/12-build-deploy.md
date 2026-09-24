@@ -47,6 +47,8 @@ cp .env.example .env
 
 Logs: `.robo-dev/logs/<service>.log`. macOS Morph API is built before run.
 
+`stop` and `restart` kill that service's process group (recorded process plus `go run`, cargo, or npm children), then wait until its port is free before the next start. macOS does not need a `setsid` binary.
+
 Start **Morph API** first when bringing apps up one by one (auth hub).
 
 ### Environment

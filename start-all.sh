@@ -15,6 +15,12 @@
 #   ./start-all.sh logs <service>          tail -f log file
 #   ./start-all.sh list                    list service names + aliases
 #
+# Stop and restart signal the service's whole process group (TERM, then
+# KILL), so children from `go run`, cargo, and npm are not left listening
+# or holding the Badger lock. The next start waits until that service's
+# port is free. macOS does not need a setsid binary (bash 3.2 job control
+# is the fallback when python/perl are absent).
+#
 # Aliases (API + UI): morph, morph-utils (shell + Data Access), bk, formx, composerx,
 #   morph-engi, sharpreport — or `all` for every service below.
 # Neo4j: full-stack start/restart ensures bolt port 7687 is up when `neo4j` CLI exists.
@@ -51,8 +57,6 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
-
-mkdir -p "$LOG_DIR"
 
 log()  { echo -e "${CYAN}▶${NC} $*"; }
 ok()   { echo -e "${GREEN}✓${NC} $*"; }
@@ -91,6 +95,7 @@ load_root_env() {
 ensure_morph_binary() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     log "Building morph-api (macOS — avoids BadgerDB LC_UUID issue)..."
+    ensure_run_dirs
     (cd "${ROOT}/morph" && go build -o "${RUN_DIR}/morph-server" main.go)
   fi
 }
@@ -98,6 +103,7 @@ ensure_morph_binary() {
 ensure_composerx_binary() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     log "Building composerx-api..."
+    ensure_run_dirs
     (cd "${ROOT}/composerx/backend" && go build -o "${RUN_DIR}/composerx-server" .)
   fi
 }
@@ -105,6 +111,7 @@ ensure_composerx_binary() {
 ensure_formx_binary() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     log "Building formx-api..."
+    ensure_run_dirs
     (cd "${ROOT}/formx/backend" && go build -o "${RUN_DIR}/formx-server" ./cmd/server)
   fi
 }
@@ -134,30 +141,211 @@ remove_pid_entry() {
 record_pid() {
   local name="$1"
   local pid="$2"
+  ensure_run_dirs
   touch "$PID_FILE"
   remove_pid_entry "$name"
   echo "${name}:${pid}" >>"$PID_FILE"
 }
 
-kill_pid() {
+ensure_run_dirs() {
+  mkdir -p "$LOG_DIR"
+}
+
+# PGID of a live process, or empty. BSD and GNU ps both accept this form.
+pgid_of() {
   local pid="$1"
-  kill "$pid" 2>/dev/null || true
-  sleep 0.5
-  kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  ps -p "$pid" -o pgid= 2>/dev/null | awk 'NR==1 { print $1; exit }' || true
+}
+
+child_pids() {
+  local pid="$1"
+  ps -A -o pid= -o ppid= 2>/dev/null | awk -v p="$pid" '$2+0 == p+0 { print $1 }' || true
+}
+
+group_alive() {
+  local pgid="$1"
+  ps -A -o pgid= 2>/dev/null | awk -v g="$pgid" '$1+0 == g+0 { found=1; exit } END { exit (found ? 0 : 1) }'
+}
+
+# Negative pid means "this process group" on bash 3.2 and on BSD/GNU kill.
+signal_group() {
+  local sig="$1"
+  local pgid="$2"
+  kill -"$sig" -"$pgid" 2>/dev/null || true
+}
+
+wait_group_exit() {
+  local pgid="$1"
+  local i=0
+  while [[ "$i" -lt 25 ]]; do
+    if ! group_alive "$pgid"; then
+      return 0
+    fi
+    sleep 0.2
+    i=$((i + 1))
+  done
+  return 1
+}
+
+# Kill a dedicated process group. Refuses the launcher's own group so a
+# legacy shared group cannot take down every other service.
+kill_process_group() {
+  local pgid="$1"
+  local self
+  [[ "$pgid" =~ ^[0-9]+$ ]] || return 0
+  [[ "$pgid" -gt 1 ]] || return 0
+  self="$(pgid_of "$$")"
+  if [[ -n "$self" && "$pgid" == "$self" ]]; then
+    return 1
+  fi
+  signal_group TERM "$pgid"
+  if ! wait_group_exit "$pgid"; then
+    signal_group KILL "$pgid"
+    wait_group_exit "$pgid" || true
+  fi
+}
+
+# Descendants first, so a child is signaled before its parent can exit and
+# reparent it out of the tree (the `go run` orphan case).
+kill_tree() {
+  local pid="$1"
+  local sig="$2"
+  local child
+  for child in $(child_pids "$pid"); do
+    kill_tree "$child" "$sig"
+  done
+  kill -"$sig" "$pid" 2>/dev/null || true
+}
+
+# Stop one recorded process. If it leads its own process group (how
+# start_service launches), signal the whole group. Otherwise kill only its
+# descendant tree — never the launcher group shared by older runs.
+kill_recorded_pid() {
+  local pid="$1"
+  local pgid self
+  local i=0
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  pgid="$(pgid_of "$pid")"
+  self="$(pgid_of "$$")"
+  if [[ -n "$pgid" && "$pgid" == "$pid" && "$pgid" != "$self" ]]; then
+    kill_process_group "$pgid"
+    return 0
+  fi
+  kill_tree "$pid" TERM
+  while [[ "$i" -lt 25 ]]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+    sleep 0.2
+    i=$((i + 1))
+  done
+  kill_tree "$pid" KILL
+}
+
+listening_pids() {
+  local port="$1"
+  [[ -n "$port" ]] || return 0
+  lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true
+}
+
+wait_until_port_free() {
+  local port="$1"
+  local i=0
+  while [[ "$i" -lt 25 ]]; do
+    if [[ -z "$(listening_pids "$port")" ]]; then
+      return 0
+    fi
+    sleep 0.2
+    i=$((i + 1))
+  done
+  return 1
 }
 
 # Kill any process listening on a TCP port (orphaned dev servers not tracked in pids).
 free_listening_port() {
   local port="$1"
-  local pids
-  pids="$(lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  local pids pid
+  pids="$(listening_pids "$port")"
   [[ -n "$pids" ]] || return 0
   warn "Freeing port ${port} (stale listener pid(s): ${pids//$'\n'/ })"
-  # shellcheck disable=SC2086
-  kill $pids 2>/dev/null || true
-  sleep 0.5
-  pids="$(lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
-  [[ -z "$pids" ]] || kill -9 $pids 2>/dev/null || true
+  for pid in $pids; do
+    kill_recorded_pid "$pid"
+  done
+  if ! wait_until_port_free "$port"; then
+    pids="$(listening_pids "$port")"
+    for pid in $pids; do
+      kill -KILL "$pid" 2>/dev/null || true
+    done
+    wait_until_port_free "$port" || true
+  fi
+}
+
+# New session without forking, so the PID we record stays the group leader.
+# setsid(1) is absent on macOS; python or perl call the syscall directly.
+have_session_helper() {
+  if [[ "${START_ALL_FORCE_JOB_CONTROL:-}" == 1 ]]; then
+    return 1
+  fi
+  command -v python3 >/dev/null 2>&1 && return 0
+  command -v python >/dev/null 2>&1 && return 0
+  command -v perl >/dev/null 2>&1 && return 0
+  command -v setsid >/dev/null 2>&1 && return 0
+  return 1
+}
+
+exec_in_new_session() {
+  if command -v python3 >/dev/null 2>&1; then
+    exec python3 -c 'import os,sys
+try:
+    os.setsid()
+except OSError:
+    pass
+os.execvp(sys.argv[1], sys.argv[1:])' "$@"
+  fi
+  if command -v python >/dev/null 2>&1; then
+    exec python -c 'import os,sys
+try:
+    os.setsid()
+except OSError:
+    pass
+os.execvp(sys.argv[1], sys.argv[1:])' "$@"
+  fi
+  if command -v perl >/dev/null 2>&1; then
+    exec perl -MPOSIX -e 'eval { POSIX::setsid(); }; exec @ARGV or die "exec: $!"' -- "$@"
+  fi
+  if command -v setsid >/dev/null 2>&1; then
+    exec setsid "$@"
+  fi
+  exec "$@"
+}
+
+# TCP port the service binds, if it has one. Override hooks are for scripts/test-start-all-process-group.sh.
+service_port() {
+  local name="$1"
+  if [[ -n "${START_ALL_PORT_OVERRIDE_NAME:-}" && "$name" == "$START_ALL_PORT_OVERRIDE_NAME" && -n "${START_ALL_PORT_OVERRIDE:-}" ]]; then
+    printf '%s\n' "$START_ALL_PORT_OVERRIDE"
+    return 0
+  fi
+  case "$name" in
+    morph-api)          printf '%s\n' "${PORT:-9090}" ;;
+    morph-ui)           printf '%s\n' 3031 ;;
+    morph-utils-ui)     printf '%s\n' 3040 ;;
+    invite-signup-ui)   printf '%s\n' 3051 ;;
+    bk-api)             printf '%s\n' 8000 ;;
+    bk-ui)              printf '%s\n' 3000 ;;
+    formx-api)          printf '%s\n' "${SERVER_PORT:-29909}" ;;
+    formx-ui)           printf '%s\n' 19909 ;;
+    composerx-api)      printf '%s\n' 8043 ;;
+    composerx-ui)       printf '%s\n' 8044 ;;
+    morph-engi-api)     printf '%s\n' 9096 ;;
+    morph-engi-ui)      printf '%s\n' 5179 ;;
+    sharpreport-api)    printf '%s\n' "${SHARPREPORT_PORT:-3050}" ;;
+    sharpreport-ui)     printf '%s\n' 5178 ;;
+    *)                  return 0 ;;
+  esac
 }
 
 neo4j_port_listening() {
@@ -250,36 +438,71 @@ start_service() {
   local workdir="$2"
   shift 2
   local logfile="${LOG_DIR}/${name}.log"
-  local existing_pid
+  local existing_pid port use_job_control=0 pid
+  ensure_run_dirs
   if existing_pid="$(pid_of "$name")"; then
     warn "${name} already running (pid ${existing_pid})"
     return 0
   fi
   remove_pid_entry "$name"
+  port="$(service_port "$name")"
+  if [[ -n "$port" ]]; then
+    free_listening_port "$port"
+    if ! wait_until_port_free "$port"; then
+      err "${name}: port ${port} is still in use"
+      return 1
+    fi
+  fi
   log "Starting ${name} → ${logfile}"
+  # Own process group so stop can signal `go run` / npm children with the parent.
+  # Helpers call setsid(2) without forking. Without them, bash job control
+  # (works on macOS bash 3.2, which has no setsid binary) makes the same split.
+  if [[ "${START_ALL_FORCE_JOB_CONTROL:-}" == 1 ]] || ! have_session_helper; then
+    if set -m 2>/dev/null; then
+      use_job_control=1
+    fi
+  fi
   (
     trap '' HUP
     cd "$workdir"
     load_root_env
-    exec "$@"
+    if [[ "$use_job_control" == 1 ]]; then
+      exec "$@"
+    fi
+    exec_in_new_session "$@"
   ) >>"$logfile" 2>&1 &
+  pid=$!
   disown 2>/dev/null || true
-  record_pid "$name" "$!"
-  ok "${name} (pid $(pid_of "$name"))"
+  if [[ "$use_job_control" == 1 ]]; then
+    set +m
+  fi
+  record_pid "$name" "$pid"
+  ok "${name} (pid ${pid})"
 }
 
 stop_service() {
   local name="$1"
-  local pid
-  if ! pid="$(pid_of "$name")"; then
+  local pid port did=0
+  if pid="$(pid_of "$name")"; then
+    log "Stopping ${name} (pid ${pid})"
+    kill_recorded_pid "$pid"
+    did=1
+  else
     warn "${name} is not running"
-    remove_pid_entry "$name"
-    return 0
   fi
-  log "Stopping ${name} (pid ${pid})"
-  kill_pid "$pid"
   remove_pid_entry "$name"
-  ok "${name} stopped"
+  port="$(service_port "$name")"
+  if [[ -n "$port" && -n "$(listening_pids "$port")" ]]; then
+    free_listening_port "$port"
+    did=1
+  fi
+  if [[ -n "$port" ]] && ! wait_until_port_free "$port"; then
+    err "${name}: port ${port} still in use after stop"
+    return 1
+  fi
+  if [[ "$did" == 1 ]]; then
+    ok "${name} stopped"
+  fi
 }
 
 start_one() {
@@ -295,7 +518,6 @@ start_one() {
       ;;
     formx-api)
       load_root_env
-      free_listening_port "${SERVER_PORT:-29909}"
       if [[ "$(uname -s)" == "Darwin" ]]; then
         ensure_formx_binary
         start_service formx-api "${ROOT}/formx/backend" "${RUN_DIR}/formx-server"
@@ -393,6 +615,7 @@ resolve_services() {
 
 start_services_list() {
   local name
+  ensure_run_dirs
   touch "$PID_FILE"
   while IFS= read -r name; do
     [[ -z "$name" ]] && continue
@@ -425,23 +648,22 @@ stop_all() {
     return 0
   fi
   log "Stopping all robo dev processes..."
-  local line name pid
-  while IFS= read -r line; do
+  local line name names=() n
+  while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" ]] && continue
     name="${line%%:*}"
-    pid="${line##*:}"
-    if kill -0 "$pid" 2>/dev/null; then
-      echo "  stopping ${name} (pid ${pid})"
-      kill_pid "$pid"
-    fi
+    names+=("$name")
   done < "$PID_FILE"
+  for n in "${names[@]+"${names[@]}"}"; do
+    stop_service "$n"
+  done
   rm -f "$PID_FILE"
   ok "All stopped."
 }
 
 service_url() {
   case "$1" in
-    morph-api)          echo "http://localhost:9090" ;;
+    morph-api)          echo "http://localhost:${PORT:-9090}" ;;
     morph-ui)           echo "http://localhost:3031" ;;
     morph-utils-ui)     echo "http://localhost:3040" ;;
     invite-signup-ui)   echo "http://localhost:3051" ;;
@@ -538,6 +760,7 @@ start_all() {
     exit 1
   fi
   ensure_neo4j
+  ensure_run_dirs
   touch "$PID_FILE"
 
   for name in "${ALL_SERVICES[@]}"; do
@@ -557,10 +780,15 @@ start_all() {
 }
 
 usage() {
-  sed -n '3,18p' "$0" | sed 's/^# \{0,1\}//'
+  # Header comments up to, but not including, the first non-comment line.
+  sed -n '3,/^[^#]/p' "$0" | sed '$d; s/^# \{0,1\}//'
 }
 
 # --- main ---
+
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 load_root_env
 
