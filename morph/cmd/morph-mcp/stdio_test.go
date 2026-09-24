@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -74,11 +76,11 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		t.Fatalf("serverInfo = %#v", initResult["serverInfo"])
 	}
 	caps, _ := initResult["capabilities"].(map[string]any)
-	if caps["tools"] == nil {
+	if caps["tools"] == nil || caps["resources"] == nil {
 		t.Fatalf("capabilities = %#v", caps)
 	}
-	if _, ok := caps["resources"]; ok {
-		t.Fatalf("resources capability = %#v", caps["resources"])
+	if err := assertNotListening(t, cmd.Process.Pid); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := writeLine(stdin, `{"jsonrpc":"2.0","method":"notifications/initialized"}`); err != nil {
@@ -255,6 +257,43 @@ func resultObject(t *testing.T, line string) map[string]any {
 		t.Fatalf("result = %#v", msg["result"])
 	}
 	return result
+}
+
+func assertNotListening(t *testing.T, pid int) error {
+	t.Helper()
+	inodes := map[string]struct{}{}
+	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
+	entries, err := os.ReadDir(fdDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		target, err := os.Readlink(filepath.Join(fdDir, entry.Name()))
+		if err != nil || !strings.HasPrefix(target, "socket:[") {
+			continue
+		}
+		inode := strings.TrimSuffix(strings.TrimPrefix(target, "socket:["), "]")
+		inodes[inode] = struct{}{}
+	}
+	for _, name := range []string{"/proc/net/tcp", "/proc/net/tcp6"} {
+		body, err := os.ReadFile(name)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(body), "\n")[1:] {
+			fields := strings.Fields(line)
+			if len(fields) < 10 {
+				continue
+			}
+			if !strings.EqualFold(fields[3], "0A") {
+				continue
+			}
+			if _, ok := inodes[fields[9]]; ok {
+				return fmt.Errorf("pid %d is listening on %s", pid, fields[1])
+			}
+		}
+	}
+	return nil
 }
 
 func rpcID(v any) string {

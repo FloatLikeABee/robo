@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. The only tool in this build is `whoami` (read-only). MorphNotes tools are a later story.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools and resources. The only tool in this build is `whoami` (read-only). `resources/list` is empty. MorphNotes tools and `morph://` resources are a later story.
 
 ## Build
 

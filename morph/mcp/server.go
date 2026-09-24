@@ -37,9 +37,12 @@ func NewServer(id Identity, logger *slog.Logger) (*sdkmcp.Server, error) {
 	}, &sdkmcp.ServerOptions{
 		Instructions: instructions,
 		Logger:       logger,
-		// A non-nil empty capabilities value suppresses the SDK's historical
-		// logging capability. Tools are inferred when whoami is registered.
-		Capabilities: &sdkmcp.ServerCapabilities{},
+		// A non-nil capabilities value suppresses the SDK's historical logging
+		// capability. Tools are inferred when whoami is registered. Resources
+		// are advertised with an empty list until a later story registers URIs.
+		Capabilities: &sdkmcp.ServerCapabilities{
+			Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
+		},
 	})
 	closedWorld := false
 	sdkmcp.AddTool(server, &sdkmcp.Tool{

@@ -38,10 +38,10 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if init.ServerInfo == nil || init.ServerInfo.Name != mcp.ServerName || init.ServerInfo.Version == "" {
 		t.Fatalf("serverInfo = %+v", init.ServerInfo)
 	}
-	if init.Capabilities == nil || init.Capabilities.Tools == nil {
+	if init.Capabilities == nil || init.Capabilities.Tools == nil || init.Capabilities.Resources == nil {
 		t.Fatalf("capabilities = %+v", init.Capabilities)
 	}
-	if init.Capabilities.Resources != nil || init.Capabilities.Prompts != nil || init.Capabilities.Logging != nil {
+	if init.Capabilities.Prompts != nil || init.Capabilities.Logging != nil {
 		t.Fatalf("unexpected capabilities = %+v", init.Capabilities)
 	}
 	if !strings.Contains(strings.ToLower(init.Instructions), "read-only") {
@@ -76,6 +76,14 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	}
 	if strings.Contains(toolText(t, res), tok) {
 		t.Fatal("tool result included the token")
+	}
+
+	resources, err := session.ListResources(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resources.Resources) != 0 {
+		t.Fatalf("resources = %+v", resources.Resources)
 	}
 }
 
