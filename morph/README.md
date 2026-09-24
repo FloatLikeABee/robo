@@ -44,3 +44,7 @@ Relative `./data/...` paths are cwd-relative.
 ## Swagger
 
 http://localhost:9090/swagger/index.html
+
+## MCP
+
+`cmd/morph-mcp` is a local stdio MCP server (`whoami` only in this build). It does not open Badger, so it can run beside this API. HTTP `/ai/mcp-tools` catalogs are not MCP. See [`docs/agents/14-morph-mcp.md`](../docs/agents/14-morph-mcp.md).

@@ -61,3 +61,7 @@ Other apps point `USERS_PANEL_BASE_URL` at this API. Admin bootstrap: `EnsureBoo
 ## Optional GraphRAG
 
 Knowledge / Neo4j is optional. See [`docs/MORPH_GRAPH_OPS.md`](../MORPH_GRAPH_OPS.md).
+
+## Local MCP
+
+`morph-mcp` (`morph/cmd/morph-mcp`) is a stdio Model Context Protocol server. HTTP paths such as `/ai/mcp-tools` are Morph AI tool catalogs, not MCP. Build, env, and client config: [`14-morph-mcp.md`](14-morph-mcp.md).
