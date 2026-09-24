@@ -51,8 +51,17 @@ Case tasks require `start_at` / `end_at`. Do not add Morph AI / Notes header sho
 | `/api/auth` | Login, me, user, permissions |
 | `/api/admin` | User CRUD |
 | `/api/chat` | Morph AI sessions and messages |
-| `/api/tran/*` | MorphNotes entities (tasks, timelines, generic data, …) |
+| `/api/tran/*` | MorphNotes entities (tasks, timelines, research, generic data, …) |
+| `/api/forms/*`, `/api/knowledge/*`, `/api/graph/*` | Quick sheets, knowledge files, graph search/health |
 | `/api/skills` | Skills catalog / markdown upload |
+
+`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` require a Morph JWT. `GET` and `HEAD` on those prefixes stay available without a session, including list and detail calls the MorphNotes UI makes before login. Published HTML is a separate allowlist (GET/HEAD only):
+
+- `GET /api/tran/public/big-notes/:slug`
+- `GET /api/tran/public/timelines/:slug`
+- `GET /api/tran/public/research/:slug`
+
+See [`01-auth-flow.md`](01-auth-flow.md).
 
 ## Auth hub
 
