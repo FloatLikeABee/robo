@@ -42,6 +42,9 @@ html[data-chat-theme='light'] {
 }
 
 .app-outer {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100vh;
   min-height: 100dvh;
   height: 100dvh;
@@ -56,7 +59,8 @@ html[data-chat-theme='light'] {
 
 .app {
   width: 100%;
-  max-width: none;
+  max-width: 100%;
+  min-width: 0;
   min-height: 0;
   height: 100dvh;
   max-height: 100dvh;
@@ -363,6 +367,7 @@ html[data-chat-theme='light'] {
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   min-height: 0;
   height: 100%;
 }
@@ -412,6 +417,9 @@ html[data-chat-theme='light'] {
   background: var(--chat-surface);
   color: var(--chat-text);
   padding: 12px 24px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
   text-align: left;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   border-bottom: 2px solid var(--chat-accent);
@@ -420,6 +428,9 @@ html[data-chat-theme='light'] {
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-header-title-stack {
@@ -525,6 +536,8 @@ html[data-chat-theme='light'] {
 
 .messages-container {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -728,6 +741,8 @@ html[data-chat-theme='light'] {
 .message {
   margin-bottom: 20px;
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   animation: fadeIn 0.3s ease-in;
 }
 
@@ -751,12 +766,16 @@ html[data-chat-theme='light'] {
 }
 
 .message-content {
+  min-width: 0;
   max-width: 75%;
 }
 
 .message-bubble {
   padding: 15px 20px;
   border-radius: 18px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
   word-wrap: break-word;
   line-height: 1.5;
 }
@@ -779,6 +798,8 @@ html[data-chat-theme='light'] {
   background: #3a1a1a;
   color: #ff6666;
   border: 1px solid #5a2a2a;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .response-text {
@@ -1527,8 +1548,13 @@ html[data-chat-theme='light'] .chat-markdown tbody tr:nth-child(even) {
 .input-container {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   padding: 20px;
   padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
   background: var(--chat-msg-bg);
   border-top: 1px solid var(--chat-border);
   gap: 12px;
@@ -1903,34 +1929,43 @@ html[data-chat-theme='light'] .chat-input-inner {
   .chat-header {
     padding: 8px 10px;
     padding-top: max(8px, env(safe-area-inset-top));
-    flex-wrap: nowrap;
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     min-height: 52px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .chat-header-title-stack {
     flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
     margin-right: 0;
   }
 
-  .header-actions {
-    width: auto;
-    max-width: min(58vw, 280px);
-    margin-left: 0;
-    justify-content: flex-end;
-    flex-wrap: nowrap;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  .chat-header-title-stack .app-title {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .header-actions::-webkit-scrollbar {
-    display: none;
+  .header-actions {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .header-app-links {
@@ -2089,10 +2124,6 @@ html[data-chat-theme='light'] .chat-input-inner {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    max-width: min(62vw, 240px);
-  }
-
   .message-content {
     max-width: 96% !important;
   }
@@ -2594,7 +2625,9 @@ html[data-chat-theme='light'] .skills-modal-overlay {
 .skills-panel-page {
   min-height: 100dvh;
   box-sizing: border-box;
-  padding: 24px 20px 48px;
+  width: 100%;
+  max-width: 100%;
+  padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   background: var(--chat-page-bg);
   color: var(--chat-text);
 }
@@ -3299,8 +3332,9 @@ html[data-chat-theme='light'] .skills-panel-alert {
   }
 
   .app.app--agent .chat-sidebar {
+    position: fixed;
     width: 80px;
-    min-width: 80px;
+    min-width: 0;
   }
 
   .app.app--agent .agent-workspace {

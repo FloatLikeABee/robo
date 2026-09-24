@@ -631,8 +631,8 @@ export default function CaseTasks() {
         onClose={onCloseDialog}
         PaperProps={{
           sx: {
-            width: { xs: '100vw', sm: '66.666vw' },
-            maxWidth: '100vw',
+            width: { xs: '100%', sm: '66.666vw' },
+            maxWidth: '100%',
             height: '100%',
             overflow: 'hidden',
             display: 'flex',
