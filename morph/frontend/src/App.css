@@ -3363,3 +3363,132 @@ html[data-chat-theme='light'] .skills-panel-alert {
     background: var(--scrollbar-track);
   }
 }
+
+.header-more,
+.sidebar-sheet-close {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .header-app-links--bar,
+  .header-action-clear {
+    display: none;
+  }
+
+  .header-more {
+    display: inline-flex;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .header-actions {
+    overflow: visible;
+    max-width: none;
+  }
+
+  .chat-header .chat-icon-button,
+  .skool-ai-chat--embedded .chat-header .chat-icon-button,
+  .chat-nav-toggle,
+  .header-more-button,
+  .sidebar-sheet-close,
+  .hybrid-drawer-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .sidebar-sheet-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 12px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--chat-border);
+    background: var(--chat-surface2);
+    color: var(--chat-text);
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .header-more-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: default;
+  }
+
+  .header-more-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+    padding: 6px;
+    background: var(--chat-surface);
+    border: 1px solid var(--chat-border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .header-more-panel .header-app-link,
+  .header-more-item {
+    min-height: 44px;
+    min-width: 44px;
+    width: 100%;
+    justify-content: flex-start;
+    box-sizing: border-box;
+  }
+
+  .header-more-panel .header-app-link-label {
+    display: inline;
+  }
+
+  .chat-sidebar.is-open,
+  .app.app--agent .chat-sidebar.is-open {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .sidebar-session-main {
+    min-height: 44px;
+  }
+
+  .sidebar-session-remove,
+  .app.app--agent .sidebar-session-remove {
+    position: static;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    opacity: 1;
+  }
+
+  .app.app--agent .sidebar-sessions {
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .app.app--agent .sidebar-session-row {
+    width: auto;
+    height: auto;
+    min-height: 44px;
+    align-self: stretch;
+  }
+
+  .app.app--sidebar-open {
+    overflow-x: clip;
+  }
+}

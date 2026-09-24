@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Drawer,
   Dialog,
+  IconButton,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -20,6 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import { MapContainer, Polygon, Polyline, TileLayer, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -642,8 +644,22 @@ export default function CaseTasks() {
           },
         }}
       >
-        <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            px: 2.5,
+            py: 1,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+          }}
+        >
           <Typography variant="h6">{editing ? 'Case/task details' : 'Create case/task'}</Typography>
+          <IconButton aria-label="Close case/task" onClick={onCloseDialog} sx={{ width: 44, height: 44, flexShrink: 0 }}>
+            <CloseIcon />
+          </IconButton>
         </Box>
         <Tabs
           value={detailsTab}
