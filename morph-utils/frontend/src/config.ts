@@ -1,4 +1,4 @@
-import { readRuntimeConfig, resolvePublicUrl, sheetxEmbedUrl } from './publicUrl';
+import { morphLoginHref, readRuntimeConfig, resolvePublicUrl, sheetxEmbedUrl } from './publicUrl';
 
 export type UtilsModuleId = 'sheetx' | 'composerx' | 'datax' | 'projects';
 
@@ -47,6 +47,22 @@ export const MORPH_AI_URL = resolvePublicUrl({
   runtime: runtimeConfig.morphAiUrl,
   built: import.meta.env.VITE_MORPH_AI_URL,
   devFallback: import.meta.env.DEV ? 'http://localhost:3031' : '',
+  dev: import.meta.env.DEV,
+});
+
+const morphApiUrl = resolvePublicUrl({
+  runtime: runtimeConfig.morphApiUrl,
+  runtimeAlias: runtimeConfig.usersPanelApiUrl,
+  built: import.meta.env.VITE_MORPH_API_URL,
+  builtAlias: import.meta.env.VITE_USERS_PANEL_API_URL,
+  devFallback: '',
+  dev: false,
+});
+
+/** Sign-in target. Blank when production has no non-loopback Morph origin. */
+export const MORPH_LOGIN_HREF = morphLoginHref({
+  morphAi: MORPH_AI_URL,
+  morphApi: morphApiUrl,
   dev: import.meta.env.DEV,
 });
 

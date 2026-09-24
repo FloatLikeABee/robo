@@ -112,4 +112,4 @@ The product owner creates the service. This repo does not call Render. After mer
 
 Disk `morph-engi-data` is mounted at `/data` (1 GB) and is a single instance. `GET /health` must return HTTP 200.
 
-The MorphUtils module id is `projects`. The placeholder for story #114 is `https://<morph-engi public host>`. #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL`. This change does not set those variables.
+The MorphUtils module id is `projects`. The placeholder is `https://<morph-engi public host>`. Story #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on `morph-utils`. Those prompts have no value in git. Do not set them on `morph-engi`. `GET /health` is the health check.

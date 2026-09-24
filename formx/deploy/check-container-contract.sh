@@ -183,8 +183,15 @@ else:
         errors.append("formx must not set REACT_APP_MORPH_UTILS_URL")
 
 for forbidden in ("VITE_SHEETX_URL", "VITE_FORMSX_URL"):
-    if any(line.strip() == "- key: " + forbidden for line in lines):
-        errors.append("must not set " + forbidden)
+    if forbidden in env_map(formx or []):
+        errors.append("formx must not set " + forbidden)
+utils_env = env_map(by_name.get("morph-utils") or [])
+for key in ("VITE_SHEETX_URL", "VITE_FORMSX_URL"):
+    body_env = "\n".join(utils_env.get(key, []))
+    if key not in utils_env:
+        errors.append("morph-utils missing prompt " + key)
+    elif "sync: false" not in body_env or "value:" in body_env:
+        errors.append(key + " must be an empty prompt on morph-utils")
 
 morph = by_name.get("morph")
 if morph is None:

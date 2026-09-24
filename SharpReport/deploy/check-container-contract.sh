@@ -108,8 +108,7 @@ if "numInstances:" in text:
     errors.append("must not set numInstances")
 if "generateValue:" in text:
     errors.append("must not generate secret values")
-if any("key: VITE_DATAX_URL" in line for line in lines):
-    errors.append("must not set VITE_DATAX_URL")
+# VITE_DATAX_URL is an empty prompt on morph-utils, not on sharpreport.
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
@@ -188,6 +187,12 @@ else:
             errors.append(key + " must set sync: false")
         if "value:" in body:
             errors.append(key + " must not have a value")
+    if "VITE_DATAX_URL" in env:
+        errors.append("sharpreport must not set VITE_DATAX_URL")
+
+utils = next((block for block in blocks if service_name(block) == "morph-utils"), None)
+if utils is None or "key: VITE_DATAX_URL" not in "\n".join(utils):
+    errors.append("morph-utils missing VITE_DATAX_URL prompt")
 
 doc = open(deploy_readme, encoding="utf-8").read()
 for needle in (

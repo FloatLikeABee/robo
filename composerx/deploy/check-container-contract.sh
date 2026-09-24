@@ -80,8 +80,7 @@ if "numInstances:" in text:
     errors.append("must not set numInstances")
 if "generateValue:" in text:
     errors.append("must not generate secret values")
-if "VITE_COMPOSERX_URL" in text:
-    errors.append("must not set VITE_COMPOSERX_URL")
+# VITE_COMPOSERX_URL is an empty prompt on morph-utils, not on composerx.
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
@@ -164,6 +163,12 @@ else:
             errors.append(key + " must not have a value")
     if "REACT_APP_MORPH_UTILS_URL" in env:
         errors.append("composerx must not set REACT_APP_MORPH_UTILS_URL")
+    if "VITE_COMPOSERX_URL" in env:
+        errors.append("composerx must not set VITE_COMPOSERX_URL")
+
+utils = next((block for block in blocks if service_name(block) == "morph-utils"), None)
+if utils is None or "key: VITE_COMPOSERX_URL" not in "\n".join(utils):
+    errors.append("morph-utils missing VITE_COMPOSERX_URL prompt")
 
 for doc in (backend_readme, deploy_readme):
     doc_text = open(doc, encoding="utf-8").read()

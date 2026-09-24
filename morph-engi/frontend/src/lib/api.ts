@@ -10,6 +10,7 @@ import {
   isBrowserStore,
   previewToken,
 } from './browserStore'
+import { missingMorphSessionReason } from './morphSignInHref'
 
 export { isBrowserStore } from './browserStore'
 
@@ -329,7 +330,7 @@ export async function ensureSession(): Promise<EnsureSessionResult> {
     return {
       ok: false,
       reason:
-        'No Morph AI session found. Sign in at http://localhost:3031, then open Projects from MorphUtils or reload.',
+        missingMorphSessionReason(Boolean(import.meta.env.DEV)),
     }
   }
 

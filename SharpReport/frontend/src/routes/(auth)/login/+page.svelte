@@ -18,12 +18,16 @@
 		<h1 class="text-2xl font-bold">Data Access</h1>
 	</div>
 
-	<a
-		href={morphAi}
-		target="_top"
-		rel="noopener noreferrer"
-		class="block w-full py-2 px-4 bg-accent-primary text-white rounded-md text-center hover:bg-opacity-90 transition-colors"
-	>
-		Open Morph AI
-	</a>
+	{#if morphAi}
+		<a
+			href={morphAi}
+			target="_top"
+			rel="noopener noreferrer"
+			class="block w-full py-2 px-4 bg-accent-primary text-white rounded-md text-center hover:bg-opacity-90 transition-colors"
+		>
+			Sign in on Morph
+		</a>
+	{:else}
+		<p class="text-center text-sm text-muted">Sign in on Morph, then open Data Access from MorphUtils.</p>
+	{/if}
 </div>
