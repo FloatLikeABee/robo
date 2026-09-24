@@ -153,33 +153,6 @@ export const askHelp = async (payload) => {
   return response.data;
 };
 
-// MCP
-export const startMCPServer = async () => {
-  const response = await api.post('/mcp/start');
-  return response.data;
-};
-
-// MCP Hosts
-export const getMCPHosts = async () => {
-  const response = await api.get('/mcp/hosts');
-  return response.data;
-};
-
-export const createMCPHost = async (payload) => {
-  const response = await api.post('/mcp/hosts', payload);
-  return response.data;
-};
-
-export const updateMCPHost = async (hostId, payload) => {
-  const response = await api.put(`/mcp/hosts/${hostId}`, payload);
-  return response.data;
-};
-
-export const deleteMCPHost = async (hostId) => {
-  const response = await api.delete(`/mcp/hosts/${hostId}`);
-  return response.data;
-};
-
 // Legacy aliases (to be removed once all callers migrate)
 export const getCustomizations = getAssistants;
 export const createCustomization = createAssistant;
@@ -594,11 +567,6 @@ const apiService = {
   getSystemSettings,
   updateSystemSettings,
   askHelp,
-  startMCPServer,
-  getMCPHosts,
-  createMCPHost,
-  updateMCPHost,
-  deleteMCPHost,
   getCustomizations,
   createCustomization,
   updateCustomization,

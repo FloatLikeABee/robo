@@ -1,3 +1,5 @@
+> **Superseded** by `morphai-drop-files-workspace`. This change specified Morph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+
 ## Why
 
 Morph AI Files still shows an empty workspace after refresh. Last-session restore does not help: opening a folder often never binds (webkit picker sends no directory handle, then the handler **clears** the session binding), and even a bound folder disappears when recents are capped or the live handle needs permission again. The last opened folder must still be there after reload.

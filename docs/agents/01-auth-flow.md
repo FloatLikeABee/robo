@@ -69,11 +69,11 @@ Most `/api/*` routes need a Morph session (`Authorization: Bearer`). Published H
 
 `POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*` (including Research create, patch, cancel, publish, and delete), `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` (including `POST /api/graph/search`) return 401 with no session. `GET` and `HEAD` on those prefixes still succeed without a session, so MorphNotes can list records before login. That read exposure is intentional for this rule. `POST` and unknown kinds under `/api/tran/public/` are 401.
 
-The MorphNotes SPA and Morph AI attach the bearer token from `userspanel_session_token` (`tranApi`) when the user is signed in. MorphUtils copies the same token into iframes as `?userspanel_token=`. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls.
+The MorphNotes SPA and Morph AI attach the bearer token from `userspanel_session_token` (`tranApi`) when the user is signed in. MorphUtils copies the same token into iframes as `?userspanel_token=`. The API does not read that cookie. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls and does not send identity headers.
 
-A new published page must be registered as GET and added to `publicMorphReadKinds` in `morph/handlers/authz_middleware.go`.
+A new published page must be registered as GET and added to `publicMorphReadKinds` in `morph/handlers/authz_middleware.go`. The path must be exactly `/api/tran/public/{kind}/{slug}` with one non-empty slug segment.
 
-`X-User-ID` / `X-User-Role` still satisfy the session check. Removing that fallback is issue #23, not this rule.
+`X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` are not a session. There is no header fallback. Chat (`/api/chat`), admin (`/api/admin`), and the mutating MorphNotes routes above require `Authorization: Bearer` with a Morph JWT. Spoofed identity headers do not replace the user or role in that token. Anonymous `GET` and `HEAD` on the former open prefixes stay unauthenticated (issue #69).
 
 ### Admin bootstrap
 

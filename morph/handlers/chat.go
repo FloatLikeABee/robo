@@ -14,12 +14,11 @@ import (
 
 // ChatHandler handles chat requests (sheets/forms, registration flows, general assistant).
 // @Summary      Chat with Morph AI
-// @Description  Send a message; AI may help with sheets, registration, or general questions.
+// @Description  Send a message; AI may help with sheets, registration, or general questions. Requires a Morph JWT. The user id comes from that session, not from a client header.
 // @Tags         Chat
 // @Accept       json
 // @Produce      json
 // @Param        request  body      models.ChatRequest  true  "Chat request with message"
-// @Header       200      {string}  X-User-ID          "Optional user ID for chat history"
 // @Success      200      {object}  models.ChatResponse
 // @Failure      400      {object}  map[string]string   "Invalid request"
 // @Failure      500      {object}  map[string]string   "Internal server error"

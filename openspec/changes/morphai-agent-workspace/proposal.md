@@ -1,3 +1,5 @@
+> **Superseded (Files tab only)** by `morphai-drop-files-workspace`. Instructions in this change to build or keep a Morph AI Files tab, local-folder picker, or pin-from-folder are not permission to restore that tab. Notes & TODOs, Context & Knowledge, the agent shell, and orchestration in this change stay.
+
 ## Why
 
 Morph AI is still a chat box with overlay drawers. Turning it into an agent needs a durable workspace next to the conversation (files, notes, knowledge) plus room to type, and a way to control context, cache it, and fan work out to sub-agents. The session list currently eats width or sits behind an overlay; collapsing it and splitting chat from workspace makes that possible.
