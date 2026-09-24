@@ -56,7 +56,7 @@ Start **Morph API** first when bringing apps up one by one (auth hub).
 
 - Local: one gitignored `.env` at the **repo root**
 - Nested leftover `.env` files are ignored
-- Production path remains `deploy/.env.production` **when that tree exists** (it is currently absent)
+- Hosted Morph: copy `deploy/.env.production.example` to gitignored `deploy/.env.production`. Runbook: [`deploy/README.md`](../../deploy/README.md).
 
 ## Per-app build (without the launcher)
 
@@ -111,9 +111,11 @@ python3 openspec/check_files_workspace_archive.py
 ( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
 ```
 
+The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image.
+
 ## Production / cloud
 
-**Not currently documented as a complete path.** `scripts/deploy.sh` still talks about Render and Alibaba and still lists removed apps, but **`deploy/` is missing** (no `render.yaml`, no `DEPLOY-README.md`). Do not follow that script as an operator runbook until `deploy/` is restored.
+Morph API and the Morph AI UI ship as one image. The runbook is [`deploy/README.md`](../../deploy/README.md) (build, `docker compose` up, `/data` volume, env file, backup, upgrade). No host is selected. `scripts/deploy.sh` still talks about Render and Alibaba and still lists removed apps. Do not follow that script.
 
 ### What does exist
 

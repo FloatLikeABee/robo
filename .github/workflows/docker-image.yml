@@ -1,0 +1,33 @@
+# Image build for Morph API + Morph AI UI.
+#
+# This is not one of the five required check names. Those stay in ci.yml
+# (Go / Morph API, Go / Event Logs, Go / Content Maker, Go / morphai,
+# Morph frontend). Do not move this job into ci.yml.
+name: Morph image
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morph-image-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Contract
+        run: sh deploy/check-container-contract.sh
+      - name: Build
+        run: docker build -t morph:ci .

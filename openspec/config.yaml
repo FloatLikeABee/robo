@@ -11,7 +11,7 @@ context: |
   Chat: Morph AI only — no platform-chat drawers. Product UIs dark-only.
   Local data: one repo-root .env; SQLite + Badger under ./data/ (cwd-relative). No MySQL/Mongo/Redis required.
   Not in the supported stack: Booki, Academi, standalone UsersPanel, landing/, Survey Maker as a product name.
-  GraphRAG/Neo4j is optional. deploy/ tree is currently absent; do not document Render/Alibaba as a complete path.
+  GraphRAG/Neo4j is optional. Morph image runbook is deploy/README.md. Do not document Render/Alibaba or scripts/deploy.sh as a complete hosting path.
   Do not restore Morph AI's IndexedDB Files tab unless the product owner explicitly says yes. Current policy is the active change morphai-drop-files-workspace. See openspec/project.md.
 
 # Per-artifact rules (optional)

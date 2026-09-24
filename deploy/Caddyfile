@@ -1,0 +1,5 @@
+# Optional stub for issue #53. `docker compose up` does not start Caddy.
+# Not a production hostname. Replace this site block when TLS is finished.
+:80 {
+	reverse_proxy morph:9090
+}
