@@ -233,19 +233,19 @@ var providerCatalog = []providerSpec{
 		},
 	},
 	{
-		Kind:          adapterOpenAI,
-		DefaultVision: "llama-3.2-11b-vision-preview",
+		Kind: adapterOpenAI,
 		Info: ProviderInfo{
 			ID:             ProviderGroq,
 			DisplayName:    "Groq",
 			RequiresKey:    true,
 			DefaultBaseURL: "https://api.groq.com/openai/v1",
 			SuggestedModels: []string{
-				"llama-3.3-70b-versatile",
-				"llama-3.1-8b-instant",
-				"gemma2-9b-it",
+				"openai/gpt-oss-120b",
+				"openai/gpt-oss-20b",
 			},
-			Capabilities: fullCaps,
+			// The public Groq catalog has no general vision chat model.
+			// llama-3.2 vision is decommissioned; Qwen-VL there is enterprise-only.
+			Capabilities: Capabilities{Chat: true, Stream: true, Tools: true, JSONMode: true},
 			APIKeyEnv:    "GROQ_API_KEY",
 			BaseURLEnv:   "GROQ_BASE_URL",
 		},

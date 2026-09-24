@@ -18,6 +18,10 @@ var ErrCapabilityUnsupported = errors.New("ai provider does not support this cap
 // ErrUnknownProvider means Provider is not in the registry.
 var ErrUnknownProvider = errors.New("unknown ai provider")
 
+// errStreamTruncated means the provider closed a stream before the terminal
+// marker ([DONE] or message_stop). The partial text is not a finished reply.
+var errStreamTruncated = errors.New("stream ended before a terminal event")
+
 // ProviderConfigError is returned when a named provider cannot be called.
 // It unwraps to ErrProviderNotConfigured.
 type ProviderConfigError struct {

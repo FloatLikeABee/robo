@@ -54,7 +54,7 @@ func streamOpenAI(ctx context.Context, rc resolved, r io.Reader, ch chan<- Strea
 		}
 		for _, tc := range choice.Delta.ToolCalls {
 			if tc.Index < 0 || tc.Index > 64 {
-				continue
+				return fmt.Errorf("openai stream: tool call index %d is out of range", tc.Index)
 			}
 			for len(acc) <= tc.Index {
 				acc = append(acc, toolAcc{})
@@ -73,17 +73,24 @@ func streamOpenAI(ctx context.Context, rc resolved, r io.Reader, ch chan<- Strea
 	})
 	if err != nil && !errors.Is(err, errSSEDone) {
 		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-			sendEvent(context.Background(), ch, StreamEvent{Err: ctx.Err()})
+			sendTerminal(ctx, ch, StreamEvent{Err: ctx.Err()})
 			return
 		}
-		sendEvent(ctx, ch, StreamEvent{Err: err})
+		sendTerminal(ctx, ch, StreamEvent{Err: err})
 		return
 	}
 	if ctx.Err() != nil {
-		sendEvent(context.Background(), ch, StreamEvent{Err: ctx.Err()})
+		sendTerminal(ctx, ch, StreamEvent{Err: ctx.Err()})
 		return
 	}
-	sendEvent(ctx, ch, StreamEvent{Done: true, FinishReason: finish, ToolCalls: accToolCalls(acc)})
+	sendTerminal(ctx, ch, StreamEvent{Done: true, FinishReason: finish, ToolCalls: accToolCalls(acc)})
+}
+
+func normalizeToolArgs(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "{}"
+	}
+	return s
 }
 
 func accToolCalls(acc []toolAcc) []ToolCall {
@@ -95,7 +102,7 @@ func accToolCalls(acc []toolAcc) []ToolCall {
 		if tc.id == "" && tc.name == "" && tc.args.Len() == 0 {
 			continue
 		}
-		out = append(out, ToolCall{ID: tc.id, Name: tc.name, Arguments: tc.args.String()})
+		out = append(out, ToolCall{ID: tc.id, Name: tc.name, Arguments: normalizeToolArgs(tc.args.String())})
 	}
 	if len(out) == 0 {
 		return nil
@@ -109,6 +116,20 @@ func sendEvent(ctx context.Context, ch chan<- StreamEvent, ev StreamEvent) bool 
 		return false
 	case ch <- ev:
 		return true
+	}
+}
+
+// sendTerminal delivers the final event without parking the stream goroutine.
+// A full buffer and a cancelled caller both return; the caller then closes the
+// channel and the response body.
+func sendTerminal(ctx context.Context, ch chan<- StreamEvent, ev StreamEvent) {
+	select {
+	case ch <- ev:
+	case <-ctx.Done():
+		select {
+		case ch <- ev:
+		default:
+		}
 	}
 }
 

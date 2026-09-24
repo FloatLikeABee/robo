@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -149,16 +151,35 @@ func anthMaxTokens(req outbound) int {
 }
 
 func anthropicMessagesURL(base string) string {
-	b := strings.TrimRight(strings.TrimSpace(base), "/")
-	lower := strings.ToLower(b)
+	raw := strings.TrimSpace(base)
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		b := strings.TrimRight(raw, "/")
+		lower := strings.ToLower(b)
+		switch {
+		case strings.HasSuffix(lower, "/messages"):
+			return b
+		case strings.HasSuffix(lower, "/v1"):
+			return b + "/messages"
+		default:
+			return b + "/v1/messages"
+		}
+	}
+	path := strings.TrimRight(u.Path, "/")
+	lower := strings.ToLower(path)
 	switch {
 	case strings.HasSuffix(lower, "/messages"):
-		return b
+		u.Path = path
 	case strings.HasSuffix(lower, "/v1"):
-		return b + "/messages"
+		u.Path = path + "/messages"
 	default:
-		return b + "/v1/messages"
+		if path == "" {
+			u.Path = "/v1/messages"
+		} else {
+			u.Path = path + "/v1/messages"
+		}
 	}
+	return u.String()
 }
 
 func convertMessages(msgs []Message) (string, []anthMsg, error) {
@@ -527,31 +548,30 @@ func streamAnthropic(ctx context.Context, rc resolved, r io.Reader, ch chan<- St
 	})
 	if err != nil && !errors.Is(err, errSSEDone) {
 		if ctx.Err() != nil {
-			sendEvent(context.Background(), ch, StreamEvent{Err: ctx.Err()})
+			sendTerminal(ctx, ch, StreamEvent{Err: ctx.Err()})
 			return
 		}
-		sendEvent(ctx, ch, StreamEvent{Err: err})
+		sendTerminal(ctx, ch, StreamEvent{Err: err})
 		return
 	}
 	if ctx.Err() != nil {
-		sendEvent(context.Background(), ch, StreamEvent{Err: ctx.Err()})
+		sendTerminal(ctx, ch, StreamEvent{Err: ctx.Err()})
 		return
 	}
 	var calls []ToolCall
 	if len(acc) > 0 {
-		max := 0
+		idxs := make([]int, 0, len(acc))
 		for idx := range acc {
-			if idx > max {
-				max = idx
-			}
+			idxs = append(idxs, idx)
 		}
-		for i := 0; i <= max; i++ {
+		sort.Ints(idxs)
+		for _, i := range idxs {
 			tool := acc[i]
 			if tool == nil || !tool.isTool {
 				continue
 			}
-			calls = append(calls, ToolCall{ID: tool.id, Name: tool.name, Arguments: tool.args.String()})
+			calls = append(calls, ToolCall{ID: tool.id, Name: tool.name, Arguments: normalizeToolArgs(tool.args.String())})
 		}
 	}
-	sendEvent(ctx, ch, StreamEvent{Done: true, FinishReason: finish, ToolCalls: calls})
+	sendTerminal(ctx, ch, StreamEvent{Done: true, FinishReason: finish, ToolCalls: calls})
 }

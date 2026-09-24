@@ -152,7 +152,7 @@ func resolveLegacy(cfg Config) (resolved, error) {
 }
 
 func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
-	key := cfg.APIKey
+	key := namedProviderKey(cfg)
 	if key == "" {
 		key = spec.lookupEnv(spec.Info.APIKeyEnv, spec.ExtraKeyEnvs)
 	}
@@ -244,6 +244,28 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 	return rc, nil
 }
 
+// namedProviderKey returns a key the caller set on Config. A key that
+// LoadFromEnv copied from the legacy env vars is not one of those: it belongs
+// to the empty-provider DashScope path only.
+func namedProviderKey(cfg Config) string {
+	key := strings.TrimSpace(cfg.APIKey)
+	if key == "" || !cfg.legacyEnvKey {
+		return key
+	}
+	if key != legacyEnvAPIKey() {
+		return key
+	}
+	return ""
+}
+
+func legacyEnvAPIKey() string {
+	return strings.TrimSpace(firstNonEmpty(
+		os.Getenv("MORPH_AI_API_KEY"),
+		os.Getenv("GEMINI_API_KEY"),
+		os.Getenv("TRAN_QWEN_API_KEY"),
+	))
+}
+
 func (s providerSpec) lookupEnv(primary string, extra []string) string {
 	vals := make([]string, 0, 1+len(extra))
 	if primary != "" {
@@ -311,6 +333,7 @@ func (c Config) applyCall(req CompletionRequest) Config {
 	}
 	if s := strings.TrimSpace(req.APIKey); s != "" {
 		out.APIKey = s
+		out.legacyEnvKey = false
 	}
 	if s := strings.TrimSpace(req.BaseURL); s != "" {
 		out.BaseURL = s

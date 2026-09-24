@@ -80,7 +80,7 @@ Ollama is configured with no key when a base URL resolves. The default is `http:
 
 **Legacy env path (provider empty):** unchanged. Key order `MORPH_AI_API_KEY`, `GEMINI_API_KEY`, `TRAN_QWEN_API_KEY`. Model order `MORPH_AI_MODEL`, `GEMINI_MODEL`, `TRAN_QWEN_MODEL`, then `qwen3-max`. `OPENAI_API_KEY` does not configure this path.
 
-**GEMINI_API_KEY challenge:** the same variable is the legacy single-key fallback and the Gemini provider key. That split is intentional. `LoadFromEnv` still copies it into `Config.APIKey` for the unscoped client. An explicit `gemini` provider reads it only when its own `APIKey` is empty. An explicit `dashscope` provider does not read it, so a real Gemini key is not sent to DashScope just because the Gemini env var is set.
+**GEMINI_API_KEY challenge:** the same variable is the legacy single-key fallback and the Gemini provider key. That split is intentional. `LoadFromEnv` still copies it into `Config.APIKey` for the unscoped client, and marks that copy as a legacy env key. A named provider ignores a key with that mark and reads its own env var. An explicit `gemini` provider therefore uses `GEMINI_API_KEY`. An explicit `dashscope` provider does not, so a Gemini key copied by `LoadFromEnv` is not sent to DashScope. `MORPH_AI_API_KEY` and `TRAN_QWEN_API_KEY` still authorize explicit DashScope through that provider's env list, not through the copied field.
 
 ### 4. How stored keys plug in later
 
@@ -101,7 +101,7 @@ Delivery order is the opposite of that precedence: the first stored source to bu
 
 - Anthropic: chat, stream, tools, vision. No JSON mode (`response_format` does not exist on Messages).
 - DashScope native: chat only. Vision keeps today's `MORPH_AI_API_URL` sentence so formx's image test still matches.
-- Every OpenAI-compatible preset, including Mistral, Groq, Ollama, and generic: chat, stream, tools, vision, JSON mode at the protocol layer. A model that rejects one of those returns the provider's HTTP error, mapped to `*APIError` (`API error (status N): code - message`), which matches the string shape callers already display.
+- Every OpenAI-compatible preset except Groq, including Mistral, Ollama, and generic: chat, stream, tools, vision, JSON mode at the protocol layer. Groq is chat, stream, tools, and JSON mode only. The public catalog has no general vision model (`llama-3.2-11b-vision-preview` and `gemma2-9b-it` are retired). Suggested Groq models are `openai/gpt-oss-120b` and `openai/gpt-oss-20b`. A model that rejects a capability returns the provider's HTTP error, mapped to `*APIError` (`API error (status N): code - message`), which matches the string shape callers already display.
 
 ## Risks / Trade-offs
 
@@ -118,3 +118,13 @@ No caller edits. Deploy is a library update. Rollback is reverting the module. E
 ## Open Questions
 
 None that change the spec or the task breakdown. Model ids in the suggested lists are labels for a settings UI, not a pinned contract.
+
+## Review revisions
+
+Lens review on the first implementation found two holes. Both are fixed in the library, and the spec scenarios for key provenance and stream cancellation match this section.
+
+**Legacy key provenance.** `explicitBaseOverride` already ignored the DashScope default base URL for other providers. `LoadFromEnv` also copies `MORPH_AI_API_KEY`, then `GEMINI_API_KEY`, then `TRAN_QWEN_API_KEY` into `Config.APIKey`. Using that field as an explicit key meant `cfg := LoadFromEnv(); cfg.Provider = openai` sent the DashScope key to OpenAI, and the same copy became an Ollama Bearer token or a DashScope call authorized by a Gemini key. The copy is now tagged `legacyEnvKey`. A named provider drops it and falls through to that provider's own env var. A different string written to `Config.APIKey` after `LoadFromEnv`, or a per-call `APIKey`, is an explicit key and is sent. The empty-provider path still uses the copied key.
+
+**Stream cancellation.** The OpenAI and Anthropic readers sent the terminal event with `context.Background()`. If the 16-slot channel was full and the caller had stopped reading, that send blocked, the goroutine never returned, and `resp.Body.Close` never ran. The terminal send now waits on the call context and, once that context is cancelled, tries the channel once without blocking. `defer resp.Body.Close()` therefore runs. A stream that reaches EOF before `[DONE]` or `message_stop` returns an error instead of a clean finish. Empty streamed tool arguments are normalized to `{}`. `rateLimit` records the wait under the mutex, releases it, and sleeps with the call context so cancel returns during the gap.
+
+**Left for a later change.** Validating Anthropic tool JSON on `content_block_stop` would reject argument strings the caller can already see. A separate stream HTTP client (`ResponseHeaderTimeout` only) changes when a long stream is cut off and should not ride along with the leak fix. Bounding successful response bodies with `LimitReader` can truncate a long completion. Redacting keys inside provider error text is worthwhile and was not required to stop the cross-vendor send.

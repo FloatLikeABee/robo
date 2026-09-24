@@ -8,18 +8,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
-func (c *Client) rateLimit() {
-	c.requestMutex.Lock()
-	defer c.requestMutex.Unlock()
-	now := time.Now()
-	if wait := c.minRequestInterval - now.Sub(c.lastRequestTime); wait > 0 {
-		time.Sleep(wait)
+func (c *Client) rateLimit(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	c.lastRequestTime = time.Now()
+	c.requestMutex.Lock()
+	now := time.Now()
+	wait := time.Duration(0)
+	if !c.lastRequestTime.IsZero() {
+		if gap := c.minRequestInterval - now.Sub(c.lastRequestTime); gap > 0 {
+			wait = gap
+		}
+	}
+	c.lastRequestTime = now.Add(wait)
+	c.requestMutex.Unlock()
+	return sleepCtx(ctx, wait)
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -68,7 +76,9 @@ func (c *Client) doJSON(ctx context.Context, hc *http.Client, rc resolved, endpo
 				return nil, err
 			}
 		}
-		c.rateLimit()
+		if err := c.rateLimit(ctx); err != nil {
+			return nil, err
+		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 		if err != nil {
@@ -122,7 +132,9 @@ func (c *Client) doStream(ctx context.Context, hc *http.Client, rc resolved, end
 				return nil, err
 			}
 		}
-		c.rateLimit()
+		if err := c.rateLimit(ctx); err != nil {
+			return nil, err
+		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 		if err != nil {
@@ -200,9 +212,26 @@ func clipBody(b []byte) string {
 }
 
 func openAIChatURL(base string) string {
-	b := strings.TrimRight(strings.TrimSpace(base), "/")
-	if strings.HasSuffix(strings.ToLower(b), "/chat/completions") {
-		return b
+	return joinProviderURL(base, "/chat/completions")
+}
+
+func joinProviderURL(base, suffix string) string {
+	raw := strings.TrimSpace(base)
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		b := strings.TrimRight(raw, "/")
+		if strings.HasSuffix(strings.ToLower(b), strings.ToLower(suffix)) {
+			return b
+		}
+		return b + suffix
 	}
-	return b + "/chat/completions"
+	path := strings.TrimRight(u.Path, "/")
+	if strings.HasSuffix(strings.ToLower(path), strings.ToLower(suffix)) {
+		u.Path = path
+	} else if path == "" {
+		u.Path = suffix
+	} else {
+		u.Path = path + suffix
+	}
+	return u.String()
 }

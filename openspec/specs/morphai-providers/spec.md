@@ -35,7 +35,7 @@ Callers that construct the client from `MORPH_AI_*` (and the legacy `GEMINI_API_
 - **AND** no image payload is sent
 
 ### Requirement: Config resolution without cross-provider fallback
-A call SHALL resolve settings in this order: per-call provider, model, API key, and base URL when set; otherwise the client config; otherwise that provider's own environment variables; otherwise the provider default model and base URL. A key or base URL that belongs to a different provider SHALL NOT be used. When the selected provider still has no key (or, for Ollama, no base URL), the call SHALL fail with an error that unwraps to the not-configured error, and SHALL NOT contact another provider. Ollama SHALL be configured when a base URL resolves, including its localhost default, with no key.
+A call SHALL resolve settings in this order: per-call provider, model, API key, and base URL when set; otherwise the client config; otherwise that provider's own environment variables; otherwise the provider default model and base URL. A key or base URL that belongs to a different provider SHALL NOT be used. A key copied by the legacy env loader (`MORPH_AI_API_KEY`, `GEMINI_API_KEY`, or `TRAN_QWEN_API_KEY`) SHALL be valid only while no provider is selected. Selecting a named provider SHALL drop that copied key and SHALL use a caller-set key or that provider's own env var. If the provider still has no key, the call SHALL fail with the not-configured error. When the selected provider still has no key (or, for Ollama, no base URL), the call SHALL fail with an error that unwraps to the not-configured error, and SHALL NOT contact another provider. Ollama SHALL be configured when a base URL resolves, including its localhost default, with no key.
 
 #### Scenario: Explicit OpenAI key beats the OpenAI env var
 - **WHEN** the caller passes an API key and `OPENAI_API_KEY` is also set
@@ -56,8 +56,26 @@ A call SHALL resolve settings in this order: per-call provider, model, API key, 
 - **WHEN** the caller selects openai-compatible and supplies a key but no base URL and no `OPENAI_COMPATIBLE_BASE_URL`
 - **THEN** the call fails with the not-configured error
 
+#### Scenario: A key loaded from the legacy env is not sent to OpenAI
+- **WHEN** a client is loaded from `MORPH_AI_API_KEY` and the provider is then set to openai, and `OPENAI_API_KEY` is unset
+- **THEN** the call fails with the not-configured error
+- **AND** no HTTP request is sent
+
+#### Scenario: A key loaded from the legacy env is not attached to Ollama
+- **WHEN** a client is loaded from `MORPH_AI_API_KEY` and the provider is then set to ollama
+- **THEN** the request omits the Authorization header
+
+#### Scenario: The Gemini fallback does not authorize explicit DashScope
+- **WHEN** the only key in the environment is `GEMINI_API_KEY`, the client is loaded from the environment, and the provider is then set to dashscope
+- **THEN** the call fails with the not-configured error
+- **AND** no HTTP request is sent
+
+#### Scenario: A caller-set key still wins
+- **WHEN** a client is loaded from the legacy env and the caller then sets a different API key for the selected provider
+- **THEN** the request uses that caller key
+
 ### Requirement: Chat, stream, tools, vision, and JSON mode
-Chat completions, streaming, tool calls, vision, and JSON mode SHALL work through the selected provider when that provider's protocol supports them. Anthropic SHALL use its Messages API, including its tool-use content blocks. Providers that share the OpenAI chat-completions protocol SHALL use that protocol. A request for a capability the selected provider lacks SHALL fail with an error that unwraps to the capability-unsupported error and SHALL NOT be sent. Provider HTTP errors SHALL surface status, code, and message.
+Chat completions, streaming, tool calls, vision, and JSON mode SHALL work through the selected provider when that provider's protocol supports them. Cancelling a stream SHALL return the reader goroutine and close the response body. A stream that ends before its terminal marker SHALL be an error. Anthropic SHALL use its Messages API, including its tool-use content blocks. Providers that share the OpenAI chat-completions protocol SHALL use that protocol. A request for a capability the selected provider lacks SHALL fail with an error that unwraps to the capability-unsupported error and SHALL NOT be sent. Provider HTTP errors SHALL surface status, code, and message.
 
 #### Scenario: OpenAI-compatible tool round trip
 - **WHEN** a caller sends tools and the provider returns a tool call, then the caller sends the tool result
@@ -66,8 +84,18 @@ Chat completions, streaming, tool calls, vision, and JSON mode SHALL work throug
 - **AND** the final assistant text is returned
 
 #### Scenario: Streaming text is reassembled
-- **WHEN** a provider streams text as server-sent events
+- **WHEN** a provider streams text as server-sent events and the stream ends with its terminal marker
 - **THEN** the caller can reassemble the full text from the deltas
+
+#### Scenario: Cancelling a stream releases the response
+- **WHEN** a stream is cancelled after its event buffer fills and the caller does not read
+- **THEN** the stream goroutine returns
+- **AND** the response body is closed
+
+#### Scenario: A stream that ends early is an error
+- **WHEN** the provider closes the stream before the terminal marker
+- **THEN** the caller receives an error
+- **AND** the partial text is not returned as a finished reply
 
 #### Scenario: Anthropic rejects JSON mode
 - **WHEN** a caller asks Anthropic for JSON mode

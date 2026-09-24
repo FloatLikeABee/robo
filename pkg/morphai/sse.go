@@ -2,6 +2,7 @@ package morphai
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"strings"
 )
@@ -16,11 +17,15 @@ func readSSE(r io.Reader, fn func(sseEvent) error) error {
 	buf := make([]byte, 64*1024)
 	sc.Buffer(buf, 2*1024*1024)
 	var event, data strings.Builder
+	terminal := false
 	flush := func() error {
 		if event.Len() == 0 && data.Len() == 0 {
 			return nil
 		}
 		err := fn(sseEvent{Event: event.String(), Data: data.String()})
+		if errors.Is(err, errSSEDone) {
+			terminal = true
+		}
 		event.Reset()
 		data.Reset()
 		return err
@@ -51,5 +56,11 @@ func readSSE(r io.Reader, fn func(sseEvent) error) error {
 	if err := sc.Err(); err != nil {
 		return err
 	}
-	return flush()
+	if err := flush(); err != nil {
+		return err
+	}
+	if !terminal {
+		return errStreamTruncated
+	}
+	return nil
 }
