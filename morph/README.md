@@ -10,7 +10,7 @@ This is not a Transfinder, school, or SQL Server product. Agent notes: [`docs/ag
 |-------|--|
 | Backend | Go, Gin, Badger, SQLite (`TRAN_SQLITE_PATH`) |
 | Frontend | React 18 (CRA) |
-| Auth | Morph JWT + bcrypt (`plat_users` in SQLite). Writes on `/api/tran`, `/api/forms`, `/api/knowledge`, and `/api/graph` require that JWT. List reads and published HTML GETs stay reachable without it (see below). |
+| Auth | Morph JWT + bcrypt (`plat_users` in SQLite). Chat, admin, and writes on `/api/tran`, `/api/forms`, `/api/knowledge`, and `/api/graph` require that JWT. `X-User-*` headers are not a session. List reads and published HTML GETs stay reachable without it (see below). |
 
 Ports: API **9090**, UI **3031**.
 
@@ -47,7 +47,7 @@ Relative `./data/...` paths are cwd-relative.
 
 ## API auth
 
-`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` need a Morph JWT. Research create and publish are in that set. `GET` and `HEAD` on those prefixes still work without a session (MorphNotes lists are not behind login).
+`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` need a Morph JWT. Research create and publish are in that set. Chat and admin need a Morph JWT as well. `X-User-ID`, `X-User-Role`, and `X-User-Email` do not authenticate and do not override the token. `GET` and `HEAD` on those prefixes still work without a session (MorphNotes lists are not behind login).
 
 Published pages are an allowlist, not the whole `/api/tran/public/` prefix. With no session, only `GET` and `HEAD` of:
 

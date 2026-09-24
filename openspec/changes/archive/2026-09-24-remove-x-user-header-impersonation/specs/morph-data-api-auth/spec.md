@@ -1,10 +1,6 @@
-# morph-data-api-auth Specification
+# Spec Delta
 
-## Purpose
-
-Stop anonymous clients from creating, updating, or deleting MorphNotes and sibling Morph data, while published HTML pages and signed-in mutations keep working.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Mutating Morph data APIs require a session
 The system MUST reject `POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` with HTTP 401 when the request has no Morph session. Research create and Research publish are included. A Morph session is a valid Morph JWT for an existing user. `X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` are not a session.
@@ -95,17 +91,6 @@ When the request carries a valid Morph JWT for an existing user, the same mutati
 - **WHEN** a client with no session requests `GET /api/tran/public/research/slug%2Fextra`
 - **THEN** the response status is 401
 
-### Requirement: Private reads on the former open prefixes stay available
-`GET` and `HEAD` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` MUST remain reachable without a session so MorphNotes can still list and open records without a login redirect. Paths under `/api/tran/public/` that are not on the published-page allowlist are not private reads; those follow the published-page requirement and MUST return 401.
-
-#### Scenario: Anonymous list read is not rejected by the middleware
-- **WHEN** a client with no session sends `GET /api/tran/research`
-- **THEN** the response status is not 401
-
-#### Scenario: Anonymous form, knowledge, and graph reads are not rejected
-- **WHEN** a client with no session sends `GET /api/forms/templates`, `GET /api/knowledge/files`, or `GET /api/graph/health`
-- **THEN** each response status is not 401
-
 ### Requirement: Logged-in management tool calls keep working
 An internal Morph AI management call to a mutating `/api/tran/*` route MUST succeed when the outer request has a valid Morph JWT. The internal request MUST carry that same `Authorization` header value, exactly. The internal request MUST NOT authenticate by copying `X-User-ID` or `X-User-Role`.
 
@@ -117,3 +102,9 @@ An internal Morph AI management call to a mutating `/api/tran/*` route MUST succ
 #### Scenario: Tool loop does not authenticate with an identity header
 - **WHEN** the management tool executor calls `POST /api/tran/research` and the outer request has no `Authorization` header
 - **THEN** the inner response status is 401
+
+## REMOVED Requirements
+
+### Requirement: Legacy header session is unchanged
+**Reason**: Issue #23. `X-User-ID` impersonates any user, including admin, on routes that now require a session.
+**Migration**: Send `Authorization: Bearer` with a Morph JWT. Identity headers are ignored for authentication.
