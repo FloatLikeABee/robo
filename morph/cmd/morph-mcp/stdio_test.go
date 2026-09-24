@@ -79,6 +79,13 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if caps["tools"] == nil || caps["resources"] == nil {
 		t.Fatalf("capabilities = %#v", caps)
 	}
+	resourcesCap, _ := caps["resources"].(map[string]any)
+	if resourcesCap == nil {
+		t.Fatalf("capabilities.resources = %#v", caps["resources"])
+	}
+	if changed, ok := resourcesCap["listChanged"]; ok {
+		t.Fatalf("resources.listChanged = %#v; the server does not emit list_changed", changed)
+	}
 	if err := assertNotListening(t, cmd.Process.Pid); err != nil {
 		t.Fatal(err)
 	}
@@ -104,13 +111,6 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	if !strings.Contains(callLine, "user-stdio") {
 		t.Fatalf("whoami result = %s", callLine)
 	}
-
-	if strings.Contains(stderr.String(), tok) {
-		t.Fatal("stderr included the token")
-	}
-	if !strings.Contains(stderr.String(), "user-stdio") {
-		t.Fatalf("stderr = %q", stderr.String())
-	}
 	if strings.Contains(initLine+listLine+callLine, "server ready") {
 		t.Fatal("stdout included a log line")
 	}
@@ -126,6 +126,20 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("process did not exit after stdin closed")
 	}
+
+	// cmd.Wait returns only after the stderr copy goroutine finishes.
+	// bytes.Buffer is not safe to read while that goroutine is still writing.
+	stderrText := stderr.String()
+	if strings.Contains(stderrText, tok) {
+		t.Fatal("stderr included the token")
+	}
+	if !strings.Contains(stderrText, "morph-mcp server ready") {
+		t.Fatalf("stderr = %q", stderrText)
+	}
+	if strings.Contains(stderrText, "user-stdio") || strings.Contains(stderrText, "user_id") {
+		t.Fatalf("stderr included the user id: %q", stderrText)
+	}
+	drainLines(t, lines, tok)
 }
 
 func TestStdioRejectsMissingIdentity(t *testing.T) {
@@ -208,6 +222,28 @@ func startLineReader(r io.Reader) <-chan string {
 		}
 	}()
 	return ch
+}
+
+func drainLines(t *testing.T, lines <-chan string, token string) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case line, ok := <-lines:
+			if !ok {
+				return
+			}
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			assertJSONRPC(t, line, token)
+			if strings.Contains(line, "server ready") {
+				t.Fatalf("stdout included a log line: %s", line)
+			}
+		case <-deadline:
+			t.Fatal("stdout did not reach EOF")
+		}
+	}
 }
 
 func waitID(t *testing.T, lines <-chan string, id string) string {

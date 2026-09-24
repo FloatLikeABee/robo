@@ -41,6 +41,9 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if init.Capabilities == nil || init.Capabilities.Tools == nil || init.Capabilities.Resources == nil {
 		t.Fatalf("capabilities = %+v", init.Capabilities)
 	}
+	if init.Capabilities.Resources.ListChanged {
+		t.Fatal("resources listChanged must be false; the server does not emit list_changed")
+	}
 	if init.Capabilities.Prompts != nil || init.Capabilities.Logging != nil {
 		t.Fatalf("unexpected capabilities = %+v", init.Capabilities)
 	}
@@ -196,8 +199,11 @@ func TestProtocolBytesStayOffTheLog(t *testing.T) {
 		t.Fatal("protocol stream included a log line")
 	}
 	logText := logs.String()
-	if !strings.Contains(logText, "user-7") {
+	if !strings.Contains(logText, "morph-mcp server ready") {
 		t.Fatalf("log = %q", logText)
+	}
+	if strings.Contains(logText, "user-7") || strings.Contains(logText, "user_id") {
+		t.Fatalf("log included the user id: %q", logText)
 	}
 	if strings.Contains(logText, tok) {
 		t.Fatal("log included the token")
