@@ -1,5 +1,7 @@
 # robo — local development
 
+[![CI](https://github.com/FloatLikeABee/robo/actions/workflows/ci.yml/badge.svg)](https://github.com/FloatLikeABee/robo/actions/workflows/ci.yml)
+
 This workspace contains the Morph platform apps. Use **`start-all.sh`** to run them together in dev.
 
 Architecture and per-app notes: [`docs/agents/00-architecture-overview.md`](./docs/agents/00-architecture-overview.md). Local run and build: [`docs/agents/12-build-deploy.md`](./docs/agents/12-build-deploy.md).
@@ -14,8 +16,9 @@ The supported path is **local `start-all.sh`**. `scripts/deploy.sh` still mentio
 
 | Folder | Product | Stack |
 |--------|---------|-------|
-| `morph/` | Morph AI and MorphNotes | Go + React (CRA) |
+| `morph/` | Morph AI and MorphNotes (Tasks, Timelines, Big notes, Research, Generic data) | Go + React (CRA) |
 | `morph-utils/` | MorphUtils shell (Event Logs, Content Maker, Data Access, Project) | React (Vite) |
+| `invite-signup/` | Invite Signup (admin codes and user redeem) | React (Vite) |
 | `formx/` | Event Logs | Go + React (Vite) |
 | `composerx/` | Content Maker | Go + Svelte (Vite) |
 | `morph-engi/` | Project (in MorphUtils) | Rust + Svelte (Vite) |
@@ -59,7 +62,7 @@ cp .env.example .env
 
 Set `MORPH_AI_API_KEY`, `USERS_PANEL_BASE_URL=http://127.0.0.1:9090`, and per-app data paths (`TRAN_SQLITE_PATH`, `COMPOSERX_SQLITE_PATH`, …) in that file. Relative `./data/...` paths stay relative to each app’s working directory.
 
-Default Morph login: **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`).
+Default Morph login for local/dev (`MORPH_ENV` unset): **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`). `./start-all.sh` needs no extra auth config. Hosting sets `MORPH_ENV=production` and the overrides in [`docs/security-hosting-checklist.md`](./docs/security-hosting-checklist.md). In that mode Morph refuses to start while the development JWT secret or admin password is still in use.
 
 **Minimum AI setup** (DashScope / Qwen by default):
 
@@ -99,6 +102,7 @@ Clone → `cp .env.example .env` → `./start-all.sh`. Data lives under each app
 | Morph API | http://localhost:9090 |
 | Morph AI / MorphNotes UI | http://localhost:3031 |
 | MorphUtils | http://localhost:3040 |
+| Invite Signup | http://localhost:3051 |
 | AI tools API | http://localhost:8000/docs |
 | AI tools UI | http://localhost:3000 |
 | Event Logs API | http://localhost:29909/swagger/index.html |
@@ -152,6 +156,7 @@ Data Access API port follows `SHARPREPORT_PORT` in `.env` (Vite on 5178 proxies 
 |-----|----|-------------------------|
 | `morph-api` | `morph-ui` | `morph` |
 | — | `morph-utils-ui` | `morph-utils` |
+| — | `invite-signup-ui` | — |
 | `bk-api` | `bk-ui` | `bk` |
 | `formx-api` | `formx-ui` | `formx` |
 | `composerx-api` | `composerx-ui` | `composerx` |

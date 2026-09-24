@@ -87,7 +87,6 @@ export function startProgressTicker(steps, onUpdate, signal) {
 
 export function inferTextAssistProgressSteps(ctx = {}) {
   const mode = String(ctx.mode ?? '').toLowerCase();
-  const kind = String(ctx.kind ?? 'text').toLowerCase();
   const steps = ['Reading your draft…'];
 
   if (mode === 'improve') {
