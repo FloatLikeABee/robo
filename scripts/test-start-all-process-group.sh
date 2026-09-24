@@ -111,17 +111,15 @@ cycle_stop() {
   assert_dead "$listener" "${label} listener"
 }
 
-echo "case 1: new session (python/perl/setsid) — three restarts"
+echo "case 1: job-control process group — three restarts"
 i=1
 while [[ "$i" -le 3 ]]; do
   cycle_stop "session restart ${i}"
   i=$((i + 1))
 done
 
-echo "case 2: bash job control fallback (no setsid helper)"
-START_ALL_FORCE_JOB_CONTROL=1
+echo "case 2: job control is the default even when a setsid helper exists"
 cycle_stop "job-control"
-unset START_ALL_FORCE_JOB_CONTROL
 
 echo "case 3: killing only the parent leaves the listener; port cleanup reaps it"
 set +m
@@ -143,6 +141,38 @@ wait_until_port_free "$port" || fail "port ${port} still busy after free_listeni
 assert_port_free
 assert_dead "$legacy_listener" "legacy listener"
 kill -0 "$$" 2>/dev/null || fail "launcher pid was killed while freeing an orphan"
+
+echo "case 5: stub python/perl/setsid on PATH must not be exec'd"
+stubdir="${tmpdir}/stubs"
+mkdir -p "$stubdir"
+for stub in python3 python perl setsid; do
+  cat >"${stubdir}/${stub}" <<'EOF'
+#!/bin/sh
+echo "stub-interpreter" >&2
+exit 1
+EOF
+  chmod +x "${stubdir}/${stub}"
+done
+saved_path="$PATH"
+PATH="${stubdir}:${PATH}"
+start_service orphan-demo "$tmpdir" /usr/bin/python3 "$fixture" "$port" || fail "stub PATH: start_service returned an error"
+PATH="$saved_path"
+wait_listen
+assert_one_listener
+parent="$(pid_of orphan-demo)"
+pgid="$(pgid_of "$parent")"
+listener="$(listening_pids "$port" | awk 'NR==1 { print $1; exit }')"
+[[ "$parent" == "$pgid" ]] || fail "stub PATH: pid ${parent} is not group leader ${pgid}"
+[[ "$listener" != "$parent" ]] || fail "stub PATH: listener is the parent"
+# The setsid wrapper must not have been the stub.
+if [[ -f "${LOG_DIR}/orphan-demo.log" ]] && grep -q "stub-interpreter" "${LOG_DIR}/orphan-demo.log"; then
+  fail "stub PATH: launcher exec'd a stub interpreter"
+fi
+echo "stub PATH: parent ${parent} pgid ${pgid} listener ${listener}"
+stop_service orphan-demo
+assert_port_free
+assert_dead "$parent" "stub PATH parent"
+assert_dead "$listener" "stub PATH listener"
 
 echo "case 4: launcher help and status still run"
 help_text="$("${ROOT}/start-all.sh" --help)"

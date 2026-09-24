@@ -16,10 +16,10 @@
 #   ./start-all.sh list                    list service names + aliases
 #
 # Stop and restart signal the service's whole process group (TERM, then
-# KILL), so children from `go run`, cargo, and npm are not left listening
-# or holding the Badger lock. The next start waits until that service's
-# port is free. macOS does not need a setsid binary (bash 3.2 job control
-# is the fallback when python/perl are absent).
+# KILL). Bash job control creates that group, so macOS bash 3.2 does not
+# need a setsid binary. Children from `go run`, cargo, and npm are not
+# left listening or holding the Badger lock. The next start waits until
+# that service's port is free.
 #
 # Aliases (API + UI): morph, morph-utils (shell + Data Access), bk, formx, composerx,
 #   morph-engi, sharpreport — or `all` for every service below.
@@ -283,21 +283,36 @@ free_listening_port() {
   fi
 }
 
-# New session without forking, so the PID we record stays the group leader.
-# setsid(1) is absent on macOS; python or perl call the syscall directly.
-have_session_helper() {
-  if [[ "${START_ALL_FORCE_JOB_CONTROL:-}" == 1 ]]; then
-    return 1
-  fi
-  command -v python3 >/dev/null 2>&1 && return 0
-  command -v python >/dev/null 2>&1 && return 0
-  command -v perl >/dev/null 2>&1 && return 0
-  command -v setsid >/dev/null 2>&1 && return 0
+# True when the command exits 0 within about two seconds. Rejects a macOS
+# python stub that `command -v` can see but that does not run.
+interpreter_runs() {
+  local bin="$1"
+  shift
+  command -v "$bin" >/dev/null 2>&1 || return 1
+  "$bin" "$@" >/dev/null 2>&1 &
+  local probe=$!
+  local i=0
+  while [[ "$i" -lt 20 ]]; do
+    if ! kill -0 "$probe" 2>/dev/null; then
+      wait "$probe"
+      return $?
+    fi
+    sleep 0.1
+    i=$((i + 1))
+  done
+  kill -9 "$probe" 2>/dev/null || true
+  wait "$probe" 2>/dev/null || true
   return 1
 }
 
+# New session without forking, so the PID we record stays the group leader.
+# Used only when bash job control could not be enabled. Perl before python:
+# macOS ships perl, and python3 may be a stub.
 exec_in_new_session() {
-  if command -v python3 >/dev/null 2>&1; then
+  if interpreter_runs perl -MPOSIX -e 'exit 0'; then
+    exec perl -MPOSIX -e 'eval { POSIX::setsid(); }; exec @ARGV or die "exec: $!"' -- "$@"
+  fi
+  if interpreter_runs python3 -c 'import os'; then
     exec python3 -c 'import os,sys
 try:
     os.setsid()
@@ -305,7 +320,7 @@ except OSError:
     pass
 os.execvp(sys.argv[1], sys.argv[1:])' "$@"
   fi
-  if command -v python >/dev/null 2>&1; then
+  if interpreter_runs python -c 'import os'; then
     exec python -c 'import os,sys
 try:
     os.setsid()
@@ -313,10 +328,7 @@ except OSError:
     pass
 os.execvp(sys.argv[1], sys.argv[1:])' "$@"
   fi
-  if command -v perl >/dev/null 2>&1; then
-    exec perl -MPOSIX -e 'eval { POSIX::setsid(); }; exec @ARGV or die "exec: $!"' -- "$@"
-  fi
-  if command -v setsid >/dev/null 2>&1; then
+  if interpreter_runs setsid true; then
     exec setsid "$@"
   fi
   exec "$@"
@@ -454,13 +466,11 @@ start_service() {
     fi
   fi
   log "Starting ${name} → ${logfile}"
-  # Own process group so stop can signal `go run` / npm children with the parent.
-  # Helpers call setsid(2) without forking. Without them, bash job control
-  # (works on macOS bash 3.2, which has no setsid binary) makes the same split.
-  if [[ "${START_ALL_FORCE_JOB_CONTROL:-}" == 1 ]] || ! have_session_helper; then
-    if set -m 2>/dev/null; then
-      use_job_control=1
-    fi
+  # Bash job control (including bash 3.2) makes this PID its own process
+  # group, so stop can signal `go run` / npm children with the parent.
+  # No setsid binary required. Helpers run only if monitor mode fails.
+  if set -m 2>/dev/null; then
+    use_job_control=1
   fi
   (
     trap '' HUP
