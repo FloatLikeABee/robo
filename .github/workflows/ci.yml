@@ -1,0 +1,83 @@
+# CI for the Morph platform monorepo.
+#
+# Modules are independent (no go.work). Each Go job reads its own go.mod
+# for the toolchain version. MORPH_AI_API_KEY is unset; tests must pass
+# without an AI provider.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Morph API
+            dir: morph
+            cache-deps: morph/go.sum
+          - name: Event Logs
+            dir: formx/backend
+            cache-deps: formx/backend/go.sum
+          - name: Content Maker
+            dir: composerx/backend
+            cache-deps: composerx/backend/go.sum
+          - name: morphai
+            dir: pkg/morphai
+            # No third-party requirements, so there is no go.sum.
+            cache-deps: pkg/morphai/go.mod
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: ${{ matrix.dir }}/go.mod
+          cache-dependency-path: ${{ matrix.cache-deps }}
+      - name: Vet and test
+        working-directory: ${{ matrix.dir }}
+        run: |
+          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          if [ -n "${MORPH_AI_API_KEY+x}" ]; then
+            echo "MORPH_AI_API_KEY must be unset in CI" >&2
+            exit 1
+          fi
+          go vet ./...
+          go test ./...
+
+  morph-frontend:
+    name: Morph frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: morph/frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: morph/frontend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Unit tests
+        run: |
+          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          CI=true npm test -- --watchAll=false
+      - name: Production build
+        run: |
+          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          CI=true npm run build

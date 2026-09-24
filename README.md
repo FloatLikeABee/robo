@@ -1,5 +1,7 @@
 # robo — local development
 
+[![CI](https://github.com/FloatLikeABee/robo/actions/workflows/ci.yml/badge.svg)](https://github.com/FloatLikeABee/robo/actions/workflows/ci.yml)
+
 This workspace contains the Morph platform apps. Use **`start-all.sh`** to run them together in dev.
 
 Architecture and per-app notes: [`docs/agents/00-architecture-overview.md`](./docs/agents/00-architecture-overview.md). Local run and build: [`docs/agents/12-build-deploy.md`](./docs/agents/12-build-deploy.md).

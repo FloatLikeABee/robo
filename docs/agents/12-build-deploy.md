@@ -74,7 +74,36 @@ cd SharpReport/frontend && npm run build
 cd bk/frontend && npm run build
 ```
 
-Tests: `go test ./...` in morph / formx/backend / composerx/backend; `cargo test` in the Rust backends.
+Tests: `go vet ./...` and `go test ./...` in morph, formx/backend, composerx/backend, and pkg/morphai (see CI below); `cargo test` in the Rust backends.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request to `main` and on every push to `main`. Jobs run in parallel. A newer run on the same pull request cancels the one it replaces.
+
+There is no `go.work`. Each Go module is tested from its own directory, using the `go` version in that module's `go.mod`. `actions/setup-go` caches modules and build outputs. `MORPH_AI_API_KEY` is unset; nothing in these jobs should call an AI provider.
+
+| Check | Directory | Commands |
+|-------|-----------|----------|
+| Go / Morph API | `morph` | `go vet ./...` then `go test ./...` |
+| Go / Event Logs | `formx/backend` | `go vet ./...` then `go test ./...` |
+| Go / Content Maker | `composerx/backend` | `go vet ./...` then `go test ./...` |
+| Go / morphai | `pkg/morphai` | `go vet ./...` then `go test ./...` |
+| Morph frontend | `morph/frontend` | `npm ci`, then `CI=true npm test -- --watchAll=false`, then `CI=true npm run build` |
+
+The frontend job uses Node.js 22 (the repo `engines.node` is `>=20`) and caches npm from `morph/frontend/package-lock.json`.
+
+Reproduce locally from the repo root. Leave `MORPH_AI_API_KEY` unset (do not export a key, and do not rely on a root `.env` for these commands):
+
+```bash
+unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+
+( cd morph && go vet ./... && go test ./... )
+( cd formx/backend && go vet ./... && go test ./... )
+( cd composerx/backend && go vet ./... && go test ./... )
+( cd pkg/morphai && go vet ./... && go test ./... )
+
+( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
+```
 
 ## Production / cloud
 
