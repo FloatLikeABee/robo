@@ -595,8 +595,8 @@ export default function StoryBoard() {
         onClose={() => setDetailOpen(false)}
         PaperProps={{
           sx: {
-            width: { xs: '100vw', sm: '66.666vw' },
-            maxWidth: '100vw',
+            width: { xs: '100%', sm: '66.666vw' },
+            maxWidth: '100%',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -719,8 +719,8 @@ export default function StoryBoard() {
         onClose={() => !submitting && setComposeOpen(false)}
         PaperProps={{
           sx: {
-            width: { xs: '100vw', sm: '66.666vw' },
-            maxWidth: '100vw',
+            width: { xs: '100%', sm: '66.666vw' },
+            maxWidth: '100%',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',

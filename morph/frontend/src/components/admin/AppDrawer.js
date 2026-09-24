@@ -65,7 +65,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
     borderRadius: 0,
     pl: 1.5,
     pr: 1,
-    minHeight: 40,
+    minHeight: 44,
     py: 0.5,
   };
   const iconSx = { minWidth: 32 };
@@ -113,9 +113,8 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
         {isMobile && (
           <IconButton
             onClick={() => typeof onMobileClose === 'function' && onMobileClose()}
-            size="small"
             aria-label="Close navigation"
-            sx={{ color: 'text.secondary', flexShrink: 0 }}
+            sx={{ color: 'text.secondary', flexShrink: 0, width: 44, height: 44 }}
           >
             <ChevronLeftIcon />
           </IconButton>
@@ -195,7 +194,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           zIndex: (t) => t.zIndex.modal + 10,
           '& .MuiDrawer-paper': {
             ...drawerPaperSx,
-            width: 'min(220px, 86vw)',
+            width: '100%',
           },
         }}
       >
