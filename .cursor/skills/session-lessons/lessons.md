@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-09-24 — Empty embed origin must not become a relative path
+
+- Trigger: MorphUtils Event Logs `embedUrl` when `VITE_SHEETX_URL` / the resolved origin is empty
+- Rule: Append `/events-info` only when the origin is non-empty. `` `${origin}/events-info` `` on `''` is the truthy path `/events-info`, and the shell iframes its own SPA. Leave `embedUrl` empty so the iframe is not mounted.
+- Source: [containerize MorphUtils review](current)
+
 ## 2026-09-24 — Dockerfile HEALTHCHECK `$$` is the shell PID
 
 - Trigger: Dockerfile `HEALTHCHECK` or other shell-form `CMD` using `$$` so a `$` reaches the shell

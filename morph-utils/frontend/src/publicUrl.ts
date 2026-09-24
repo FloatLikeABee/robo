@@ -21,6 +21,11 @@ export function readRuntimeConfig(): RuntimeConfig {
   return window.__MORPH_UTILS_CONFIG__ ?? {};
 }
 
+export function sheetxEmbedUrl(origin: string): string {
+  if (!origin) return '';
+  return `${origin}/events-info`;
+}
+
 function nonempty(value: string | undefined): string {
   return (value ?? '').trim().replace(/\/$/, '');
 }
