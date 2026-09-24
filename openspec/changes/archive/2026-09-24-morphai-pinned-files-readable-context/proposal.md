@@ -1,3 +1,5 @@
+> **Superseded** by `morphai-drop-files-workspace`. This change specified Morph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+
 ## Why
 
 Operators pin workspace files and turn on **Files (N)** expecting Morph AI to read them. Today the UI can show a pin and the include chip while the chat receives **no file text**: `readPinnedFileBodies` only reads live `FileSystemHandle` / `File` objects, but after refresh (or when folder permission is not granted) `workspaceFiles` are IDB snapshots (`path`, `size`, `skipped` only). Pinning still works; send silently ships empty `content` → backend `AssemblePinnedBlob` skips it → the model honestly says it cannot see the file. This breaks the core Files→chat workflow.

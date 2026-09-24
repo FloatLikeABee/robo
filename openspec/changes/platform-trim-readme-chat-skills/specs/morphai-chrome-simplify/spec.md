@@ -5,7 +5,7 @@ Simplifies Morph AI chrome by dropping unused header shortcuts and the AI tools 
 ## ADDED Requirements
 
 ### Requirement: Morph AI header has no notes, knowledge, or JSON-export icons
-The Morph AI header bar MUST NOT include quick buttons for Notes & TODOs, Context & Knowledge, or Export session (JSON). Skills, AI tools, MorphNotes/MorphUtils app links, clear chat, and sign out MAY remain. Notes & TODOs in MorphNotes and Files-workspace tabs MUST still exist.
+The Morph AI header bar MUST NOT include quick buttons for Notes & TODOs, Context & Knowledge, or Export session (JSON). Skills, AI tools, MorphNotes/MorphUtils app links, clear chat, and sign out MAY remain. Notes & TODOs in MorphNotes, and the agent workspace Notes & TODOs and Context & Knowledge tabs, MUST still exist.
 
 #### Scenario: Header icons are gone
 - **WHEN** a signed-in operator views the Morph AI chat header

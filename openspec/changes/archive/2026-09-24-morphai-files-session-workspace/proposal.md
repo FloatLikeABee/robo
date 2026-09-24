@@ -1,3 +1,5 @@
+> **Superseded** by `morphai-drop-files-workspace`. This change specified Morph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+
 ## Why
 
 Morph AI Files treats the opened folder as throwaway UI state: refresh loses it, switching chat sessions does not restore that session’s folder and pins, and a long hint explains a workflow the user already understands. The conversation and the files should stay one workspace.

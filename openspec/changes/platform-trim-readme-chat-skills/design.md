@@ -14,7 +14,7 @@ See proposal.md for motivation. Remaining apps: `morph/`, `morph-utils/`, `formx
 
 **Non-Goals:**
 
-- Removing MorphNotes Notes & TODOs or Files workspace notes/knowledge tabs.
+- Removing MorphNotes Notes & TODOs or the agent workspace Notes & TODOs and Context & Knowledge tabs.
 - Deleting Graphic Documents / image generation unless it is only used by Video stories.
 - Changing production `deploy/.env.production`.
 - Adding a light/dark switch.
@@ -55,7 +55,7 @@ See proposal.md for motivation. Remaining apps: `morph/`, `morph-utils/`, `formx
 
 ### 5. Header removals only
 
-**Choice:** Delete the three icon buttons and `handleExportSession` if unused. Keep `ChatNotesTodosDrawer` / hybrid drawer code for Files workspace and MorphNotes. Remove Open in tab from `AiToolsWorkspaceDrawer` (including error fallback link).
+**Choice:** Delete the three icon buttons and `handleExportSession` if unused. Keep `ChatNotesTodosDrawer` / hybrid drawer code for the agent workspace (Notes & TODOs and Context & Knowledge) and MorphNotes. Remove Open in tab from `AiToolsWorkspaceDrawer` (including error fallback link).
 
 **Why:** User named the header bar, not MorphNotes.
 
