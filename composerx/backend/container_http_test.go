@@ -13,12 +13,19 @@ import (
 )
 
 func newContentMakerRouter(uiDir string) *gin.Engine {
+	return newContentMakerRouterAt(uiDir, "http://127.0.0.1:9")
+}
+
+func newContentMakerRouterAt(uiDir, panelURL string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	uiPaths := map[string]struct{}{}
 	r := gin.New()
-	r.Use(requireTranmailAccess("http://127.0.0.1:9", uiPaths))
+	r.Use(requireTranmailAccess(panelURL, uiPaths))
 	r.GET("/health", (&App{}).handleHealth)
 	r.GET("/templates", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	r.GET("/emails", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 	mountContentMakerUI(r, uiDir, uiPaths)
@@ -91,6 +98,75 @@ func TestUIMountDoesNotRequireAuth(t *testing.T) {
 	}
 	if body["status"] != "ok" {
 		t.Fatalf("health status %v", body["status"])
+	}
+}
+
+func TestHeaderOnlyAdminIs401(t *testing.T) {
+	r := newContentMakerRouter(t.TempDir())
+	for _, path := range []string{"/templates", "/emails"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("X-User-Role", "admin")
+		req.Header.Set("X-User-Roles", "admin")
+		req.Header.Set("X-User-Permissions", "compose_email")
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%s status %d, want 401", path, rec.Code)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/templates", nil)
+	req.Header.Set("Authorization", "Bearer not-a-token")
+	req.Header.Set("X-User-Role", "admin")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("bad bearer status %d, want 401", rec.Code)
+	}
+}
+
+func TestMorphBearerIgnoresSpoofedRole(t *testing.T) {
+	allow := true
+	morph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer good" {
+			http.Error(w, "no", http.StatusUnauthorized)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/permissions") {
+			if allow {
+				_, _ = w.Write([]byte(`{"permissions":["compose_email"]}`))
+			} else {
+				_, _ = w.Write([]byte(`{"permissions":[]}`))
+			}
+			return
+		}
+		if allow {
+			_, _ = w.Write([]byte(`{"user":{"roles":["employee"]}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"user":{"roles":["member"]}}`))
+	}))
+	t.Cleanup(morph.Close)
+
+	r := newContentMakerRouterAt(t.TempDir(), morph.URL)
+	req := httptest.NewRequest(http.MethodGet, "/templates", nil)
+	req.Header.Set("Authorization", "Bearer good")
+	req.Header.Set("X-User-Role", "admin")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("morph bearer status %d, want 200", rec.Code)
+	}
+
+	allow = false
+	req = httptest.NewRequest(http.MethodGet, "/emails", nil)
+	req.Header.Set("Authorization", "Bearer good")
+	req.Header.Set("X-User-Role", "admin")
+	req.Header.Set("X-User-Permissions", "compose_email")
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("spoofed admin status %d, want 403", rec.Code)
 	}
 }
 

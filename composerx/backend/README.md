@@ -68,7 +68,7 @@ docker build -t composerx:local -f composerx/Dockerfile .
 docker run --rm -p 127.0.0.1:8043:8043 composerx:local
 ```
 
-`GET /health` returns HTTP 200 and `"status":"ok"` without Morph or MorphUtils. `GET /` is the UI. The image sets `VITE_API_BASE` empty so the UI calls that same origin. A checkout `npm run build` without that variable still targets `http://localhost:8043`.
+`GET /health` returns HTTP 200 and `"status":"ok"` without Morph or MorphUtils. `GET /` is the UI. Other API routes need an `Authorization` bearer that Morph accepts at `USERS_PANEL_BASE_URL`. `X-User-Role` and `X-User-Permissions` are not a session. The image sets `VITE_API_BASE` empty so the UI calls that same origin. A checkout `npm run build` without that variable still targets `http://localhost:8043`.
 
 `docker compose -f composerx/docker-compose.yml up --build` uses `composerx/deploy/.env.production` when that file exists (copy from `composerx/deploy/.env.production.example`). Data is the named volume at `/data`.
 

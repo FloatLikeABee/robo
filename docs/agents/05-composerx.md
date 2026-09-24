@@ -9,7 +9,7 @@ User-facing product: **Content Maker**. Folder stays `composerx`. This is **not*
 | Backend | `composerx/backend/` Go + Gin |
 | Frontend | `composerx/frontend/` Svelte + Vite |
 | Ports | API `8043`, UI `8044` |
-| Auth | Morph SSO (`USERS_PANEL_BASE_URL`) |
+| Auth | Morph SSO (`USERS_PANEL_BASE_URL`). API routes need that bearer. `X-User-Role` is not a session |
 | Data | SQLite `COMPOSERX_SQLITE_PATH` + Badger `COMPOSERX_BADGER_PATH` |
 
 Compose and publish markdown/HTML for outside readers. Optional email/SMTP remains in code; do not require MySQL, MongoDB, or Redis.

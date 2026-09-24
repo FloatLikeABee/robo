@@ -116,3 +116,12 @@ If #109 merges first, rebase or merge `main` and keep both new services. Do not 
 ## Open Questions
 
 None. Embed wiring is #114. Event Logs is #109.
+
+## Follow-up: Morph bearer is the only API session
+
+Lens on PR #118: `requireTranmailAccess` treated `X-User-Role` / `X-User-Permissions` as identity before calling Morph, so `curl -H 'X-User-Role: admin'` opened `/templates` on the public origin.
+
+- **Choice:** Keep the existing Morph check. Strip `X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` (same names as Morph `stripClientIdentityHeaders`). No bearer, or `GET /api/auth/user` not HTTP 200, is 401. Role and permissions used for the allow gate come only from that Morph response (`admin`, any returned permission, or `employee` plus `compose_email`). A validated bearer that fails the gate is 403. Content Maker does not decode the JWT; Morph remains the issuer, same as `/auth/login` and `/auth/me`.
+- **Rejected:** Local `auth.DecodeToken`. This process has no `plat_users` store and is not the issuer.
+- **Rejected:** A new shared secret. The UI already sends `Authorization: Bearer`.
+- **Left:** merge-data `../` filenames, cookie `Secure`, and floating `<base>` tags. Lens marked those non-blocking.

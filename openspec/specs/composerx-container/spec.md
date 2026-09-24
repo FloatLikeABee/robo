@@ -7,7 +7,7 @@ Packages Content Maker's API and UI as one image so an operator can start that a
 ## Requirements
 
 ### Requirement: One image serves the Content Maker API and UI
-The repository MUST provide a container image that contains the Content Maker API binary and the production build of the Content Maker UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Data Access, Project, AI tools, Morph, MorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `COMPOSERX_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `8043`. `GET /health` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Morph or MorphUtils. When `COMPOSERX_UI_DIR` points at a directory that contains `index.html`, `GET /` MUST return that UI document without authentication. API routes other than `/health`, `/auth/`, and `/public/` MUST still require authentication. A local checkout that does not set `COMPOSERX_UI_DIR` MUST NOT serve that UI from the API process.
+The repository MUST provide a container image that contains the Content Maker API binary and the production build of the Content Maker UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Data Access, Project, AI tools, Morph, MorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `COMPOSERX_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `8043`. `GET /health` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Morph or MorphUtils. When `COMPOSERX_UI_DIR` points at a directory that contains `index.html`, `GET /` MUST return that UI document without authentication. API routes other than `/health`, `/auth/`, and `/public/` MUST require a bearer token that Morph accepts at `USERS_PANEL_BASE_URL` (`GET /api/auth/user` returns HTTP 200). `X-User-Role`, `X-User-Roles`, and `X-User-Permissions` MUST NOT grant access. A local checkout that does not set `COMPOSERX_UI_DIR` MUST NOT serve that UI from the API process.
 
 #### Scenario: Health does not depend on MorphUtils
 - **WHEN** the image is running and Morph and MorphUtils are not reachable
@@ -18,6 +18,10 @@ The repository MUST provide a container image that contains the Content Maker AP
 - **WHEN** the image is running with `COMPOSERX_UI_DIR` set to its built UI
 - **THEN** `GET /` on that listen port returns the Content Maker UI document without a token
 - **AND** `GET /templates` without a token is rejected
+
+#### Scenario: Client role headers are not a session
+- **WHEN** `GET /templates` includes `X-User-Role: admin` and no `Authorization` bearer
+- **THEN** the response is HTTP 401
 
 #### Scenario: Other apps are not in the image
 - **WHEN** an operator inspects the image contents
