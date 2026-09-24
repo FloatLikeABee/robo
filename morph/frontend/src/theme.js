@@ -72,6 +72,21 @@ export function getAdminTheme(mode) {
           body: {
             touchAction: 'manipulation',
             WebkitTapHighlightColor: 'transparent',
+            '@media (max-width:768px)': {
+              fontSize: '16px',
+              lineHeight: 1.5,
+            },
+          },
+        },
+      },
+      MuiTypography: {
+        styleOverrides: {
+          body2: {
+            '@media (max-width:768px)': {
+              fontSize: '1rem',
+              lineHeight: 1.5,
+              overflowWrap: 'anywhere',
+            },
           },
         },
       },
@@ -104,6 +119,13 @@ export function getAdminTheme(mode) {
                 : 'linear-gradient(135deg, #5b58c4 0%, #4f4cb0 100%)',
             },
           },
+          sizeSmall: {
+            '@media (max-width:768px)': {
+              minHeight: 44,
+              minWidth: 44,
+              fontSize: '1rem',
+            },
+          },
           containedSecondary: {
             background: isDark
               ? 'linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%)'
@@ -113,6 +135,40 @@ export function getAdminTheme(mode) {
               background: isDark
                 ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
                 : '#7c72c8',
+            },
+          },
+        },
+      },
+      MuiAlert: {
+        styleOverrides: {
+          message: {
+            '@media (max-width:768px)': {
+              fontSize: '1rem',
+              lineHeight: 1.5,
+              overflowWrap: 'anywhere',
+            },
+          },
+          action: {
+            '@media (max-width:768px)': {
+              '& .MuiIconButton-root': {
+                width: 44,
+                height: 44,
+                minWidth: 44,
+                minHeight: 44,
+              },
+            },
+          },
+        },
+      },
+      MuiSnackbar: {
+        styleOverrides: {
+          root: {
+            '@media (max-width:768px)': {
+              left: 8,
+              right: 8,
+              width: 'auto',
+              maxWidth: 'calc(100% - 16px)',
+              bottom: 'max(8px, env(safe-area-inset-bottom))',
             },
           },
         },

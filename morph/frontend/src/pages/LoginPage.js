@@ -87,14 +87,14 @@ export default function LoginPage() {
             🤖
           </span>
           <div>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf4fb' }}>Morph AI</h1>
-            <p style={{ margin: 0, fontSize: 12, color: '#93adc4' }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: 1.3, color: '#eaf4fb' }}>Morph AI</h1>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: '#93adc4' }}>
               Sign in once — MorphNotes and MorphUtils use this session
             </p>
           </div>
         </div>
-        <form onSubmit={onSubmit} style={{ display: 'grid', gap: 16 }}>
-          <label style={{ display: 'grid', gap: 6, fontSize: 12, fontWeight: 500, color: '#b8cfe0' }}>
+        <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
+          <label style={{ display: 'grid', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.5, color: '#b8cfe0' }}>
             Username or email
             <input
               type="text"
@@ -105,7 +105,7 @@ export default function LoginPage() {
               style={inputStyle}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6, fontSize: 12, fontWeight: 500, color: '#b8cfe0' }}>
+          <label style={{ display: 'grid', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.5, color: '#b8cfe0' }}>
             Password
             <input
               type="password"
@@ -118,19 +118,45 @@ export default function LoginPage() {
           </label>
           {error ? (
             <div
+              role="alert"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 borderRadius: 8,
                 border: '1px solid rgba(248, 113, 113, 0.45)',
                 background: 'rgba(88, 28, 28, 0.35)',
-                padding: '8px 12px',
-                fontSize: 14,
+                padding: '8px 8px 8px 12px',
+                fontSize: 16,
+                lineHeight: 1.5,
                 color: '#fecaca',
                 maxWidth: '100%',
                 overflowWrap: 'anywhere',
                 boxSizing: 'border-box',
               }}
             >
-              {error}
+              <span style={{ flex: '1 1 auto', minWidth: 0 }}>{error}</span>
+              <button
+                type="button"
+                aria-label="Dismiss error"
+                onClick={() => setError('')}
+                style={{
+                  flex: '0 0 auto',
+                  width: 44,
+                  height: 44,
+                  minWidth: 44,
+                  minHeight: 44,
+                  border: 'none',
+                  borderRadius: 8,
+                  background: 'transparent',
+                  color: '#fecaca',
+                  fontSize: 22,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
             </div>
           ) : null}
           <button
@@ -138,10 +164,13 @@ export default function LoginPage() {
             disabled={loading}
             style={{
               marginTop: 4,
+              minWidth: 44,
+              minHeight: 44,
               border: 'none',
               borderRadius: 8,
               padding: '10px 16px',
-              fontSize: 14,
+              fontSize: 16,
+              lineHeight: 1.5,
               fontWeight: 500,
               color: '#fff',
               background: loading ? '#0e7490' : '#0284c7',

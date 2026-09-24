@@ -493,7 +493,7 @@ export default function StoryBoard() {
 
   const sortedPosts = posts;
 
-  if (error && !posts.length) return <Alert severity="error">{error}</Alert>;
+  if (error && !posts.length) return <Alert severity="error" onClose={() => setError('')}>{error}</Alert>;
 
   return (
     <Box sx={{ width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -901,7 +901,7 @@ export default function StoryBoard() {
               </Typography>
             ) : null}
           </Box>
-          {formError ? <Alert severity="error" sx={{ flexShrink: 0 }}>{formError}</Alert> : null}
+          {formError ? <Alert severity="error" onClose={() => setFormError('')} sx={{ flexShrink: 0 }}>{formError}</Alert> : null}
         </Box>
         <Box
           sx={{

@@ -554,7 +554,7 @@ export default function CaseTasks() {
     load().catch(() => {});
   };
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <Alert severity="error" onClose={() => setError('')}>{error}</Alert>;
 
   return (
     <Box sx={{ width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -757,7 +757,7 @@ export default function CaseTasks() {
                 </Button>
               </Stack>
               {aiError ? (
-                <Alert severity="error" sx={{ mt: 1 }}>
+                <Alert severity="error" onClose={() => setAiError('')} sx={{ mt: 1 }}>
                   {aiError}
                 </Alert>
               ) : null}
@@ -873,13 +873,13 @@ export default function CaseTasks() {
               </>
             ) : null}
             {detailInfo ? <Alert severity="success">{detailInfo}</Alert> : null}
-            {detailError ? <Alert severity="error">{detailError}</Alert> : null}
+            {detailError ? <Alert severity="error" onClose={() => setDetailError('')}>{detailError}</Alert> : null}
           </Stack>
           ) : null}
         </Box>
         <Box sx={{ px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
           {detailInfo && detailsTab !== 'details' ? <Alert severity="success" sx={{ mb: 1 }}>{detailInfo}</Alert> : null}
-          {detailError && detailsTab !== 'details' ? <Alert severity="error" sx={{ mb: 1 }}>{detailError}</Alert> : null}
+          {detailError && detailsTab !== 'details' ? <Alert severity="error" onClose={() => setDetailError('')} sx={{ mb: 1 }}>{detailError}</Alert> : null}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {editing ? (
             <Button onClick={() => setEmailDialogOpen(true)} disabled={submitting}>
