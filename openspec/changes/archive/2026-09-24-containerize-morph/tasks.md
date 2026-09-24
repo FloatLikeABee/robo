@@ -16,5 +16,5 @@
 
 ## 4. Verify
 
-- [ ] 4.1 `go test ./...` in `morph`.
-- [ ] 4.2 Build and `docker compose up` with a throwaway production env (strong secrets generated at runtime, not committed). `GET /health` is 200, `GET /` is the Morph AI index, login works, a note survives `down` and `up`, the server uid is 65532, and production mode refuses a default secret.
+- [x] 4.1 `go test ./...` in `morph`.
+- [x] 4.2 Build and `docker compose up` with a throwaway production env (strong secrets generated at runtime, not committed). `GET /health` is 200, `GET /` is the Morph AI index, login works, a note survives `down` and `up`, the server uid is 65532, and production mode refuses a default secret.
