@@ -173,4 +173,4 @@ The product owner creates the service. This repo does not call Render. After mer
 
 `GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<morph-engi public host>`. #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on MorphUtils. This change does not set those variables.
 
-Local image build, without Render: `docker build -f morph-engi/Dockerfile -t morph-engi:local .` from the repo root. Fill `morph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.
+Local image build, without Render: `DOCKER_BUILDKIT=1 docker build -f morph-engi/Dockerfile -t morph-engi:local .` from the repo root. BuildKit is required so `morph-engi/Dockerfile.dockerignore` is used instead of the root ignore file. Fill `morph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.

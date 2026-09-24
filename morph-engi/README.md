@@ -86,7 +86,7 @@ npm run vercel-build
 One image serves the API and the built UI. From the repo root:
 
 ```bash
-docker build -f morph-engi/Dockerfile -t morph-engi:local .
+DOCKER_BUILDKIT=1 docker build -f morph-engi/Dockerfile -t morph-engi:local .
 ```
 
 That command does not use Render or `render.yaml`. `GET /health` is the healthcheck (`wget` on `http://127.0.0.1:${PORT}/health`). The image default `PORT` is `9096`. `sh morph-engi/deploy/check-container-contract.sh` checks the Dockerfile and Blueprint without a daemon.
