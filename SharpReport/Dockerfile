@@ -28,6 +28,7 @@ WORKDIR /app
 COPY --from=build /src/SharpReport/backend/target/release/datapulse /app/datapulse
 COPY --from=ui /src/SharpReport/frontend/build /app/ui
 COPY SharpReport/backend/config /app/config
+COPY SharpReport/backend/migrations /app/migrations
 COPY SharpReport/deploy/docker-entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh /app/datapulse
 ENV PORT=3050 \
