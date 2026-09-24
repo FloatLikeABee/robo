@@ -2,41 +2,51 @@ package auth
 
 import (
 	"errors"
-	"os"
-	"strconv"
+	"fmt"
+	"log"
 	"strings"
 	"time"
+
+	"idongivaflyinfa/config"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 // Claims matches the UsersPanel JWT shape so other apps can keep calling /api/auth/user.
 type Claims struct {
-	Email             string   `json:"email"`
-	Username          string   `json:"username"`
-	Roles             []string `json:"roles"`
-	DefaultChannelID  string   `json:"default_channel_id"`
+	Email            string   `json:"email"`
+	Username         string   `json:"username"`
+	Roles            []string `json:"roles"`
+	DefaultChannelID string   `json:"default_channel_id"`
 	jwt.RegisteredClaims
 }
 
 type TokenConfig struct {
-	Secret       []byte
-	ExpiryHours  int64
+	Secret      []byte
+	ExpiryHours int64
+	// Production rejects tokens with no iat or exp, and tokens whose
+	// exp-iat window is longer than the production maximum (168 hours).
+	Production bool
 }
 
 func LoadTokenConfig() TokenConfig {
-	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	cfg := config.GetConfig()
+	secret := strings.TrimSpace(cfg.JWTSecret)
 	if secret == "" {
-		secret = "morph-dev-jwt-secret-change-me"
+		secret = config.DefaultJWTSecret
 	}
-	// Default: no practical session timeout (~100 years). Override with JWT_EXPIRY_HOURS.
-	hours := int64(100 * 365 * 24)
-	if raw := strings.TrimSpace(os.Getenv("JWT_EXPIRY_HOURS")); raw != "" {
-		if n, err := strconv.ParseInt(raw, 10, 64); err == nil && n > 0 {
-			hours = n
-		}
+	hours, err := config.JWTExpiryHours()
+	if err != nil {
+		// Do not sign a 100-year token when production lifetime is invalid.
+		// main refuses to start on this error; 24 hours is the safe fallback.
+		log.Printf("warning: %s", err.Error())
+		hours = config.ProductionJWTExpiryHours
 	}
-	return TokenConfig{Secret: []byte(secret), ExpiryHours: hours}
+	production, envErr := config.ParseMorphEnv()
+	if envErr != nil {
+		production = true
+	}
+	return TokenConfig{Secret: []byte(secret), ExpiryHours: hours, Production: production}
 }
 
 func EncodeToken(cfg TokenConfig, userID, email, username string, roles []string, channelID string) (string, error) {
@@ -76,7 +86,27 @@ func DecodeToken(cfg TokenConfig, token string) (*Claims, error) {
 	if !ok || !parsed.Valid {
 		return nil, errors.New("invalid token")
 	}
+	if cfg.Production {
+		if err := enforceProductionLifetime(claims); err != nil {
+			return nil, err
+		}
+	}
 	return claims, nil
+}
+
+// enforceProductionLifetime rejects tokens that cannot prove they were issued
+// inside the production ceiling. EncodeToken always sets iat and exp; tokens
+// from before that, or issued for the old 876000-hour lifetime, fail here.
+func enforceProductionLifetime(claims *Claims) error {
+	if claims.IssuedAt == nil || claims.ExpiresAt == nil {
+		return errors.New("token is missing iat or exp")
+	}
+	lifetime := claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time)
+	max := time.Duration(config.ProductionMaxJWTExpiryHours) * time.Hour
+	if lifetime <= 0 || lifetime > max {
+		return fmt.Errorf("token lifetime exceeds the production maximum of %d hours", config.ProductionMaxJWTExpiryHours)
+	}
+	return nil
 }
 
 func IsAdminRoles(roles []string) bool {

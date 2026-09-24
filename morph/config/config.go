@@ -16,14 +16,14 @@ type Config struct {
 	DBPath          string
 	ExternalAPIBase string // Image reader, PDF reader, Gathering (e.g. http://localhost:8000)
 	// Embedded Tran stores (default). Legacy MySQL/Mongo only for migrate / STORAGE_BACKEND=legacy.
-	TranSQLitePath       string // e.g. ./data/tran.sqlite
-	EntityDetailsBadger  string // e.g. ./data/entity_details
-	StorageBackend       string // embedded (default) | legacy
-	TranMySQLDSN         string // legacy / migrate source
-	TranMongoURI         string // legacy / migrate source
-	TranMongoDB          string // legacy / migrate source
+	TranSQLitePath      string // e.g. ./data/tran.sqlite
+	EntityDetailsBadger string // e.g. ./data/entity_details
+	StorageBackend      string // embedded (default) | legacy
+	TranMySQLDSN        string // legacy / migrate source
+	TranMongoURI        string // legacy / migrate source
+	TranMongoDB         string // legacy / migrate source
 	// Seed (cmd/seed_tran, full mode): optional; read from env / .env
-	SeedTranCap         int  // default 50; max rows per trimmed entity type
+	SeedTranCap       int  // default 50; max rows per trimmed entity type
 	SeedTranSkipPrune bool // when true, skip delete/trim before seed
 	AdminEmail        string
 	AdminUsername     string
@@ -53,26 +53,26 @@ func GetConfig() Config {
 	return Config{
 		Port: getEnv("PORT", "9090"),
 		// MorphAI: MORPH_AI_* preferred; GEMINI_* kept for backward compatibility.
-		GeminiAPIKey: firstEnv("MORPH_AI_API_KEY", "GEMINI_API_KEY", ""),
-		ModelName:    firstEnv("MORPH_AI_MODEL", "GEMINI_MODEL", "qwen3-max"),
-		DBPath:               getEnv("DB_PATH", "./data/badger"),
-		ExternalAPIBase:      getEnv("EXTERNAL_API_BASE", "http://localhost:8000"),
-		TranSQLitePath:       getEnv("TRAN_SQLITE_PATH", "./data/tran.sqlite"),
-		EntityDetailsBadger:  getEnv("ENTITY_DETAILS_BADGER", "./data/entity_details"),
-		StorageBackend:       strings.ToLower(strings.TrimSpace(getEnv("STORAGE_BACKEND", "embedded"))),
-		TranMySQLDSN:         getEnv("TRAN_MYSQL_DSN", ""),
-		TranMongoURI:         getEnv("TRAN_MONGO_URI", ""),
-		TranMongoDB:          getEnv("TRAN_MONGO_DB", "athena"),
-		SeedTranCap:          getEnvInt("SEED_TRAN_CAP", 50),
-		SeedTranSkipPrune:    envTruthy("SEED_TRAN_SKIP_PRUNE"),
-		AdminEmail:           firstNonEmptyEnv("ADMIN_EMAIL", "BOOTSTRAP_ADMIN_EMAIL", "morphadmin@local.com"),
-		AdminUsername:        firstNonEmptyEnv("ADMIN_USERNAME", "BOOTSTRAP_ADMIN_USERNAME", "morphadmin"),
-		AdminPassword:        firstNonEmptyEnv("ADMIN_PASSWORD", "BOOTSTRAP_ADMIN_PASSWORD", "admin123"),
-		JWTSecret:            getEnv("JWT_SECRET", "morph-dev-jwt-secret-change-me"),
-		SharpReportBaseURL:   strings.TrimSuffix(getEnv("SHARPREPORT_BASE_URL", ""), "/"),
-		TranFormBaseURL:      strings.TrimSuffix(getEnv("TRANFORM_BASE_URL", ""), "/"),
-		TranMailBaseURL:      strings.TrimSuffix(getEnv("TRANMAIL_BASE_URL", ""), "/"),
-		BookiBaseURL:         strings.TrimSuffix(getEnv("BOOKI_BASE_URL", ""), "/"),
+		GeminiAPIKey:            firstEnv("MORPH_AI_API_KEY", "GEMINI_API_KEY", ""),
+		ModelName:               firstEnv("MORPH_AI_MODEL", "GEMINI_MODEL", "qwen3-max"),
+		DBPath:                  getEnv("DB_PATH", "./data/badger"),
+		ExternalAPIBase:         getEnv("EXTERNAL_API_BASE", "http://localhost:8000"),
+		TranSQLitePath:          getEnv("TRAN_SQLITE_PATH", "./data/tran.sqlite"),
+		EntityDetailsBadger:     getEnv("ENTITY_DETAILS_BADGER", "./data/entity_details"),
+		StorageBackend:          strings.ToLower(strings.TrimSpace(getEnv("STORAGE_BACKEND", "embedded"))),
+		TranMySQLDSN:            getEnv("TRAN_MYSQL_DSN", ""),
+		TranMongoURI:            getEnv("TRAN_MONGO_URI", ""),
+		TranMongoDB:             getEnv("TRAN_MONGO_DB", "athena"),
+		SeedTranCap:             getEnvInt("SEED_TRAN_CAP", 50),
+		SeedTranSkipPrune:       envTruthy("SEED_TRAN_SKIP_PRUNE"),
+		AdminEmail:              firstNonEmptyEnv("ADMIN_EMAIL", "BOOTSTRAP_ADMIN_EMAIL", DefaultAdminEmail),
+		AdminUsername:           firstNonEmptyEnv("ADMIN_USERNAME", "BOOTSTRAP_ADMIN_USERNAME", DefaultAdminUsername),
+		AdminPassword:           firstNonEmptyEnv("ADMIN_PASSWORD", "BOOTSTRAP_ADMIN_PASSWORD", DefaultAdminPassword),
+		JWTSecret:               resolvedJWTSecret(),
+		SharpReportBaseURL:      strings.TrimSuffix(getEnv("SHARPREPORT_BASE_URL", ""), "/"),
+		TranFormBaseURL:         strings.TrimSuffix(getEnv("TRANFORM_BASE_URL", ""), "/"),
+		TranMailBaseURL:         strings.TrimSuffix(getEnv("TRANMAIL_BASE_URL", ""), "/"),
+		BookiBaseURL:            strings.TrimSuffix(getEnv("BOOKI_BASE_URL", ""), "/"),
 		TranEntityAttachmentMax: getEnvInt("TRAN_ENTITY_ATTACHMENT_MAX", 10),
 		TranEntityAttachmentDir: getEnv("TRAN_ENTITY_ATTACHMENT_DIR", "uploads/entity_attachments"),
 	}
