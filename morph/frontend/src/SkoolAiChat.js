@@ -1177,7 +1177,19 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                     )}
                   </div>
                 )}
-                {msg.type === 'error' && <div className="message-bubble error-bubble">⚠️ {msg.content}</div>}
+                {msg.type === 'error' && (
+                  <div className="message-bubble error-bubble">
+                    <span>⚠️ {msg.content}</span>
+                    <button
+                      type="button"
+                      className="error-bubble-dismiss"
+                      aria-label="Dismiss error"
+                      onClick={() => setMessages((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
