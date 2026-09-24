@@ -9,8 +9,9 @@ import { tranApi } from './api/tranClient';
 import { runAiProgress } from './lib/aiProgress';
 import { contextFingerprint, inferSubAgents } from './lib/agentContext';
 import AgentWorkspace, {
+  initialWorkspaceOpen,
   readLastSessionId,
-  readWorkspaceOpen,
+  readStoredWorkspaceChoice,
   readWorkspaceTab,
   resolveRestoredSessionId,
   writeLastSessionId,
@@ -142,7 +143,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const sessionsSheetRef = useRef(null);
   const sessionsCloseRef = useRef(null);
   const sessionsToggleRef = useRef(null);
-  const [workspaceOpen, setWorkspaceOpen] = useState(() => (isAgentShell ? readWorkspaceOpen() : true));
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => (
+    isAgentShell
+      ? initialWorkspaceOpen({
+          stored: readStoredWorkspaceChoice(),
+          phone: typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches,
+        })
+      : true
+  ));
   const [workspaceTab, setWorkspaceTab] = useState('knowledge');
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeKnowledge, setIncludeKnowledge] = useState(true);

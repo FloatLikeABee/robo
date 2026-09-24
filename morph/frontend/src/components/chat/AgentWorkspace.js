@@ -50,6 +50,22 @@ export function readWorkspaceOpen() {
   return true;
 }
 
+export function readStoredWorkspaceChoice() {
+  try {
+    const v = localStorage.getItem(WORKSPACE_OPEN_KEY);
+    if (v === '0' || v === '1') return v;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+export function initialWorkspaceOpen({ stored = null, phone = false } = {}) {
+  if (stored === '0' || stored === false) return false;
+  if (stored === '1' || stored === true) return true;
+  return !phone;
+}
+
 export function writeWorkspaceOpen(open) {
   try {
     localStorage.setItem(WORKSPACE_OPEN_KEY, open ? '1' : '0');
