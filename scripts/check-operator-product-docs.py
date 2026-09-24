@@ -223,7 +223,7 @@ def check_paths(errors: list[str]) -> None:
             if not looks_like_repo_path(token):
                 continue
             candidate = ROOT / token
-            if candidate.exists():
+            if candidate.exists() or (path.parent / token).exists():
                 continue
             if path_excused(text, token):
                 continue
