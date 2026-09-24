@@ -109,9 +109,9 @@ func (b *aesBox) Open(sealed string, aad []byte) ([]byte, error) {
 	if !ok {
 		return nil, ErrUnknownKeyID
 	}
-	raw, err := base64.StdEncoding.DecodeString(payload)
+	raw, err := decodePayload(payload)
 	if err != nil {
-		return nil, ErrDecrypt
+		return nil, err
 	}
 	aead, err := newAEAD(key)
 	if err != nil {
@@ -147,6 +147,17 @@ func splitToken(sealed string) (version, id, payload string, err error) {
 		return "", "", "", ErrDecrypt
 	}
 	return parts[0], parts[1], parts[2], nil
+}
+
+func decodePayload(payload string) ([]byte, error) {
+	if payload == "" || strings.ContainsAny(payload, "\r\n \t") {
+		return nil, ErrDecrypt
+	}
+	raw, err := base64.StdEncoding.Strict().DecodeString(payload)
+	if err != nil {
+		return nil, ErrDecrypt
+	}
+	return raw, nil
 }
 
 func validKeyID(id string) bool {

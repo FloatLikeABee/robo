@@ -237,6 +237,30 @@ func TestResealTamperedPreviousFails(t *testing.T) {
 	}
 }
 
+func TestOpenDoesNotTrialDecryptUnderAnotherLoadedKey(t *testing.T) {
+	cur := fakeKey(0x11)
+	prev := fakeKey(0x22)
+	box, err := secretbox.New(cur, prev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := []byte("aad")
+	sealed, err := box.Seal([]byte("x"), aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(sealed, ":")
+	sum := sha256.Sum256(prev)
+	parts[1] = hex.EncodeToString(sum[:4])
+	_, err = box.Open(strings.Join(parts, ":"), aad)
+	if !errors.Is(err, secretbox.ErrDecrypt) {
+		t.Fatal("expected decrypt failure when the key id is swapped to another loaded key")
+	}
+	if errors.Is(err, secretbox.ErrUnknownKeyID) {
+		t.Fatal("swapped key id was treated as unknown")
+	}
+}
+
 func collidingKeys(t *testing.T) ([]byte, []byte) {
 	t.Helper()
 	seen := make(map[string][]byte)

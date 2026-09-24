@@ -100,7 +100,19 @@ func createDevKeyFile(path string) ([]byte, bool, error) {
 	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
 		return nil, false, fmt.Errorf("%w: key file mode is not private", ErrKeyFile)
 	}
+	if err := syncDir(filepath.Dir(path)); err != nil {
+		return nil, false, fmt.Errorf("%w: could not write key file", ErrKeyFile)
+	}
 	return append([]byte(nil), raw...), true, nil
+}
+
+func syncDir(path string) error {
+	d, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }
 
 func readDevKeyFile(path string, lstated os.FileInfo) ([]byte, error) {
@@ -130,7 +142,8 @@ func readDevKeyFile(path string, lstated os.FileInfo) ([]byte, error) {
 		return nil, fmt.Errorf("%w: could not read key file", ErrKeyFile)
 	}
 	var extra [1]byte
-	if n, _ := f.Read(extra[:]); n > 0 {
+	n, rerr := f.Read(extra[:])
+	if n > 0 || (rerr != nil && rerr != io.EOF) {
 		return nil, fmt.Errorf("%w: key file must contain 32 bytes of standard base64", ErrKeyFile)
 	}
 	raw, err := decodeKey("key file", string(body))

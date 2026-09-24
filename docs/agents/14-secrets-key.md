@@ -64,7 +64,7 @@ Provider-key rows use `provider_key:<scope>:<ownerID>:<provider>`. Scope is `wor
 ## Rotation
 
 1. Generate a new key with `openssl rand -base64 32`. Set it as `MORPH_SECRETS_KEY`. Put the old key, and any older keys still required, in `MORPH_SECRETS_KEY_PREVIOUS` (comma-separated). Restart.
-2. For each stored token, if `NeedsRotation` is true, call `Reseal` with that row's associated data and store the result. Count `Reseal` errors on their own: a corrupt token does not report rotation, and a tampered previous-key token reports rotation and then fails open.
+2. For each stored token, if `NeedsRotation` is true, call `Reseal` with that row's associated data and store the result. Count `Reseal` errors on their own. A corrupt token does not report rotation. A tampered previous-key token still reports rotation, and `Reseal` then returns `ErrDecrypt` with no plaintext.
 3. When a full scan finds nothing left to rotate, remove `MORPH_SECRETS_KEY_PREVIOUS` and restart.
 
 There is no admin HTTP endpoint for this scan yet. `Reseal` is the function that endpoint will call. New seals always use the current key.

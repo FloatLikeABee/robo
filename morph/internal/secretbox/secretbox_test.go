@@ -123,6 +123,27 @@ func TestOpenTamperAndTruncationIsDecrypt(t *testing.T) {
 	}
 }
 
+func TestOpenRejectsNonCanonicalPayload(t *testing.T) {
+	box, err := secretbox.New(fakeKey(0x11))
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := []byte("aad")
+	sealed, err := box.Seal([]byte("payload"), aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(sealed, ":")
+	if len(parts) != 3 || len(parts[2]) < 8 {
+		t.Fatal("token was not v1")
+	}
+	withNewline := parts[0] + ":" + parts[1] + ":" + parts[2][:4] + "\n" + parts[2][4:]
+	_, err = box.Open(withNewline, aad)
+	if !errors.Is(err, secretbox.ErrDecrypt) {
+		t.Fatal("expected decrypt failure when the payload contains a newline")
+	}
+}
+
 func TestOpenUnknownKeyIDIsNotDecrypt(t *testing.T) {
 	a, err := secretbox.New(fakeKey(0x11))
 	if err != nil {

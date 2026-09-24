@@ -26,4 +26,4 @@
 
 ## 6. Module verification
 
-- [ ] 6.1 Run `cd morph && go vet ./... && go test ./...` and verify both exit 0. Verify `git diff` does not touch `morph/config/config.go` or `morph/handlers/authz_middleware.go`.
+- [x] 6.1 Run `cd morph && go vet ./... && go test ./...` and verify both exit 0. Verify `git diff` does not touch `morph/config/config.go` or `morph/handlers/authz_middleware.go`.
