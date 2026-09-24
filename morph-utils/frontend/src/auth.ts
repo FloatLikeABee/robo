@@ -1,4 +1,9 @@
-import { readRuntimeConfig, resolvePublicUrl } from './publicUrl';
+import {
+  appendSessionToken,
+  readRuntimeConfig,
+  resolvePublicUrl,
+  sessionCookieAttributes,
+} from './publicUrl';
 
 /** Shared Morph JWT cookie used across Morph AI / MorphUtils / embedded apps. */
 export const SHARED_SESSION_COOKIE = 'userspanel_session_token';
@@ -36,7 +41,7 @@ function readCookie(name: string): string {
 
 function writeCookie(name: string, value: string, maxAgeSeconds: number): void {
   if (typeof document === 'undefined') return;
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
+  document.cookie = `${name}=${encodeURIComponent(value)}; ${sessionCookieAttributes(maxAgeSeconds)}`;
 }
 
 function readLocalToken(): string {
@@ -118,9 +123,7 @@ export function withSessionToken(baseUrl: string | undefined): string | undefine
   const token = getSharedToken();
   if (!token) return baseUrl;
   try {
-    const url = new URL(baseUrl, window.location.origin);
-    url.searchParams.set('userspanel_token', token);
-    return url.toString();
+    return appendSessionToken(new URL(baseUrl, window.location.origin).toString(), token);
   } catch {
     return baseUrl;
   }

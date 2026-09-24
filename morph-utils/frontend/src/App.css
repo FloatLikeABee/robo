@@ -464,6 +464,8 @@ a {
   padding: 8px 16px;
   font-size: 0.85rem;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .morph-utils-embed-retry:hover {

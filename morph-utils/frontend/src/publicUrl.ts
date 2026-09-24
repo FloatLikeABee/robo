@@ -30,6 +30,44 @@ function nonempty(value: string | undefined): string {
   return (value ?? '').trim().replace(/\/$/, '');
 }
 
+export function isLoopbackUrl(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  try {
+    const host = new URL(trimmed).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    return host === 'localhost' || host === '::1' || host.startsWith('127.');
+  } catch {
+    return false;
+  }
+}
+
+/** Morph sign-in origin. Loopback is kept only for local dev. */
+export function morphLoginHref(input: { morphAi?: string; morphApi?: string; dev: boolean }): string {
+  for (const candidate of [input.morphAi, input.morphApi]) {
+    const trimmed = nonempty(candidate);
+    if (!trimmed) continue;
+    if (!input.dev && isLoopbackUrl(trimmed)) continue;
+    return trimmed;
+  }
+  return '';
+}
+
+export function appendSessionToken(baseUrl: string, token: string): string {
+  if (!baseUrl || !token) return baseUrl;
+  const url = new URL(baseUrl);
+  url.searchParams.set('userspanel_token', token);
+  return url.toString();
+}
+
+/** Host-only session cookie. No Domain: *.onrender.com is a public suffix. */
+export function sessionCookieAttributes(maxAgeSeconds: number): string {
+  return `Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
+}
+
+export function usesLocalStartHint(embedUrl: string): boolean {
+  return isLoopbackUrl(embedUrl);
+}
+
 /** First non-empty of runtime, runtime alias, build-time, build-time alias. Dev fallback only when all are blank. */
 export function resolvePublicUrl(input: {
   runtime?: string;

@@ -146,6 +146,22 @@ else:
             errors.append("VITE_MORPH_API_URL must not have a value")
     if "REACT_APP_MORPH_UTILS_URL" in env:
         errors.append("must not set REACT_APP_MORPH_UTILS_URL")
+    for key in (
+        "VITE_SHEETX_URL",
+        "VITE_FORMSX_URL",
+        "VITE_COMPOSERX_URL",
+        "VITE_DATAX_URL",
+        "VITE_PROJECTS_URL",
+        "VITE_MORPH_ENGI_URL",
+        "VITE_MORPH_AI_URL",
+    ):
+        body_env = "\n".join(env.get(key, []))
+        if key not in env:
+            errors.append("missing prompt " + key)
+        elif "sync: false" not in body_env:
+            errors.append(key + " must set sync: false")
+        elif "value:" in body_env:
+            errors.append(key + " must not have a value")
 
 for doc in (deploy_readme, utils_readme):
     doc_text = open(doc, encoding="utf-8").read()

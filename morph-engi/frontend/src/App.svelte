@@ -4,11 +4,17 @@
   import ModuleShell from './components/ModuleShell.svelte'
   import DataGrid from './components/DataGrid.svelte'
   import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, uploadFile } from './lib/api'
+  import { morphSignInHref } from './lib/morphSignInHref'
   import type { PageId } from './lib/nav'
   import { NAV } from './lib/nav'
   import ProjectDocumentPanel from './components/ProjectDocumentPanel.svelte'
   import ConfirmDialog from './components/ConfirmDialog.svelte'
   import { confirm } from './lib/confirmDialog'
+
+  const morphHref = morphSignInHref(
+    (import.meta.env.VITE_MORPH_AI_URL as string | undefined) ?? '',
+    Boolean(import.meta.env.DEV),
+  )
 
   let authed = $state(false)
   let loading = $state(true)
@@ -178,7 +184,11 @@
     </form>
     <div class="flex gap-3 flex-wrap justify-center">
       <button type="button" class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" onclick={() => bootstrap()}>Retry SSO</button>
-      <a class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" href="http://localhost:3031" target="_blank" rel="noopener">Open Morph AI</a>
+      {#if morphHref}
+        <a class="btn-ghost border border-white/10 px-4 py-2 rounded-xl" href={morphHref} target="_top" rel="noopener">Sign in on Morph</a>
+      {:else}
+        <p class="text-muted text-sm">Sign in on Morph, then open Project from MorphUtils.</p>
+      {/if}
     </div>
     {/if}
   </div>

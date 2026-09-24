@@ -44,7 +44,7 @@ export function Login() {
           <span className="text-2xl">📄</span>
           <div>
             <h1 className="text-lg font-semibold text-[#eaf4fb]">TranForm</h1>
-            <p className="text-xs text-[#93adc4]">Sign in to continue</p>
+            <p className="text-xs text-[#93adc4]">Sign in with your Morph account. Opening Event Logs from MorphUtils after that skips this form.</p>
           </div>
         </div>
         <form onSubmit={onSubmit} className="grid gap-4">

@@ -3,8 +3,8 @@
 # Secrets and public origins that are filled in the dashboard are prompts. Do
 # not put values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are
 # public origin prompts, not secrets. REACT_APP_MORPH_UTILS_URL is a morph
-# dashboard prompt with no value. Do not set VITE_SHEETX_URL, VITE_DATAX_URL,
-# VITE_PROJECTS_URL, or VITE_MORPH_ENGI_URL here.
+# dashboard prompt with no value. Embed origins are prompts on morph-utils
+# only (sync: false, no value). Do not put an onrender.com host in this file.
 services:
   - type: web
     runtime: docker
@@ -125,8 +125,23 @@ services:
       # Public Morph origin, filled in the dashboard. Not a secret.
       - key: VITE_MORPH_API_URL
         sync: false
+      # Embed origins. Dashboard prompts. Not secrets. No host in git.
+      - key: VITE_SHEETX_URL
+        sync: false
+      - key: VITE_FORMSX_URL
+        sync: false
+      - key: VITE_COMPOSERX_URL
+        sync: false
+      - key: VITE_DATAX_URL
+        sync: false
+      - key: VITE_PROJECTS_URL
+        sync: false
+      - key: VITE_MORPH_ENGI_URL
+        sync: false
+      - key: VITE_MORPH_AI_URL
+        sync: false
 
-  # Event Logs API + UI. One disk. MorphUtils iframe origin is story #114.
+  # Event Logs API + UI. One disk. The MorphUtils iframe origin is VITE_SHEETX_URL on morph-utils.
   - type: web
     runtime: docker
     name: formx
@@ -259,8 +274,8 @@ services:
       - key: MORPH_AI_API_KEY
         sync: false
 
-  # Project (MorphUtils module id projects). Do not set VITE_PROJECTS_URL
-  # or VITE_MORPH_ENGI_URL here; story #114 wires the public origin.
+  # Project (MorphUtils module id projects). VITE_PROJECTS_URL and
+  # VITE_MORPH_ENGI_URL are prompts on morph-utils, not on this service.
   - type: web
     runtime: docker
     name: morph-engi

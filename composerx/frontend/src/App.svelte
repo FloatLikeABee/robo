@@ -928,7 +928,7 @@
           <span class="tm-login-icon" aria-hidden="true">✉️</span>
           <div>
             <h1 class="tm-login-title">Content Maker</h1>
-            <p class="tm-login-sub">Sign in to continue</p>
+            <p class="tm-login-sub">Sign in with your Morph account. Opening Content Maker from MorphUtils after that skips this form.</p>
           </div>
         </div>
         <form

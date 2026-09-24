@@ -169,9 +169,9 @@ Do not put a JWT, password, or API key in git. Fill those prompts in the dashboa
 
 Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. The Blueprint already lists that key with `sync: false` and no value. Fill the dashboard prompt. Do not put a value in `render.yaml`. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not commit the URL.
 
-### 5. Env matrix for story #114
+### 5. Env matrix for the MorphUtils embeds
 
-Leave these `VITE_*` keys unset on `morph-utils` in this change. Story #114 sets them. They are read when the MorphUtils container starts, so a later change does not require a MorphUtils image rebuild. Fill the recorded origin outside git.
+Set these `VITE_*` keys on `morph-utils`. Story #114 wires them. The Blueprint lists each as a dashboard prompt with no value in git. They are read when the MorphUtils container starts, so a later change does not require a MorphUtils image rebuild. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
 
 | Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
 |-----|---------|-------------|--------------------------------------------------|-----------------|
@@ -181,11 +181,17 @@ Leave these `VITE_*` keys unset on `morph-utils` in this change. Story #114 sets
 | `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
 | `VITE_PROJECTS_URL` (alias `VITE_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
 
+### Shared Morph session
+
+The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. MorphUtils passes the Morph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.
+
+Failure modes: the bearer can appear in the log of that first request before the page strips the query; signing out on one host does not clear the cookie on the others; opening an embed origin directly does not see the Morph host cookie. An unsigned MorphUtils page links to the Morph origin (`VITE_MORPH_AI_URL`, or `VITE_MORPH_API_URL` when that is blank) and does not mount the embeds. After sign-in, open MorphUtils from Morph so the Apps link adds the bearer. A custom parent domain you control would be a later cookie `Domain`. It is not used here.
+
 The sections below keep the per-service port, disk, and secret tables. Those sections still do not put a value for `REACT_APP_MORPH_UTILS_URL` in the Blueprint. The `morph` service lists the key as a dashboard prompt.
 
 ## MorphUtils on Render
 
-The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `morph-engi` service. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `morph-engi` service. Set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, and `VITE_DATAX_URL` on `morph-utils` as prompts with no value in git.
 
 ### Env
 
@@ -194,15 +200,15 @@ The product owner creates the shell. This repo does not call Render. After merge
 | `PORT` | yes | `3040`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
 | `VITE_MORPH_API_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
 | `VITE_USERS_PANEL_API_URL` | no | Alias used only when `VITE_MORPH_API_URL` is unset or blank. Leave it unset. |
-| `VITE_SHEETX_URL` | no | Event Logs origin. Alias: `VITE_FORMSX_URL`. Do not set this on `morph-utils`. Story #114 uses `https://<event-logs public host>`. |
-| `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Do not set this on `morph-utils`. |
-| `VITE_COMPOSERX_URL` | no | Content Maker origin. This change does not set it on `morph-utils`. #114 uses `https://<composerx public host>`. |
-| `VITE_DATAX_URL` | no | Data Access origin. Do not set this on `morph-utils`. The placeholder for story #114 is `https://<sharpreport public host>`. |
-| `VITE_PROJECTS_URL` | no | Leave unset. Story #114 sets this to `https://<morph-engi public host>`. Alias: `VITE_MORPH_ENGI_URL`. |
-| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. Leave unset. |
-| `VITE_MORPH_AI_URL` | no | Morph AI origin, if the header link in the shell should leave MorphUtils. |
+| `VITE_SHEETX_URL` | yes for the Event Logs iframe | Event Logs origin. Alias: `VITE_FORMSX_URL`. Prompt on `morph-utils`, no value in git. Placeholder `https://<event-logs public host>`. |
+| `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Same prompt rules. |
+| `VITE_COMPOSERX_URL` | yes for the Content Maker iframe | Content Maker origin. Prompt on `morph-utils`, no value in git. Placeholder `https://<composerx public host>`. |
+| `VITE_DATAX_URL` | yes for the Data Access iframe | Data Access origin. Prompt on `morph-utils`, no value in git. Placeholder `https://<sharpreport public host>`. |
+| `VITE_PROJECTS_URL` | yes for the Project iframe | Project origin. Placeholder `https://<morph-engi public host>`. Alias: `VITE_MORPH_ENGI_URL`. |
+| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. Same prompt rules. |
+| `VITE_MORPH_AI_URL` | no | Morph origin for the sign-in link when it should differ from `VITE_MORPH_API_URL`. |
 
-Set `VITE_MORPH_API_URL` in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. With the embed variables unset, those modules stay blank. `GET /health` does not call them.
+Set `VITE_MORPH_API_URL` and the embed prompts in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. A blank embed origin leaves that iframe unmounted. `GET /health` does not call them. The session cookie notes are in the stack section above: `userspanel_session_token`, `SameSite=Lax`, no `Domain`.
 
 Morph already allows cross-origin `Authorization` for non-loopback origins (`Access-Control-Allow-Origin: *`, credentials false). The shell sends `Authorization: Bearer` and does not send cookies cross-origin. This change does not edit CORS.
 
@@ -214,7 +220,7 @@ After the first deploy is live, open the URL Render shows for `morph-utils`. `GE
 
 ## Event Logs on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` in this Blueprint. Do not set `REACT_APP_MORPH_UTILS_URL` on `formx`. The `morph` service lists that key as a dashboard prompt with no value.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on `formx`. Those keys are empty prompts on `morph-utils`. Do not set `REACT_APP_MORPH_UTILS_URL` on `formx`. The `morph` service lists that key as a dashboard prompt with no value.
 
 ### Env
 
@@ -241,7 +247,7 @@ Use Render disk snapshots of `formx-data`. Take a snapshot before an upgrade you
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `formx`. `GET /health` must return HTTP 200 and a JSON body with `"status": "healthy"`. `GET /events-info` is the UI. Copy that origin. The placeholder for story #114 is `https://<event-logs public host>`. #114 sets that value as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. This change does not set `VITE_SHEETX_URL` on MorphUtils. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `formx`. `GET /health` must return HTTP 200 and a JSON body with `"status": "healthy"`. `GET /events-info` is the UI. Copy that origin. The placeholder is `https://<event-logs public host>`. Set that value as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on `morph-utils`. That prompt has no value in git. Do not set it on `formx` or `morph`. Do not guess an `onrender.com` host from the service name.
 
 ## Content Maker on Render
 
@@ -264,7 +270,7 @@ The product owner creates the service. This repo does not call Render. After mer
 | `TRAN_QWEN_API_KEY` | no | Legacy alias used only when `MORPH_AI_API_KEY` is unset. |
 | `TRAN_OPENAI_API_KEY` | no | Optional reference-library embeddings. Leave blank unless you use that path. |
 
-Do not put key values in git. This change does not set `VITE_COMPOSERX_URL` on MorphUtils.
+Do not put key values in git. Set `VITE_COMPOSERX_URL` on `morph-utils` as a prompt with no value in git. Do not set it on `composerx`.
 
 ### Disk
 
@@ -274,7 +280,7 @@ Use Render disk snapshots of `composerx-data` before an upgrade you may need to 
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<composerx public host>`. #114 sets that value as `VITE_COMPOSERX_URL` on MorphUtils. This change does not set `VITE_COMPOSERX_URL`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<composerx public host>`. Set that value as `VITE_COMPOSERX_URL` on `morph-utils`. That prompt has no value in git. Do not guess an `onrender.com` host from the service name.
 
 ## Data Access on Render
 
@@ -315,11 +321,11 @@ Use Render disk snapshots of `sharpreport-data` before an upgrade you may need t
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<sharpreport public host>`. #114 sets that origin as `VITE_DATAX_URL` on MorphUtils. This change does not set `VITE_DATAX_URL`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<sharpreport public host>`. Set that origin as `VITE_DATAX_URL` on `morph-utils`. That prompt has no value in git. Do not set it on `sharpreport`. Do not guess an `onrender.com` host from the service name.
 
 ## Project on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-engi` (Singapore, starter) after `morph-utils`. Render builds `morph-engi/Dockerfile` with context `.`. Deploys from `main` run only after CI checks pass. The MorphUtils module id is `projects`. This Blueprint does not set `VITE_PROJECTS_URL` or `VITE_MORPH_ENGI_URL`.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-engi` (Singapore, starter) after `morph-utils`. Render builds `morph-engi/Dockerfile` with context `.`. Deploys from `main` run only after CI checks pass. The MorphUtils module id is `projects`. `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` are empty prompts on `morph-utils`, not on this service.
 
 ### Env
 
@@ -340,6 +346,6 @@ The product owner creates the service. This repo does not call Render. After mer
 
 ### Public URL
 
-`GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<morph-engi public host>`. #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on MorphUtils. This change does not set those variables.
+`GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder is `https://<morph-engi public host>`. Set that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on `morph-utils`. Those prompts have no value in git. Do not set them on `morph-engi`.
 
 Local image build, without Render: `DOCKER_BUILDKIT=1 docker build -f morph-engi/Dockerfile -t morph-engi:local .` from the repo root. BuildKit is required so `morph-engi/Dockerfile.dockerignore` is used instead of the root ignore file. Fill `morph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.

@@ -117,9 +117,7 @@ names = [service_name(block) for block in blocks]
 if names[:2] != ["morph", "morph-utils"] or "morph-engi" not in names:
     errors.append("services must start with morph, morph-utils and include morph-engi, got " + ", ".join(names))
 
-for forbidden in ("VITE_PROJECTS_URL", "VITE_MORPH_ENGI_URL"):
-    if any(line.strip() == "- key: " + forbidden for line in lines):
-        errors.append("must not set " + forbidden)
+# VITE_PROJECTS_URL and VITE_MORPH_ENGI_URL are empty prompts on morph-utils.
 
 by_name = {service_name(block): block for block in blocks}
 project = by_name.get("morph-engi")
@@ -200,6 +198,14 @@ else:
         errors.append("morph-utils PORT must stay 3040")
     if "disk:" in "\n".join(utils):
         errors.append("morph-utils must not gain a disk")
+    for key in ("VITE_PROJECTS_URL", "VITE_MORPH_ENGI_URL"):
+        if key in env:
+            errors.append("morph-engi must not set " + key)
+        body_env = "\n".join(utils_env.get(key, []))
+        if key not in utils_env:
+            errors.append("morph-utils missing prompt " + key)
+        elif "sync: false" not in body_env or "value:" in body_env:
+            errors.append(key + " must be an empty prompt on morph-utils")
 
 needles = (
     "prj-dahc33dbedkc73a1v8n0",

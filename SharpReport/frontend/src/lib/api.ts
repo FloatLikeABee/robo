@@ -1,3 +1,5 @@
+import { morphSignInHref } from './morphSignInHref';
+
 const configured = import.meta.env.PUBLIC_API_URL as string | undefined;
 const usersPanelConfigured = import.meta.env.PUBLIC_USERS_PANEL_URL as string | undefined;
 const usersPanelViteConfigured = import.meta.env.VITE_USERS_PANEL_API_URL as string | undefined;
@@ -22,13 +24,11 @@ export function getApiOrigin(): string {
 
 /** Morph AI origin — Data Access has no separate login; this is where sessions start. */
 export function morphAiOrigin(): string {
-	const fromEnv = (
+	const fromEnv =
 		(import.meta.env.PUBLIC_MORPH_AI_URL as string | undefined) ||
 		(import.meta.env.VITE_MORPH_AI_URL as string | undefined) ||
-		''
-	).trim();
-	if (fromEnv) return fromEnv.replace(/\/$/, '');
-	return 'http://localhost:3031';
+		'';
+	return morphSignInHref(fromEnv, Boolean(import.meta.env.DEV));
 }
 
 /** Full URL for `fetch()` — use for all `/api/v1/...` calls. */

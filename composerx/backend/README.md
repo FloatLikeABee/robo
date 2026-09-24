@@ -86,4 +86,4 @@ Do not pass keys as `docker build` arguments. `sh composerx/deploy/check-contain
 
 ## Render
 
-The product owner syncs `render.yaml` in project `prj-dahc33dbedkc73a1v8n0`. The service is `composerx`. Secrets and the Morph origin are dashboard prompts. See [`deploy/README.md`](../../deploy/README.md). The placeholder for story #114 is `https://<composerx public host>`. This change does not set `VITE_COMPOSERX_URL`.
+The product owner syncs `render.yaml` in project `prj-dahc33dbedkc73a1v8n0`. The service is `composerx`. Secrets and the Morph origin are dashboard prompts. See [`deploy/README.md`](../../deploy/README.md). The placeholder is `https://<composerx public host>`. Set `VITE_COMPOSERX_URL` on `morph-utils` as a prompt with no value in git. Do not set it on `composerx`. This repo does not call Render. `GET /health` returns HTTP 200 without calling MorphUtils. `USERS_PANEL_BASE_URL` is `https://<morph public host>` and is not a secret. `MORPH_AI_API_KEY` and `TRAN_OPENAI_API_KEY` stay optional with no sample secret.

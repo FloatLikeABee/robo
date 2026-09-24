@@ -7,13 +7,14 @@ import {
   withSessionToken,
 } from './auth';
 import {
-  MORPH_AI_URL,
+  MORPH_LOGIN_HREF,
   UTILS_MODULES,
   moduleById,
   normalizeModuleId,
   type UtilsModuleId,
 } from './config';
 import { embedStartCommand, probeEmbedOrigin, PROBED_EMBED_IDS } from './embedProbe';
+import { usesLocalStartHint } from './publicUrl';
 import UserProfileModal from './UserProfileModal';
 import './App.css';
 
@@ -58,7 +59,7 @@ function ModulePanel({ moduleId }: { moduleId: UtilsModuleId }) {
             >
               {pending ? (
                 <p>Checking {m.label}…</p>
-              ) : (
+              ) : usesLocalStartHint(m.embedUrl as string) ? (
                 <>
                   <p>
                     {m.label} isn’t running. Start it with{' '}
@@ -70,6 +71,13 @@ function ModulePanel({ moduleId }: { moduleId: UtilsModuleId }) {
                       </>
                     ) : null}
                   </p>
+                  <button type="button" className="morph-utils-embed-retry" onClick={() => void recheck()}>
+                    Retry
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>{m.label} isn’t reachable at its configured origin.</p>
                   <button type="button" className="morph-utils-embed-retry" onClick={() => void recheck()}>
                     Retry
                   </button>
@@ -130,7 +138,7 @@ export default function App() {
     setMoreOpen(false);
   }, [location.pathname]);
 
-  const morphAiHref = MORPH_AI_URL || '/';
+  const morphAiHref = MORPH_LOGIN_HREF;
 
   return (
     <div className={`morph-utils-shell${moreOpen ? ' is-more-open' : ''}`}>
@@ -185,19 +193,21 @@ export default function App() {
                 <span>Username & password</span>
               </span>
             </button>
-          ) : (
+          ) : morphAiHref ? (
             <a
               className="morph-utils-external-link"
               href={morphAiHref}
-              aria-label="Sign in on Morph AI"
+              target="_top"
+              rel="noopener noreferrer"
+              aria-label="Sign in on Morph"
             >
               <span aria-hidden>⇢</span>
               <span className="morph-utils-nav-tooltip" role="tooltip">
-                <strong>Morph AI</strong>
+                <strong>Morph</strong>
                 <span>Sign in once for all Morph apps</span>
               </span>
             </a>
-          )}
+          ) : null}
         </div>
       </aside>
 
@@ -210,6 +220,21 @@ export default function App() {
         </header>
 
         <main className="morph-utils-main">
+          {authed ? null : (
+            <div className="morph-utils-frame-wrap">
+              <div className="morph-utils-embed-down" role="status">
+                <p>Sign in on Morph. One account covers MorphUtils and the apps it embeds.</p>
+                {morphAiHref ? (
+                  <a className="morph-utils-embed-retry" href={morphAiHref} target="_top" rel="noopener noreferrer">
+                    Sign in on Morph
+                  </a>
+                ) : (
+                  <p>Morph origin is not set. Set VITE_MORPH_API_URL and restart.</p>
+                )}
+              </div>
+            </div>
+          )}
+          {authed ? (
           <Routes>
             <Route path="/" element={<Navigate to={`/${defaultModule.id}`} replace />} />
             <Route path="/settings" element={<Navigate to={`/${defaultModule.id}`} replace />} />
@@ -222,6 +247,7 @@ export default function App() {
             <Route path="/:moduleId" element={<ModuleRoute />} />
             <Route path="*" element={<Navigate to={`/${defaultModule.id}`} replace />} />
           </Routes>
+          ) : null}
         </main>
       </div>
 
@@ -240,9 +266,9 @@ export default function App() {
                 ✕
               </button>
             </div>
-            {authed ? null : (
-              <a className="morph-utils-more-danger" href={morphAiHref}>
-                Sign in on Morph AI
+            {authed || !morphAiHref ? null : (
+              <a className="morph-utils-more-danger" href={morphAiHref} target="_top" rel="noopener noreferrer">
+                Sign in on Morph
                 <span>One login covers Data, Utils, and AI</span>
               </a>
             )}
