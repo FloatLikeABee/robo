@@ -85,3 +85,4 @@ Neo4j and `morphgraph-worker` are optional. The rest of the stack starts without
 - AI: `02-ai-integration.md`
 - Conventions: `13-conventions.md`
 - Run: `12-build-deploy.md`
+- Local MCP (stdio): `14-morph-mcp.md`

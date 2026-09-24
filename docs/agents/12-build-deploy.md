@@ -59,6 +59,7 @@ Start **Morph API** first when bringing apps up one by one (auth hub).
 
 ```bash
 cd morph && go build -o morph-server main.go
+cd morph && go build -o morph-mcp ./cmd/morph-mcp   # stdio MCP; see docs/agents/14-morph-mcp.md
 cd formx/backend && go build -o formsx-server ./cmd/server
 cd composerx/backend && go build -o composerx-server .
 cd SharpReport/backend && cargo build --release
