@@ -21,10 +21,10 @@ This is **not** a Transfinder / school / SQL Server product. MorphNotes UI lives
 
 ## Startup (`morph/main.go`)
 
-1. `pkg/repoenv` + `config.GetConfig()` (root `.env`)
+1. `pkg/repoenv` + `config.GetConfig()` (root `.env`), then the `MORPH_ENV` startup guard (local defaults still start; `production` refuses weak JWT/admin secrets before listen). See [`docs/security-hosting-checklist.md`](../security-hosting-checklist.md).
 2. Badger + in-memory cache
 3. MorphAI client from `MORPH_AI_API_KEY`
-4. SQLite Tran store (`TRAN_SQLITE_PATH`) including `plat_users`
+4. SQLite Tran store (`TRAN_SQLITE_PATH`) including `plat_users` (production also checks stored admin passwords)
 5. Gin: CORS, `AuthzMiddleware`, Swagger, API, static SPA
 6. Listen on `PORT` (default `9090`)
 

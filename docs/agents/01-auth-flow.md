@@ -57,7 +57,9 @@ Public routes include `POST /api/auth/login` and selected `/api/tran/public/*`. 
 
 ### Admin bootstrap
 
-On startup Morph calls `EnsureBootstrapAdmin()` from env (`ADMIN_EMAIL` / `ADMIN_USERNAME` / `ADMIN_PASSWORD`). Default operator login in the root README: **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`).
+On startup Morph calls `EnsureBootstrapAdmin()` from env (`ADMIN_EMAIL` / `ADMIN_USERNAME` / `ADMIN_PASSWORD`). That insert does not change an existing row. Default operator login for local/dev (`MORPH_ENV` unset): **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`). `./start-all.sh` needs no extra auth config.
+
+`MORPH_ENV=production` refuses the development JWT secret, the development admin password (including a hash already stored in `plat_users`), and a JWT lifetime outside 1–168 hours. Production default lifetime is 24 hours when `JWT_EXPIRY_HOURS` is unset. One start with `MORPH_ROTATE_DEFAULT_ADMIN=1` replaces stored development passwords and keeps account ids. Checklist: [`docs/security-hosting-checklist.md`](../security-hosting-checklist.md). Startup errors name the variable to set and do not print secret values.
 
 ### MorphUtils SSO
 

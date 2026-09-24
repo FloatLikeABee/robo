@@ -2,39 +2,41 @@ package auth
 
 import (
 	"errors"
-	"os"
-	"strconv"
+	"log"
 	"strings"
 	"time"
+
+	"idongivaflyinfa/config"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 // Claims matches the UsersPanel JWT shape so other apps can keep calling /api/auth/user.
 type Claims struct {
-	Email             string   `json:"email"`
-	Username          string   `json:"username"`
-	Roles             []string `json:"roles"`
-	DefaultChannelID  string   `json:"default_channel_id"`
+	Email            string   `json:"email"`
+	Username         string   `json:"username"`
+	Roles            []string `json:"roles"`
+	DefaultChannelID string   `json:"default_channel_id"`
 	jwt.RegisteredClaims
 }
 
 type TokenConfig struct {
-	Secret       []byte
-	ExpiryHours  int64
+	Secret      []byte
+	ExpiryHours int64
 }
 
 func LoadTokenConfig() TokenConfig {
-	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	cfg := config.GetConfig()
+	secret := strings.TrimSpace(cfg.JWTSecret)
 	if secret == "" {
-		secret = "morph-dev-jwt-secret-change-me"
+		secret = config.DefaultJWTSecret
 	}
-	// Default: no practical session timeout (~100 years). Override with JWT_EXPIRY_HOURS.
-	hours := int64(100 * 365 * 24)
-	if raw := strings.TrimSpace(os.Getenv("JWT_EXPIRY_HOURS")); raw != "" {
-		if n, err := strconv.ParseInt(raw, 10, 64); err == nil && n > 0 {
-			hours = n
-		}
+	hours, err := config.JWTExpiryHours()
+	if err != nil {
+		// Do not sign a 100-year token when production lifetime is invalid.
+		// main refuses to start on this error; 24 hours is the safe fallback.
+		log.Printf("warning: %s", err.Error())
+		hours = config.ProductionJWTExpiryHours
 	}
 	return TokenConfig{Secret: []byte(secret), ExpiryHours: hours}
 }
