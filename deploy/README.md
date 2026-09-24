@@ -121,7 +121,7 @@ Open `https://<the service host>/health`. It must return HTTP 200 and a JSON bod
 
 ## MorphUtils on Render
 
-The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Do not add Event Logs, Content Maker, or Project to this shell service. Data Access is the separate `sharpreport` service below. This change does not set `VITE_DATAX_URL`.
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Do not add Project. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
 
 ### Env
 
@@ -130,10 +130,10 @@ The product owner creates the shell. This repo does not call Render. After merge
 | `PORT` | yes | `3040`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
 | `VITE_MORPH_API_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
 | `VITE_USERS_PANEL_API_URL` | no | Alias used only when `VITE_MORPH_API_URL` is unset or blank. Leave it unset. |
-| `VITE_SHEETX_URL` | no | Event Logs origin. Alias: `VITE_FORMSX_URL`. Not a service in this Blueprint. |
-| `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. |
-| `VITE_COMPOSERX_URL` | no | Content Maker origin. Not a service in this Blueprint. |
-| `VITE_DATAX_URL` | no | Data Access origin. Not set on `morph-utils`. The placeholder for story #114 is `https://<sharpreport public host>`. |
+| `VITE_SHEETX_URL` | no | Event Logs origin. Alias: `VITE_FORMSX_URL`. Do not set this on `morph-utils`. Story #114 uses `https://<event-logs public host>`. |
+| `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Do not set this on `morph-utils`. |
+| `VITE_COMPOSERX_URL` | no | Content Maker origin. This change does not set it on `morph-utils`. #114 uses `https://<composerx public host>`. |
+| `VITE_DATAX_URL` | no | Data Access origin. Do not set this on `morph-utils`. The placeholder for story #114 is `https://<sharpreport public host>`. |
 | `VITE_PROJECTS_URL` | no | Project origin. Alias: `VITE_MORPH_ENGI_URL`. Not a service in this Blueprint. |
 | `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. |
 | `VITE_MORPH_AI_URL` | no | Morph AI origin, if the header link in the shell should leave MorphUtils. |
@@ -148,9 +148,73 @@ No JWT, password, or API key is set on this service.
 
 After the first deploy is live, open the URL Render shows for `morph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that value as `REACT_APP_MORPH_UTILS_URL` on the Morph service. This change does not set `REACT_APP_MORPH_UTILS_URL`. Do not guess an `onrender.com` host from the service name.
 
+## Event Logs on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, or `REACT_APP_MORPH_UTILS_URL` in this Blueprint.
+
+### Env
+
+| Key | Required | Value |
+|-----|----------|--------|
+| `PORT` | yes | `29909`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`, and the entrypoint copies `PORT` onto `SERVER_PORT`. |
+| `FORMSX_SQLITE_PATH` | yes | `/data/formsx.sqlite` |
+| `FORMSX_BADGER_PATH` | yes | `/data/formsx_badger` |
+| `UPLOAD_DIR` | yes | `/data/uploads` |
+| `USERS_PANEL_BASE_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. Login fails until it is set. `GET /health` does not call Morph or MorphUtils. |
+| `PUBLIC_FORM_BASE_URL` | no | `https://<event-logs public host>`, no path. Used in broadcast mail. Prompted, no value in git. |
+| `MORPH_AI_API_KEY` | no | Optional model key. The process starts without it. |
+| `SMTP_PASSWORD` | no | Optional. Leave blank unless broadcast mail needs SMTP. Do not commit it. |
+
+`SMTP_HOST`, `SMTP_USER`, and `SMTP_FROM` stay unset unless you send mail. Do not put a password in git.
+
+### Disk
+
+`formx-data` is mounted at `/data` (1 GB). A persistent disk is a single instance, so the service cannot do a zero-downtime deploy and must not be scaled out. During a deploy Render stops the old instance before the new one can mount the disk.
+
+The entrypoint starts as root, gives `/data` to uid 65532, and then runs the server as that user. SQLite, Badger, and uploads all live on that mount.
+
+Use Render disk snapshots of `formx-data`. Take a snapshot before an upgrade you may need to undo. Restoring a snapshot replaces the disk contents.
+
+### Public URL
+
+After the first deploy is live, open the URL Render shows for `formx`. `GET /health` must return HTTP 200 and a JSON body with `"status": "healthy"`. `GET /events-info` is the UI. Copy that origin. The placeholder for story #114 is `https://<event-logs public host>`. #114 sets that value as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. This change does not set `VITE_SHEETX_URL` on MorphUtils. Do not guess an `onrender.com` host from the service name.
+
+## Content Maker on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `composerx` (Singapore, starter) beside `morph`, `morph-utils`, and `formx`. Render builds `composerx/Dockerfile` with context `.` (the repo root, so `pkg/` replace directives resolve). Deploys from `main` run only after CI checks pass. The image runbook for a local build is [`composerx/backend/README.md`](../composerx/backend/README.md).
+
+`GET /health` returns HTTP 200 and `"status":"ok"` without calling Morph or MorphUtils. `GET /` is the Content Maker UI on the same port. Local Vite stays on 8044; the image does not publish 8044.
+
+### Env
+
+| Key | Required | Value |
+|-----|----------|--------|
+| `PORT` | yes | `8043`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. `COMPOSERX_PORT` is also `8043`. The process listens on `COMPOSERX_PORT` when that is set. |
+| `COMPOSERX_PORT` | yes | `8043` |
+| `GIN_MODE` | yes | `release` |
+| `COMPOSERX_SQLITE_PATH` | yes | `/data/composerx.sqlite` |
+| `COMPOSERX_BADGER_PATH` | yes | `/data/composerx_badger` |
+| `TRAN_FILE_STORAGE_PATH` | yes | `/data/storage` |
+| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<morph public host>`, no path. This is the Morph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `/health` does not call it. |
+| `MORPH_AI_API_KEY` | no | DashScope key for compose chat. The process starts without it. |
+| `TRAN_QWEN_API_KEY` | no | Legacy alias used only when `MORPH_AI_API_KEY` is unset. |
+| `TRAN_OPENAI_API_KEY` | no | Optional reference-library embeddings. Leave blank unless you use that path. |
+
+Do not put key values in git. This change does not set `VITE_COMPOSERX_URL` on MorphUtils.
+
+### Disk
+
+`composerx-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service cannot do a zero-downtime deploy and must stay a single instance. SQLite is a single writer. Do not scale it out. The entrypoint starts as root, gives `/data` to uid 65532, and then runs the server as that user.
+
+Use Render disk snapshots of `composerx-data` before an upgrade you may need to undo.
+
+### Public URL
+
+After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<composerx public host>`. #114 sets that value as `VITE_COMPOSERX_URL` on MorphUtils. This change does not set `VITE_COMPOSERX_URL`. Do not guess an `onrender.com` host from the service name.
+
 ## Data Access on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `sharpreport` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `SharpReport/Dockerfile` with context `.` (the image needs `pkg/morphai-rs`). Deploys from `main` run only after CI checks pass.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `sharpreport` (Singapore, starter) beside `morph`, `morph-utils`, `formx`, and `composerx`. Render builds `SharpReport/Dockerfile` with context `.` (the image needs `pkg/morphai-rs`). Deploys from `main` run only after CI checks pass.
 
 ### Local image
 

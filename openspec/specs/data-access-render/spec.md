@@ -7,7 +7,7 @@ Gives the product owner a Blueprint entry for Data Access and the placeholder fo
 ## Requirements
 
 ### Requirement: Data Access is a Docker web service in the flat Blueprint
-`render.yaml` MUST declare a service named `sharpreport` with `type: web`, `runtime: docker`, `region: singapore`, `plan: starter`, and `branch: main`. That service MUST set `dockerfilePath: ./SharpReport/Dockerfile`, `dockerContext: .`, `healthCheckPath: /health`, and `autoDeployTrigger: checksPass`. The Blueprint MUST NOT declare a `projects` block. The existing `morph` and `morph-utils` services MUST remain.
+`render.yaml` MUST declare a service named `sharpreport` with `type: web`, `runtime: docker`, `region: singapore`, `plan: starter`, and `branch: main`. That service MUST set `dockerfilePath: ./SharpReport/Dockerfile`, `dockerContext: .`, `healthCheckPath: /health`, and `autoDeployTrigger: checksPass`. The Blueprint MUST NOT declare a `projects` block. The existing `morph`, `morph-utils`, `formx`, and `composerx` services MUST remain. The service names MUST be `morph`, `morph-utils`, `formx`, `composerx`, and `sharpreport`, in that order.
 
 #### Scenario: Blueprint matches the Data Access image
 - **WHEN** a reviewer reads the `sharpreport` service in `render.yaml`
@@ -16,8 +16,7 @@ Gives the product owner a Blueprint entry for Data Access and the placeholder fo
 
 #### Scenario: Existing services stay
 - **WHEN** a reviewer lists service names in `render.yaml`
-- **THEN** `morph` and `morph-utils` are still present
-- **AND** `sharpreport` is present after them
+- **THEN** the names are `morph`, `morph-utils`, `formx`, `composerx`, and `sharpreport`
 
 ### Requirement: SQLite disk and pinned port
 The `sharpreport` service MUST attach one disk named `sharpreport-data`, mounted at `/data`, with `sizeGB: 1`. It MUST set `maxShutdownDelaySeconds` to `120`. It MUST set `PORT` and `SHARPREPORT_PORT` to `3050`. It MUST set `SHARPREPORT_DATABASE_URL` to `sqlite:///data/datapulse.db`. It MUST NOT set `numInstances`.

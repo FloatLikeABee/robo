@@ -14,11 +14,14 @@ deploy/.env.production
 **/target
 morph/frontend/build
 
-# This image is Morph only. Keep morph/, pkg/, and scripts/with-root-env.cjs.
-# SharpReport is a separate image (SharpReport/Dockerfile, context .).
-# Keep the word SharpReport so the Morph contract still sees it.
+# Morph image copies named paths only. Event Logs uses formx/Dockerfile.dockerignore
+# for its own image, so a formx line here only drops Event Logs from the Morph
+# context. Content Maker and Data Access use this same root ignore (context .).
+# Keep the words composerx and SharpReport. Do not exclude those trees.
 formx
-composerx
+composerx/backend/storage
+composerx/frontend/node_modules
+**/ai.config.json
 SharpReport/frontend/node_modules
 morph-engi
 bk

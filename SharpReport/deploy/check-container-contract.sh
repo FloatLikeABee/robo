@@ -104,12 +104,11 @@ if any("key: VITE_DATAX_URL" in line for line in lines):
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if "morph" not in names or "morph-utils" not in names:
-    errors.append("morph and morph-utils must stay, got " + ", ".join(names))
-if names[:2] != ["morph", "morph-utils"]:
-    errors.append("morph then morph-utils must stay first, got " + ", ".join(names))
-if "sharpreport" not in names:
-    errors.append("missing sharpreport")
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport"]:
+    errors.append(
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, got "
+        + ", ".join(names)
+    )
 
 svc = next((block for block in blocks if service_name(block) == "sharpreport"), None)
 if svc is None:

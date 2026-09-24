@@ -89,41 +89,47 @@ func isAllowedDevOrigin(origin string) bool {
 		strings.HasPrefix(u, "https://127.0.0.1:")
 }
 
-func requireTranmailAccess(usersPanelBaseURL string) gin.HandlerFunc {
+func requireTranmailAccess(usersPanelBaseURL string, uiPaths map[string]struct{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/health" || strings.HasPrefix(c.Request.URL.Path, "/auth/") || strings.HasPrefix(c.Request.URL.Path, "/public/") {
+		path := c.Request.URL.Path
+		if path == "/health" || strings.HasPrefix(path, "/auth/") || strings.HasPrefix(path, "/public/") || uiPathOpen(uiPaths, path) {
 			c.Next()
 			return
 		}
-		role := resolveScopedRole(c.GetHeader("X-User-Role"), c.GetHeader("X-User-Roles"))
-		rawPermissions := c.GetHeader("X-User-Permissions")
+		// Same strip as Morph AuthzMiddleware. Client headers are not a session.
+		stripClientIdentityHeaders(c.Request)
 		token := bearerToken(c.GetHeader("Authorization"))
-		var panelPerms []string
-		if token != "" {
-			r, perms := resolveRoleAndPermissionsFromUsersPanel(usersPanelBaseURL, token)
-			panelPerms = perms
-			if r != "" {
-				role = r
-			}
-			if len(perms) > 0 {
-				rawPermissions = strings.Join(perms, ",")
-				c.Request.Header.Set("X-User-Permissions", rawPermissions)
-			}
-		}
-		// Morph-hosted auth: any authenticated user may use ComposerX.
-		if role == "admin" || len(panelPerms) > 0 {
-			c.Next()
-			return
-		}
-		if role == "employee" && hasCSVPermission(rawPermissions, "compose_email") {
-			c.Next()
-			return
-		}
 		if token == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 			return
 		}
+		role, perms, ok := resolveRoleAndPermissionsFromUsersPanel(usersPanelBaseURL, token)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		// Morph-hosted auth: a bearer Morph accepted. Role and permissions come only from that response.
+		rawPermissions := strings.Join(perms, ",")
+		if role == "admin" || len(perms) > 0 || (role == "employee" && hasCSVPermission(rawPermissions, "compose_email")) {
+			c.Next()
+			return
+		}
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "tranmail access is restricted by admin policy"})
+	}
+}
+
+func stripClientIdentityHeaders(r *http.Request) {
+	if r == nil {
+		return
+	}
+	for _, key := range []string{
+		"X-User-ID",
+		"X-User-Role",
+		"X-User-Roles",
+		"X-User-Email",
+		"X-User-Permissions",
+	} {
+		r.Header.Del(key)
 	}
 }
 
@@ -175,50 +181,63 @@ func bearerToken(header string) string {
 	return strings.TrimSpace(parts[1])
 }
 
-func resolveRoleAndPermissionsFromUsersPanel(baseURL, token string) (string, []string) {
+// ok is false when Morph did not accept the bearer. An empty role with ok true is a validated session.
+func resolveRoleAndPermissionsFromUsersPanel(baseURL, token string) (string, []string, bool) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if baseURL == "" || token == "" {
-		return "", nil
+		return "", nil, false
 	}
-	reqUser, _ := http.NewRequest(http.MethodGet, baseURL+"/api/auth/user", nil)
+	reqUser, err := http.NewRequest(http.MethodGet, baseURL+"/api/auth/user", nil)
+	if err != nil {
+		return "", nil, false
+	}
 	reqUser.Header.Set("Authorization", "Bearer "+token)
 	userResp, err := http.DefaultClient.Do(reqUser)
 	if err != nil {
-		return "", nil
+		return "", nil, false
 	}
 	defer userResp.Body.Close()
 	if userResp.StatusCode != http.StatusOK {
-		return "", nil
+		return "", nil, false
 	}
-	userBody, _ := io.ReadAll(userResp.Body)
+	userBody, err := io.ReadAll(userResp.Body)
+	if err != nil {
+		return "", nil, false
+	}
 	var userPayload struct {
 		User struct {
 			Roles []string `json:"roles"`
 		} `json:"user"`
 	}
 	if json.Unmarshal(userBody, &userPayload) != nil {
-		return "", nil
+		return "", nil, false
 	}
 	role := resolveScopedRole("", strings.Join(userPayload.User.Roles, ","))
 
-	reqPerms, _ := http.NewRequest(http.MethodGet, baseURL+"/api/auth/permissions", nil)
+	reqPerms, err := http.NewRequest(http.MethodGet, baseURL+"/api/auth/permissions", nil)
+	if err != nil {
+		return role, nil, true
+	}
 	reqPerms.Header.Set("Authorization", "Bearer "+token)
 	permsResp, err := http.DefaultClient.Do(reqPerms)
 	if err != nil {
-		return role, nil
+		return role, nil, true
 	}
 	defer permsResp.Body.Close()
 	if permsResp.StatusCode != http.StatusOK {
-		return role, nil
+		return role, nil, true
 	}
-	permsBody, _ := io.ReadAll(permsResp.Body)
+	permsBody, err := io.ReadAll(permsResp.Body)
+	if err != nil {
+		return role, nil, true
+	}
 	var permsPayload struct {
 		Permissions []string `json:"permissions"`
 	}
 	if json.Unmarshal(permsBody, &permsPayload) != nil {
-		return role, nil
+		return role, nil, true
 	}
-	return role, permsPayload.Permissions
+	return role, permsPayload.Permissions, true
 }
 
 // --- bootstrap ---
@@ -251,7 +270,8 @@ func main() {
 	router.Use(corsMiddleware())
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(requireTranmailAccess(cfg.UsersPanelBaseURL))
+	uiPaths := map[string]struct{}{}
+	router.Use(requireTranmailAccess(cfg.UsersPanelBaseURL, uiPaths))
 
 	emailBodies := NewEmailContentStore(badgerDB)
 	refDocs := NewReferenceDocsStore(badgerDB)
@@ -271,8 +291,9 @@ func main() {
 	}
 
 	app.registerRoutes()
+	mountContentMakerUI(router, getEnv("COMPOSERX_UI_DIR", ""), uiPaths)
 
-	port := getEnv("COMPOSERX_PORT", "8043")
+	port := httpListenPort()
 	log.Printf("ComposerX listening on :%s (sqlite=%s badger=%s)", port, cfg.SQLitePath, cfg.BadgerPath)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start HTTP server on %s: %v", port, err)
@@ -400,7 +421,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 	token, _ := loginResp["token"].(string)
-	role, perms := resolveRoleAndPermissionsFromUsersPanel(a.cfg.UsersPanelBaseURL, token)
+	role, perms, _ := resolveRoleAndPermissionsFromUsersPanel(a.cfg.UsersPanelBaseURL, token)
 	loginResp["resolved_role"] = role
 	loginResp["permissions"] = perms
 	c.JSON(http.StatusOK, loginResp)
@@ -431,7 +452,7 @@ func (a *App) handleMe(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "invalid user payload"})
 		return
 	}
-	role, perms := resolveRoleAndPermissionsFromUsersPanel(a.cfg.UsersPanelBaseURL, token)
+	role, perms, _ := resolveRoleAndPermissionsFromUsersPanel(a.cfg.UsersPanelBaseURL, token)
 	userPayload["resolved_role"] = role
 	userPayload["permissions"] = perms
 	c.JSON(http.StatusOK, userPayload)

@@ -1,7 +1,9 @@
-# Morph API + Morph AI UI, the MorphUtils shell, and Data Access. Attach this
-# file to the existing Render project. Secrets are dashboard prompts. Do not
-# put values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are
-# public origin prompts, not secrets. Do not set VITE_DATAX_URL here.
+# Morph API + Morph AI UI, the MorphUtils shell, Event Logs, Content Maker,
+# and Data Access. Attach this file to the existing Render project. Secrets
+# and public origins that are filled in the dashboard are prompts. Do not put
+# values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are public
+# origin prompts, not secrets. Do not set VITE_SHEETX_URL, VITE_DATAX_URL, or
+# REACT_APP_MORPH_UTILS_URL here.
 services:
   - type: web
     runtime: docker
@@ -95,7 +97,7 @@ services:
       - key: TRAN_OPENAI_API_KEY
         sync: false
 
-  # MorphUtils shell only. No disk. Embed apps are not services here.
+  # MorphUtils shell only. No disk. Embed origins are not set on this service.
   - type: web
     runtime: docker
     name: morph-utils
@@ -119,6 +121,96 @@ services:
         value: "3040"
       # Public Morph origin, filled in the dashboard. Not a secret.
       - key: VITE_MORPH_API_URL
+        sync: false
+
+  # Event Logs API + UI. One disk. MorphUtils iframe origin is story #114.
+  - type: web
+    runtime: docker
+    name: formx
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./formx/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - formx/**
+        - pkg/**
+        - formx/Dockerfile
+        - formx/Dockerfile.dockerignore
+        - formx/deploy/docker-entrypoint.sh
+        - render.yaml
+    disk:
+      name: formx-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "29909"
+      - key: FORMSX_SQLITE_PATH
+        value: /data/formsx.sqlite
+      - key: FORMSX_BADGER_PATH
+        value: /data/formsx_badger
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      # Public Morph origin. Not a secret.
+      - key: USERS_PANEL_BASE_URL
+        sync: false
+      - key: PUBLIC_FORM_BASE_URL
+        sync: false
+      - key: MORPH_AI_API_KEY
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
+  # Content Maker API + UI. SQLite and Badger need the disk. One instance.
+  - type: web
+    runtime: docker
+    name: composerx
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./composerx/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - composerx/**
+        - pkg/**
+        - composerx/Dockerfile
+        - .dockerignore
+        - composerx/deploy/docker-entrypoint.sh
+        - render.yaml
+    disk:
+      name: composerx-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8043"
+      - key: COMPOSERX_PORT
+        value: "8043"
+      - key: GIN_MODE
+        value: release
+      - key: COMPOSERX_SQLITE_PATH
+        value: /data/composerx.sqlite
+      - key: COMPOSERX_BADGER_PATH
+        value: /data/composerx_badger
+      - key: TRAN_FILE_STORAGE_PATH
+        value: /data/storage
+      # Public Morph origin, no path. Not a secret. Do not invent the host.
+      - key: USERS_PANEL_BASE_URL
+        sync: false
+      - key: MORPH_AI_API_KEY
+        sync: false
+      - key: TRAN_QWEN_API_KEY
+        sync: false
+      - key: TRAN_OPENAI_API_KEY
         sync: false
 
   # Data Access API + UI. SQLite on one disk. Embed URL is story #114.

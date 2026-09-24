@@ -36,7 +36,7 @@ Every consuming app reads `USERS_PANEL_BASE_URL` (legacy name). Default: `http:/
 |-----|-------------------------|
 | Morph | `POST /api/auth/login`, `GET /api/auth/me` |
 | Event Logs (`formx`) | `POST /api/v1/auth/login` → Morph |
-| Content Maker (`composerx`) | `POST /auth/login` → Morph |
+| Content Maker (`composerx`) | `POST /auth/login` → Morph. API routes require that bearer; `X-User-Role` and `X-User-Permissions` are not a session |
 | Project (`morph-engi`) | Morph SSO (`USERS_PANEL_BASE_URL`) |
 | Data Access (`SharpReport`) | Morph SSO; reuse the Morph cookie — do not add a second credential form |
 | MorphUtils | Validates cookie against Morph `/api/auth/user` |
