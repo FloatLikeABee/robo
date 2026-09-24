@@ -41,7 +41,7 @@ The server MUST advertise the tools capability and the resources capability. `to
 - **AND** the token string is absent from the result
 
 ### Requirement: Identity fails closed
-The server MUST treat `MORPH_MCP_TOKEN` as a Morph session JWT and verify it with the same HS256 secret the Morph API uses. If the token is missing, invalid, expired, or has no subject, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the token text. A user id supplied without a valid token MUST NOT be accepted. If `JWT_SECRET` is empty or equal to the built-in development default the API substitutes when the variable is unset, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the secret. On startup the process MUST confirm the token subject still exists in `plat_users` and MUST exit non-zero when it does not. Each tool call MUST verify the token again, and an expired or invalid token MUST be a tool error that does not contain the token text.
+The server MUST treat `MORPH_MCP_TOKEN` as a Morph session JWT and verify it with `morph/auth` the way the Morph API does: HS256 signature against `JWT_SECRET`, `exp`, and in production the token-lifetime cap from #24. If the token is missing, invalid, expired, or has no subject, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the token text. A user id supplied without a valid token MUST NOT be accepted. If `JWT_SECRET` is empty or equal to the built-in development default the API substitutes when the variable is unset, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the secret. When `MORPH_ENV` is production, startup MUST also refuse a JWT secret that fails the API's production secret rules (length, placeholder, repeated character) and a `JWT_EXPIRY_HOURS` value the API would refuse, and MUST refuse a token whose lifetime exceeds the production maximum. An unrecognized `MORPH_ENV` MUST refuse startup. After the token verifies, the process MUST confirm the token subject still exists in `plat_users` and MUST exit non-zero when it does not. Each tool call MUST verify the token again, and an expired, invalid, or over-long production token MUST be a tool error that does not contain the token text.
 
 #### Scenario: Missing token
 - **WHEN** the process starts without a token
@@ -70,6 +70,11 @@ The server MUST treat `MORPH_MCP_TOKEN` as a Morph session JWT and verify it wit
 - **WHEN** a tool is called with a token that has expired since startup
 - **THEN** the tool result is an error
 - **AND** the error does not contain the token text
+
+#### Scenario: Production rejects a weak secret and a long-lived token
+- **WHEN** `MORPH_ENV` is production and `JWT_SECRET` is shorter than the API minimum, a placeholder, or a repeated character, or the token's lifetime exceeds the production maximum
+- **THEN** the process exits non-zero before any MCP message
+- **AND** stderr does not contain the secret or the token
 
 ### Requirement: Startup does not take the API's Badger lock
 The stdio process MUST NOT open the Morph Badger directories. It MUST NOT call `db.NewTranSQL` and MUST NOT run schema migrations or set the SQLite journal mode. It MUST open `TRAN_SQLITE_PATH` read-only (`mode=ro` and `query_only`) so a running `morph-api` can keep that file in WAL mode. A write on the MCP connection MUST fail.
@@ -102,7 +107,7 @@ The repository MUST document how to build the stdio server and a Cursor `mcp.jso
 - **AND** it states that `/ai/mcp-tools` style catalogs are not the Model Context Protocol
 
 ### Requirement: List and get return only the caller's notes and todos
-`list_my_tasks` and `get_task` MUST read `user_note_todo` rows whose `UserID` is the active Tran `User` row for the token email (case-insensitive trimmed email, `Deactivated = 0`). They MUST NOT use a request user id, an `X-User-ID` header, or a default user id, and they MUST NOT create a `User` row. `list_my_tasks` MUST accept optional `type` (`all`, `note`, or `todo`), optional `status` (`all`, `open`, or `done`), and optional `limit`. The default limit is 50 and the applied limit MUST NOT exceed 100. Each task object MUST include id, title, status (`open` or `done`), item type, and the text body stored in SQLite, plus deadline, created, and updated timestamps when present. `get_task` for an id the caller does not own, or that does not exist, MUST be a not-found tool error and MUST NOT say the row is forbidden or include the other user's title or body. MorphNotes `CaseTask` rows MUST NOT be returned.
+`list_my_tasks` and `get_task` MUST read `user_note_todo` rows for the verified JWT subject only. Every such query MUST constrain the WHERE clause with that subject (`plat_users.id`), joined to an active Tran `User` (`Deactivated = 0`) on email. They MUST NOT use a request user id, an email claim as a substitute for the subject, an `X-User-ID` header, or a default user id, and they MUST NOT create a `User` row. The owner predicate MUST live in one function so it can later call the shared visibility helper from #69. `list_my_tasks` MUST accept optional `type` (`all`, `note`, or `todo`), optional `status` (`all`, `open`, or `done`), and optional `limit`. The default limit is 50 and the applied limit MUST NOT exceed 100. Each task object MUST include id, title, status (`open` or `done`), item type, and the text body stored in SQLite, plus deadline, created, and updated timestamps when present. `get_task` for an id the caller does not own, or that does not exist, MUST be a not-found tool error and MUST NOT say the row is forbidden or include the other user's title or body. MorphNotes `CaseTask` rows MUST NOT be returned.
 
 #### Scenario: List returns only mine
 - **WHEN** the database has notes or todos for the caller and for another user

@@ -482,6 +482,8 @@ func childEnv(extra ...string) []string {
 		"JWT_SECRET":            true,
 		"MORPH_MCP_STDIO_CHILD": true,
 		"TRAN_SQLITE_PATH":      true,
+		"MORPH_ENV":             true,
+		"JWT_EXPIRY_HOURS":      true,
 	}
 	var out []string
 	for _, entry := range os.Environ() {

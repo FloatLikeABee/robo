@@ -32,15 +32,38 @@ type Identity struct {
 	Roles    []string
 }
 
-// IdentityFromEnv reads TokenEnv and verifies it with auth.LoadTokenConfig.
+// IdentityFromEnv reads TokenEnv and verifies it with auth.LoadTokenConfig
+// and auth.DecodeToken (signature, exp, and the production lifetime cap).
 // JWT_SECRET must be the same value the Morph API used to sign the token.
 // An empty secret or the built-in development default is refused before
-// LoadTokenConfig can substitute that default.
+// LoadTokenConfig can substitute that default. In production the secret
+// strength and JWT_EXPIRY_HOURS rules from config.ValidateStartup apply too.
 func IdentityFromEnv() (Identity, error) {
-	if err := RejectJWTSecret(os.Getenv("JWT_SECRET")); err != nil {
+	if err := validateStartupAuth(); err != nil {
 		return Identity{}, err
 	}
 	return ResolveIdentity(os.Getenv(TokenEnv), auth.LoadTokenConfig())
+}
+
+// validateStartupAuth applies the same JWT gate as morph-api main before
+// DecodeToken runs. Admin password rules stay on the API: this process
+// never reads ADMIN_PASSWORD.
+func validateStartupAuth() error {
+	prod, err := config.ParseMorphEnv()
+	if err != nil {
+		return err
+	}
+	secret := os.Getenv("JWT_SECRET")
+	if prod {
+		if msg := config.JWTSecretProblem(secret); msg != "" {
+			return errors.New(msg)
+		}
+		if _, err := config.JWTExpiryHoursFor(true); err != nil {
+			return err
+		}
+		return nil
+	}
+	return RejectJWTSecret(secret)
 }
 
 // RejectJWTSecret fails closed when the secret is empty or the value

@@ -102,9 +102,10 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 	return db, nil
 }
 
-// ListMyTasks returns the caller's user_note_todo rows. An email with no
-// active Tran user yields an empty page, not another user's rows.
-func ListMyTasks(ctx context.Context, db *sql.DB, email string, f TaskFilter) (ListResult, error) {
+// ListMyTasks returns the caller's user_note_todo rows. tokenUserID is the
+// verified JWT subject (plat_users.id). A subject with no active Tran user
+// yields an empty page, not another user's rows.
+func ListMyTasks(ctx context.Context, db *sql.DB, tokenUserID string, f TaskFilter) (ListResult, error) {
 	limit, err := appliedLimit(f.Limit)
 	if err != nil {
 		return ListResult{}, err
@@ -121,11 +122,10 @@ func ListMyTasks(ctx context.Context, db *sql.DB, email string, f TaskFilter) (L
 	if db == nil {
 		return ListResult{}, errors.New("task store is not open")
 	}
-	userID, ok, err := tranUserID(ctx, db, email)
-	if err != nil || !ok {
-		return out, err
+	q, args, ok := listQuery(tokenUserID, itemType, status, limit)
+	if !ok {
+		return out, nil
 	}
-	q, args := listQuery(userID, itemType, status, limit)
 	rows, err := db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return ListResult{}, err
@@ -144,24 +144,22 @@ func ListMyTasks(ctx context.Context, db *sql.DB, email string, f TaskFilter) (L
 	return out, nil
 }
 
-// GetMyTask returns one of the caller's rows. Any other id is ErrNotFound.
-func GetMyTask(ctx context.Context, db *sql.DB, email string, id int) (Task, error) {
+// GetMyTask returns one of the caller's rows. tokenUserID is the verified
+// JWT subject. Any other id is ErrNotFound.
+func GetMyTask(ctx context.Context, db *sql.DB, tokenUserID string, id int) (Task, error) {
 	if db == nil {
 		return Task{}, errors.New("task store is not open")
 	}
 	if id <= 0 {
 		return Task{}, errors.New("invalid id")
 	}
-	userID, ok, err := tranUserID(ctx, db, email)
-	if err != nil {
-		return Task{}, err
-	}
+	clause, clauseArgs, ok := ownerClause(tokenUserID)
 	if !ok {
 		return Task{}, ErrNotFound
 	}
 	row := db.QueryRowContext(ctx, `
 		SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
-		FROM user_note_todo WHERE ID = ? AND UserID = ?`, id, userID)
+		FROM user_note_todo WHERE ID = ? AND `+clause, append([]any{id}, clauseArgs...)...)
 	task, err := scanTask(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Task{}, ErrNotFound
@@ -221,32 +219,33 @@ func normalizeStatus(raw string) (string, error) {
 	}
 }
 
-// tranUserID matches the email branch of handlers.tranUserIDFromContext.
-// ponytail: LIMIT 1 if two active User rows share an email; a unique index is the upgrade.
-// It does not honor ?user_id=, X-User-ID, or the handler's default of user 1, and it does not insert.
-func tranUserID(ctx context.Context, db *sql.DB, email string) (int, bool, error) {
-	email = strings.TrimSpace(email)
-	if email == "" {
-		return 0, false, nil
+// ownerClause is the only owner check in this package. Every user_note_todo
+// read ANDs it into the WHERE clause. tokenUserID is the verified JWT subject
+// (plat_users.id), bound as p.id, so the statement cannot return another
+// user's rows. Issue #69 will add a shared visibility function for REST and
+// MCP. Replace this body with that call; keep ANDing the result here.
+// ponytail: LIMIT 1 if two active User rows share the plat user's email; a unique email index is the upgrade.
+func ownerClause(tokenUserID string) (string, []any, bool) {
+	tokenUserID = strings.TrimSpace(tokenUserID)
+	if tokenUserID == "" {
+		return "", nil, false
 	}
-	var id int
-	err := db.QueryRowContext(ctx, `
-		SELECT UserID FROM "User"
-		WHERE Email IS NOT NULL AND LOWER(TRIM(Email)) = LOWER(?) AND Deactivated = 0
-		LIMIT 1`, email).Scan(&id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, false, nil
-	}
-	if err != nil {
-		return 0, false, err
-	}
-	if id <= 0 {
-		return 0, false, nil
-	}
-	return id, true, nil
+	return `UserID = (
+		SELECT u.UserID
+		FROM "User" AS u
+		INNER JOIN plat_users AS p
+			ON p.email IS NOT NULL
+			AND u.Email IS NOT NULL
+			AND LOWER(TRIM(p.email)) = LOWER(TRIM(u.Email))
+		WHERE p.id = ? AND u.Deactivated = 0
+		LIMIT 1)`, []any{tokenUserID}, true
 }
 
-func listQuery(userID int, itemType, status string, limit int) (string, []any) {
+func listQuery(tokenUserID, itemType, status string, limit int) (string, []any, bool) {
+	clause, args, ok := ownerClause(tokenUserID)
+	if !ok {
+		return "", nil, false
+	}
 	// Order matches handlers.ListUserNotesTodos for the same type filter.
 	order := `ItemType ASC, Completed ASC, (DeadlineAt IS NULL) ASC, DeadlineAt ASC, CreatedOn DESC`
 	if itemType == "note" {
@@ -255,8 +254,7 @@ func listQuery(userID int, itemType, status string, limit int) (string, []any) {
 		order = `Completed ASC, (DeadlineAt IS NULL) ASC, DeadlineAt ASC, CreatedOn DESC`
 	}
 	q := `SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
-		FROM user_note_todo WHERE UserID = ?`
-	args := []any{userID}
+		FROM user_note_todo WHERE ` + clause
 	if itemType != "" {
 		q += ` AND ItemType = ?`
 		args = append(args, itemType)
@@ -269,7 +267,7 @@ func listQuery(userID int, itemType, status string, limit int) (string, []any) {
 	}
 	q += ` ORDER BY ` + order + ` LIMIT ?`
 	args = append(args, limit)
-	return q, args
+	return q, args, true
 }
 
 type scanner interface {

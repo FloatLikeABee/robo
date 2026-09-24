@@ -27,9 +27,9 @@ Missing or invalid tokens fail at startup with a message on stderr. The process 
 
 There is no separate API token yet. Do not commit the JWT. Pass it in the client config, not in git.
 
-`JWT_SECRET` must be set to the same non-default value the API used to sign the token. An empty secret, or the built-in development default `morph-dev-jwt-secret-change-me`, refuses startup. The API substitutes that default when the variable is unset; morph-mcp does not.
+`JWT_SECRET` must be set to the same non-default value the API used to sign the token. An empty secret, or the built-in development default `morph-dev-jwt-secret-change-me`, refuses startup. The API substitutes that default when the variable is unset; morph-mcp does not. Startup verifies the token with `auth.DecodeToken` (signature and `exp`) before it checks `plat_users`. When `MORPH_ENV` is `production`, morph-mcp also applies the API's production JWT secret rules and the 168-hour token lifetime cap. A short local secret is refused in that mode.
 
-On startup the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
+On startup, after the token verifies, the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again, including the production lifetime cap. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
 
 MCP never exposes private data to unauthenticated callers. Task tools run only after the token verifies and the subject exists in `plat_users`. They return that user's own Notes & TODOs, not another user's rows.
 
@@ -59,7 +59,7 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 | `list_my_tasks` | The signed-in user's own Notes & TODOs (`user_note_todo`). Optional `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), and `limit` (default 50, capped at 100). |
 | `get_task` | One of those rows by integer `id`. |
 
-`list_my_tasks` and `get_task` are not the shared MorphNotes Tasks board (`CaseTask`). That board has no per-user owner. These tools resolve the Tran `User` by the token email and return only that user's notes and todos. The text body is the SQLite column. Another user's id is not found. The tools do not say the row is forbidden, and they do not create a user row.
+`list_my_tasks` and `get_task` are not the shared MorphNotes Tasks board (`CaseTask`). That board has no per-user owner. These tools scope every query by the token subject (`plat_users.id`), joined to that user's active Tran `User`, and return only that user's notes and todos. The text body is the SQLite column. Another user's id is not found. The tools do not say the row is forbidden, and they do not create a user row.
 
 ## Cursor
 

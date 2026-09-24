@@ -130,7 +130,7 @@ func listMyTasks(id Identity, tasks *sql.DB, recheck func() error) func(context.
 		if err := callRecheck(recheck); err != nil {
 			return nil, ListResult{}, err
 		}
-		out, err := ListMyTasks(ctx, tasks, id.Email, TaskFilter{Type: in.Type, Status: in.Status, Limit: in.Limit})
+		out, err := ListMyTasks(ctx, tasks, id.UserID, TaskFilter{Type: in.Type, Status: in.Status, Limit: in.Limit})
 		if err != nil {
 			return nil, ListResult{}, err
 		}
@@ -143,7 +143,7 @@ func getTask(id Identity, tasks *sql.DB, recheck func() error) func(context.Cont
 		if err := callRecheck(recheck); err != nil {
 			return nil, Task{}, err
 		}
-		task, err := GetMyTask(ctx, tasks, id.Email, in.ID)
+		task, err := GetMyTask(ctx, tasks, id.UserID, in.ID)
 		if err != nil {
 			return nil, Task{}, err
 		}

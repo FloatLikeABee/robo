@@ -25,7 +25,7 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = ro.Close() })
 
-	listed, err := mcp.ListMyTasks(ctx, ro, "Ada@Example.com", mcp.TaskFilter{})
+	listed, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{})
 	if err != nil {
 		t.Fatalf("ListMyTasks: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 		t.Fatalf("list leaked another row: %s", blob)
 	}
 
-	openOnly, err := mcp.ListMyTasks(ctx, ro, "ada@example.com", mcp.TaskFilter{Status: "open"})
+	openOnly, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{Status: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 		t.Fatalf("dates = %+v", openOnly.Tasks[0])
 	}
 
-	capped, err := mcp.ListMyTasks(ctx, ro, "ada@example.com", mcp.TaskFilter{Limit: 500})
+	capped, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{Limit: 500})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 		t.Fatalf("cap = %+v len %d", capped.Limit, len(capped.Tasks))
 	}
 
-	mine, err := mcp.GetMyTask(ctx, ro, "ada@example.com", openOnly.Tasks[0].ID)
+	mine, err := mcp.GetMyTask(ctx, ro, "ada-id", openOnly.Tasks[0].ID)
 	if err != nil {
 		t.Fatalf("GetMyTask: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 	if err := writer.QueryRow(`SELECT ID FROM user_note_todo WHERE Title = 'Bea private'`).Scan(&beaID); err != nil {
 		t.Fatal(err)
 	}
-	_, err = mcp.GetMyTask(ctx, ro, "ada@example.com", beaID)
+	_, err = mcp.GetMyTask(ctx, ro, "ada-id", beaID)
 	if !errors.Is(err, mcp.ErrNotFound) {
 		t.Fatalf("foreign get = %v", err)
 	}
@@ -92,12 +92,43 @@ func TestMyTasksAreScopedReadOnlyAndVisibleBesideWAL(t *testing.T) {
 	if _, err := writer.Exec(`INSERT INTO user_note_todo (UserID, ItemType, Title, Body, Completed) VALUES (1, 'note', 'Ada later', 'still mine', 0)`); err != nil {
 		t.Fatalf("writer commit: %v", err)
 	}
-	again, err := mcp.ListMyTasks(ctx, ro, "ada@example.com", mcp.TaskFilter{Type: "note"})
+	again, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{Type: "note"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(again.Tasks) != 1 || again.Tasks[0].Title != "Ada later" {
 		t.Fatalf("note filter after WAL commit = %+v", again.Tasks)
+	}
+
+	bea, err := mcp.ListMyTasks(ctx, ro, "bea-id", mcp.TaskFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaBlob := taskBlob(bea.Tasks)
+	if !strings.Contains(beaBlob, "Bea private") || strings.Contains(beaBlob, "Ada open") || strings.Contains(beaBlob, "Ada later") {
+		t.Fatalf("bea list = %s", beaBlob)
+	}
+
+	injected, err := mcp.ListMyTasks(ctx, ro, "ada-id' OR 1=1 --", mcp.TaskFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(injected.Tasks) != 0 {
+		t.Fatalf("injection returned rows: %+v", injected.Tasks)
+	}
+	if _, err := mcp.GetMyTask(ctx, ro, "ada-id' OR 1=1 --", openOnly.Tasks[0].ID); !errors.Is(err, mcp.ErrNotFound) {
+		t.Fatalf("injection get = %v", err)
+	}
+
+	if _, err := writer.Exec(`UPDATE "User" SET Deactivated = 1 WHERE Email = 'ada@example.com'`); err != nil {
+		t.Fatal(err)
+	}
+	gone, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gone.Tasks) != 0 {
+		t.Fatalf("deactivated user still listed: %+v", gone.Tasks)
 	}
 }
 
@@ -153,6 +184,72 @@ func TestConfirmPlatUserRejectsDeletedSubject(t *testing.T) {
 	t.Cleanup(func() { _ = ro.Close() })
 	if err := mcp.ConfirmPlatUser(ctx, ro, "bea-id"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCheckStartupValidatesJWTBeforeServing(t *testing.T) {
+	path, _ := seedTwoUsers(t)
+	ctx := context.Background()
+	secret := "0123456789abcdef0123456789abcdef"
+	t.Setenv("TRAN_SQLITE_PATH", path)
+	t.Setenv("MORPH_ENV", "production")
+	t.Setenv("JWT_EXPIRY_HOURS", "24")
+	t.Setenv("JWT_SECRET", "stdio-test-secret")
+	t.Setenv(mcp.TokenEnv, "not-a-token")
+	if _, _, err := mcp.CheckStartup(ctx); err == nil {
+		t.Fatal("production accepted a short JWT_SECRET")
+	} else if strings.Contains(err.Error(), "stdio-test-secret") {
+		t.Fatalf("error echoed the secret: %q", err)
+	}
+
+	t.Setenv("JWT_SECRET", secret)
+	t.Setenv("JWT_EXPIRY_HOURS", "876000")
+	if _, _, err := mcp.CheckStartup(ctx); err == nil {
+		t.Fatal("production accepted JWT_EXPIRY_HOURS=876000")
+	}
+
+	t.Setenv("JWT_EXPIRY_HOURS", "24")
+	longLived, err := auth.EncodeToken(auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 876000}, "ada-id", "ada@example.com", "ada", nil, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(mcp.TokenEnv, longLived)
+	if _, _, err := mcp.CheckStartup(ctx); err == nil {
+		t.Fatal("production accepted a token whose lifetime is 876000 hours")
+	} else if strings.Contains(err.Error(), longLived) {
+		t.Fatal("error included the token")
+	}
+
+	other, err := auth.EncodeToken(auth.TokenConfig{Secret: []byte("other-secret-0123456789abcdef"), ExpiryHours: 24}, "ada-id", "ada@example.com", "ada", nil, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(mcp.TokenEnv, other)
+	if _, _, err := mcp.CheckStartup(ctx); err == nil {
+		t.Fatal("accepted a token signed with a different secret")
+	} else if strings.Contains(err.Error(), other) || strings.Contains(err.Error(), "ada-id") {
+		t.Fatalf("error leaked token or subject: %q", err)
+	}
+
+	good, err := auth.EncodeToken(auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}, "ada-id", "ada@example.com", "ada", nil, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(mcp.TokenEnv, good)
+	id, db, err := mcp.CheckStartup(ctx)
+	if err != nil {
+		t.Fatalf("valid production token: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if id.UserID != "ada-id" {
+		t.Fatalf("identity = %+v", id)
+	}
+	listed, err := mcp.ListMyTasks(ctx, db, id.UserID, mcp.TaskFilter{Status: "open"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Tasks) != 1 || listed.Tasks[0].Title != "Ada open" || strings.Contains(taskBlob(listed.Tasks), "Bea private") {
+		t.Fatalf("scoped list = %+v", listed.Tasks)
 	}
 }
 
