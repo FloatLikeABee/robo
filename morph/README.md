@@ -1,6 +1,8 @@
 # Morph AI and MorphNotes
 
-Go API + React SPA. **Morph AI** is the system chat (port **3031**). **MorphNotes** is Tasks, Timelines, Big notes, Generic data, and Settings at `/morphdata`.
+Go API + React SPA. **Morph AI** is the system chat (port **3031**). **MorphNotes** at `/morphdata` is Tasks, Timelines, Big notes, Research, and Generic data.
+
+New accounts are created in Invite Signup at `http://localhost:3051` (`invite-signup-ui`). Nav, Research publish, and redeem/admin flows: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
 
 This is not a Transfinder, school, or SQL Server product. Agent notes: [`docs/agents/03-morph.md`](../docs/agents/03-morph.md).
 
