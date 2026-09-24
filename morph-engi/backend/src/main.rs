@@ -17,6 +17,10 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber).expect("tracing init failed");
 
     let settings = config::Settings::from_env().expect("config");
+    if let Some(reason) = config::production_block_reason(&settings) {
+        eprintln!("refusing to start: {reason}");
+        std::process::exit(1);
+    }
     info!("Starting Morph Engi API on port {}", settings.app_port);
     info!("Morph auth: {}", settings.users_panel_base_url);
 

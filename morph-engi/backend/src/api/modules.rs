@@ -1373,7 +1373,7 @@ use axum::body::Bytes;
 use std::path::PathBuf;
 
 pub async fn upload_resource_file(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     AuthUser(auth): AuthUser,
     mut multipart: axum::extract::Multipart,
 ) -> ApiResult {
@@ -1398,7 +1398,7 @@ pub async fn upload_resource_file(
     }
 
     let bytes = file_bytes.ok_or(json_err("file required"))?;
-    let upload_dir = PathBuf::from("uploads").join(auth.org_id.to_string());
+    let upload_dir = PathBuf::from(&state.settings.upload_dir).join(auth.org_id.to_string());
     tokio::fs::create_dir_all(&upload_dir).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -1427,16 +1427,55 @@ pub async fn upload_resource_file(
     })))
 }
 
+fn not_found() -> (StatusCode, Json<Value>) {
+    (StatusCode::NOT_FOUND, Json(json!({"error": "not found"})))
+}
+
+/// File must stay inside `upload_root/<org_id>` after `..`, absolute names, and symlinks resolve.
+fn safe_upload_path(upload_root: &std::path::Path, org_id: i64, filename: &str) -> Option<PathBuf> {
+    use std::path::{Component, Path};
+    if filename.is_empty() || filename.contains('\0') {
+        return None;
+    }
+    let name = Path::new(filename);
+    if name.is_absolute() {
+        return None;
+    }
+    let mut parts = 0usize;
+    for component in name.components() {
+        match component {
+            Component::Normal(_) => parts += 1,
+            _ => return None,
+        }
+    }
+    if parts == 0 {
+        return None;
+    }
+    let root = std::fs::canonicalize(upload_root).ok()?;
+    let org_root = root.join(org_id.to_string());
+    let org = std::fs::canonicalize(&org_root).ok()?;
+    if !org.starts_with(&root) || org == root {
+        return None;
+    }
+    let file = std::fs::canonicalize(org_root.join(name)).ok()?;
+    if file.starts_with(&org) && file != org {
+        Some(file)
+    } else {
+        None
+    }
+}
+
 pub async fn serve_upload(
+    State(state): State<Arc<AppState>>,
+    AuthUser(auth): AuthUser,
     Path((org_id, filename)): Path<(i64, String)>,
 ) -> Result<axum::response::Response, (StatusCode, Json<Value>)> {
-    let path = PathBuf::from("uploads").join(org_id.to_string()).join(&filename);
-    if !path.exists() {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "not found"})),
-        ));
+    if org_id != auth.org_id {
+        return Err(not_found());
     }
+    let Some(path) = safe_upload_path(std::path::Path::new(&state.settings.upload_dir), org_id, &filename) else {
+        return Err(not_found());
+    };
     let data = tokio::fs::read(&path).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -1456,7 +1495,9 @@ mod tests {
     use crate::middleware::auth::AuthContext;
     use crate::services::{jwt, users_panel, AppState};
     use axum::extract::{Path, State};
+    use axum::http::Request;
     use std::sync::Arc;
+    use tower::ServiceExt;
 
     const ORG: i64 = 1;
 
@@ -1503,6 +1544,7 @@ mod tests {
             cors_origin: "*".into(),
             users_panel_base_url: "http://localhost".into(),
             static_dir: String::new(),
+            upload_dir: "uploads".into(),
             preview_demo: false,
         };
         Arc::new(AppState {
@@ -1572,5 +1614,138 @@ mod tests {
             html,
             "omitting markdown_content must leave html_content unchanged"
         );
+    }
+
+    async fn body_bytes(res: axum::response::Response) -> Vec<u8> {
+        axum::body::to_bytes(res.into_body(), 1024 * 1024)
+            .await
+            .unwrap()
+            .to_vec()
+    }
+
+    #[tokio::test]
+    async fn upload_get_rejects_anonymous_and_path_escape() {
+        let tmp = std::env::temp_dir().join(format!(
+            "morph-engi-upload-{}-{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let upload_root = tmp.join("uploads");
+        let org_dir = upload_root.join(ORG.to_string());
+        std::fs::create_dir_all(&org_dir).unwrap();
+        let secret = tmp.join("morph_engi.db");
+        std::fs::write(&secret, b"SECRET-DB-BYTES").unwrap();
+        std::fs::write(org_dir.join("ok.txt"), b"hello-file").unwrap();
+        std::os::unix::fs::symlink(&secret, org_dir.join("link.db")).unwrap();
+
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        crate::db::migrations::run(&pool).await.unwrap();
+        sqlx::query("INSERT INTO organizations (id, name) VALUES (?, ?)")
+            .bind(ORG)
+            .bind("Org")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let settings = Settings {
+            database_url: "sqlite::memory:".into(),
+            jwt_secret: "test-secret-at-least-32-characters".into(),
+            jwt_access_expiry_min: 60,
+            app_env: "test".into(),
+            app_port: 0,
+            cors_origin: "*".into(),
+            users_panel_base_url: "http://localhost".into(),
+            static_dir: String::new(),
+            upload_dir: upload_root.to_string_lossy().into_owned(),
+            preview_demo: false,
+        };
+        let state = Arc::new(AppState {
+            pool,
+            jwt: jwt::JwtService::new(settings.jwt_secret.clone(), settings.jwt_access_expiry_min),
+            users_panel: users_panel::UsersPanelClient::new(settings.users_panel_base_url.clone()),
+            settings,
+            ai: Arc::new(None),
+        });
+        let token = state.jwt.issue(7, ORG, "admin").unwrap();
+        let app = super::super::router(state);
+
+        let secret_marker = b"SECRET-DB-BYTES";
+        let escapes = [
+            format!("/api/v1/uploads/{ORG}/..%2F..%2Fmorph_engi.db"),
+            format!("/api/v1/uploads/{ORG}/%2e%2e%2f%2e%2e%2fmorph_engi.db"),
+            format!(
+                "/api/v1/uploads/{ORG}/{}",
+                secret
+                    .to_str()
+                    .unwrap()
+                    .bytes()
+                    .map(|b| format!("%{b:02X}"))
+                    .collect::<String>()
+            ),
+            format!("/api/v1/uploads/{ORG}/link.db"),
+        ];
+
+        for uri in &escapes {
+            let res = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(uri)
+                        .body(axum::body::Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let status = res.status();
+            let body = body_bytes(res).await;
+            assert!(
+                status == StatusCode::UNAUTHORIZED
+                    || status == StatusCode::FORBIDDEN
+                    || status == StatusCode::NOT_FOUND,
+                "{uri} anonymous status {status}"
+            );
+            assert!(
+                !body.windows(secret_marker.len()).any(|w| w == secret_marker),
+                "{uri} anonymous served the database"
+            );
+
+            let res = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(uri)
+                        .header("authorization", format!("Bearer {token}"))
+                        .body(axum::body::Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let status = res.status();
+            let body = body_bytes(res).await;
+            assert!(
+                status == StatusCode::UNAUTHORIZED
+                    || status == StatusCode::FORBIDDEN
+                    || status == StatusCode::NOT_FOUND,
+                "{uri} authed status {status} body {}",
+                String::from_utf8_lossy(&body)
+            );
+            assert!(
+                !body.windows(secret_marker.len()).any(|w| w == secret_marker),
+                "{uri} authed served the database"
+            );
+        }
+
+        let ok = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/v1/uploads/{ORG}/ok.txt"))
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(ok.status(), StatusCode::OK);
+        assert_eq!(body_bytes(ok).await, b"hello-file");
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

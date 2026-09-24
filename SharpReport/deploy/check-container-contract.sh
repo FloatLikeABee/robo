@@ -113,9 +113,9 @@ if any("key: VITE_DATAX_URL" in line for line in lines):
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport"]:
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport", "morph-engi"]:
     errors.append(
-        "service names must be morph, morph-utils, formx, composerx, sharpreport, got "
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, morph-engi, got "
         + ", ".join(names)
     )
 

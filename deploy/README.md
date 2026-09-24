@@ -121,7 +121,7 @@ Open `https://<the service host>/health`. It must return HTTP 200 and a JSON bod
 
 ## MorphUtils on Render
 
-The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Do not add Project. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `morph-engi` service. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
 
 ### Env
 
@@ -134,8 +134,8 @@ The product owner creates the shell. This repo does not call Render. After merge
 | `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Do not set this on `morph-utils`. |
 | `VITE_COMPOSERX_URL` | no | Content Maker origin. This change does not set it on `morph-utils`. #114 uses `https://<composerx public host>`. |
 | `VITE_DATAX_URL` | no | Data Access origin. Do not set this on `morph-utils`. The placeholder for story #114 is `https://<sharpreport public host>`. |
-| `VITE_PROJECTS_URL` | no | Project origin. Alias: `VITE_MORPH_ENGI_URL`. Not a service in this Blueprint. |
-| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. |
+| `VITE_PROJECTS_URL` | no | Leave unset. Story #114 sets this to `https://<morph-engi public host>`. Alias: `VITE_MORPH_ENGI_URL`. |
+| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. Leave unset. |
 | `VITE_MORPH_AI_URL` | no | Morph AI origin, if the header link in the shell should leave MorphUtils. |
 
 Set `VITE_MORPH_API_URL` in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. With the embed variables unset, those modules stay blank. `GET /health` does not call them.
@@ -252,3 +252,30 @@ Use Render disk snapshots of `sharpreport-data` before an upgrade you may need t
 ### Public URL
 
 After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<sharpreport public host>`. #114 sets that origin as `VITE_DATAX_URL` on MorphUtils. This change does not set `VITE_DATAX_URL`. Do not guess an `onrender.com` host from the service name.
+
+## Project on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-engi` (Singapore, starter) after `morph-utils`. Render builds `morph-engi/Dockerfile` with context `.`. Deploys from `main` run only after CI checks pass. The MorphUtils module id is `projects`. This Blueprint does not set `VITE_PROJECTS_URL` or `VITE_MORPH_ENGI_URL`.
+
+### Env
+
+| Key | Required | Value |
+|-----|----------|--------|
+| `PORT` | yes | `9096`. Do not set `MORPH_ENGI_PORT`; it overrides `PORT`, and the image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
+| `APP_ENV` | yes | `production`. A development `JWT_SECRET` or a loopback Morph API base then refuses to listen. |
+| `STATIC_DIR` | yes | `/app/frontend/dist`. The API serves the UI on the same origin. |
+| `MORPH_ENGI_DATABASE_URL` | yes | `sqlite:///data/morph_engi.db` |
+| `MORPH_ENGI_UPLOAD_DIR` | yes | `/data/uploads` |
+| `USERS_PANEL_BASE_URL` | yes | `https://<morph public host>`, no path. This is the public Morph API origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
+| `JWT_SECRET` | yes | The same value as Morph. At least 32 characters. Dashboard prompt, no value in git. |
+| `MORPH_AI_API_KEY` | no | Dashboard prompt, no value in git. `/health` succeeds without it. AI project documents do not. |
+
+### Disk
+
+`morph-engi-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service is a single instance. Do not scale it out. The entrypoint starts as root, creates `/data/uploads`, gives `/data` to uid 65532, and then runs the server as that user.
+
+### Public URL
+
+`GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder for story #114 is `https://<morph-engi public host>`. #114 sets that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on MorphUtils. This change does not set those variables.
+
+Local image build, without Render: `DOCKER_BUILDKIT=1 docker build -f morph-engi/Dockerfile -t morph-engi:local .` from the repo root. BuildKit is required so `morph-engi/Dockerfile.dockerignore` is used instead of the root ignore file. Fill `morph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.

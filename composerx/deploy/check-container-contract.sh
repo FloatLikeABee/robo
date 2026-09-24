@@ -87,9 +87,9 @@ if "REACT_APP_MORPH_UTILS_URL" in text and "key: REACT_APP_MORPH_UTILS_URL" in t
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport"]:
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport", "morph-engi"]:
     errors.append(
-        "service names must be morph, morph-utils, formx, composerx, sharpreport, got "
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, morph-engi, got "
         + ", ".join(names)
     )
 
