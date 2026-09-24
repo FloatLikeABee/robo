@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL as API_BASE } from '../apiBase';
 import { getMorphToken, clearMorphSession } from '../auth/morphSession';
+import { safeReturnPath } from '../auth/returnTo';
 
 export const tranApi = axios.create({
   baseURL: API_BASE,
@@ -25,13 +26,12 @@ tranApi.interceptors.response.use(
     const status = err.response?.status;
     const url = String(err.config?.url || '');
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    const onMorphData =
-      path.startsWith('/morphdata') || path.startsWith('/forms') || path.startsWith('/transfinderx');
-    // Morph Data is usable without login; do not bounce to Morph AI login on API 401.
-    if (status === 401 && !url.includes('/api/auth/login') && !onMorphData) {
+    if (status === 401 && !url.includes('/api/auth/login') && path !== '/login') {
       clearMorphSession();
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.assign('/login');
+      if (typeof window !== 'undefined') {
+        const here = window.location.pathname + window.location.search + window.location.hash;
+        const returnTo = safeReturnPath(here) || '/';
+        window.location.assign(`/login?returnTo=${encodeURIComponent(returnTo)}`);
       }
     }
     return Promise.reject(err);

@@ -8,6 +8,12 @@ Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update 
 - Rule: `$$` is a Compose escape, not a Dockerfile one. Shell-form `HEALTHCHECK` is `/bin/sh -c`, so `$$PORT` requests `<pid>PORT`. Use `${PORT}` and let sh expand the runtime port. `deploy/check-container-contract.sh` rejects `$$` in the Dockerfile.
 - Source: [containerize Morph](current)
 
+## 2026-09-24 — morphai env copies are snapshots
+
+- Trigger: `LoadFromEnv` then a named provider; `MORPH_AI_BASE_URL`, compatible `MORPH_AI_API_URL`, or a key that rotated after load
+- Rule: Snapshot the key and base URL at load. The empty-provider path is the only sender. A named provider drops a field that still equals its snapshot and uses that provider's own env or default. Do not re-read legacy env to decide whether the field is caller-set. A base or key written on `Config` or the call is kept.
+- Source: [morphai re-check base provenance](current)
+
 ## 2026-09-22 — Morph AI has no Files workspace
 
 - Trigger: Morph AI agent shell Files tab, Open folder, recents, local-folder pins, composer Files chip, IndexedDB `morphai-files-workspace`

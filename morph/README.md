@@ -12,7 +12,7 @@ This is not a Transfinder, school, or SQL Server product. Agent notes: [`docs/ag
 |-------|--|
 | Backend | Go, Gin, Badger, SQLite (`TRAN_SQLITE_PATH`) |
 | Frontend | React 18 (CRA) |
-| Auth | Morph JWT + bcrypt (`plat_users` in SQLite). Chat, admin, and writes on `/api/tran`, `/api/forms`, `/api/knowledge`, and `/api/graph` require that JWT. `X-User-*` headers are not a session. List reads and published HTML GETs stay reachable without it (see below). |
+| Auth | Morph JWT + bcrypt (`plat_users` in SQLite). Chat, admin, and every method on `/api/tran`, `/api/forms`, `/api/knowledge`, and `/api/graph` require that JWT. `X-User-*` headers are not a session. Published HTML GETs stay reachable without it (see below). |
 
 Ports: API **9090**, UI **3031**.
 
@@ -49,15 +49,15 @@ Relative `./data/...` paths are cwd-relative.
 
 ## API auth
 
-`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` need a Morph JWT. Research create and publish are in that set. Chat and admin need a Morph JWT as well. `X-User-ID`, `X-User-Role`, and `X-User-Email` do not authenticate and do not override the token. `GET` and `HEAD` on those prefixes still work without a session (MorphNotes lists are not behind login).
+Every method on `/api/tran/*`, `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` needs a Morph JWT, including lists, details, downloads, and `GET /api/graph/health`. Research create and publish are in that set. Chat and admin need a Morph JWT as well. `X-User-ID`, `X-User-Role`, and `X-User-Email` do not authenticate and do not override the token. MorphNotes (`/morphdata`) sends a signed-out browser to login and back. No new environment variable. Local login is unchanged.
 
-Published pages are an allowlist, not the whole `/api/tran/public/` prefix. With no session, only `GET` and `HEAD` of:
+Published pages are an allowlist, not the whole `/api/tran/public/` prefix. With no session, only `GET` and `HEAD` of a record whose published slug is set:
 
 - `/api/tran/public/big-notes/:slug`
 - `/api/tran/public/timelines/:slug`
 - `/api/tran/public/research/:slug`
 
-The SPA sends `Authorization: Bearer` from the Morph cookie when the user is signed in. Details: [`docs/agents/01-auth-flow.md`](../docs/agents/01-auth-flow.md).
+Those three routes are the only anonymous data reads on this API. The SPA sends `Authorization: Bearer` from the Morph cookie when the user is signed in. Details: [`docs/agents/01-auth-flow.md`](../docs/agents/01-auth-flow.md).
 
 ## Swagger
 

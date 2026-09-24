@@ -31,7 +31,7 @@ Identity is claims-only. The server trusts the verified claims (`sub`, email, us
 
 Rotating `JWT_SECRET` or letting the token expire only blocks new launches. It does not stop a morph-mcp that is already running. To revoke access immediately, stop or restart the running morph-mcp processes. The MCP client relaunches them, and the new process checks the token again. There is no per-user revoke list in this build.
 
-MCP never exposes private data to unauthenticated callers. This skeleton does not read MorphNotes or other private stores. Do not add a tool that returns private data before the caller has a verified token.
+MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). This build does not read MorphNotes or other private stores. Do not add a tool that returns a record without calling `ExposeRecord`.
 
 On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config.
 

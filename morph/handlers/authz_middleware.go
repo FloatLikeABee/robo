@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"idongivaflyinfa/auth"
+	"idongivaflyinfa/publish"
 
 	"github.com/gin-gonic/gin"
 )
@@ -103,19 +104,14 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 
 		scope, ok := h.resolveUserScope(c)
 
-		// Former open data APIs. Unsafe methods need a session. GET/HEAD stay
-		// reachable without one so MorphNotes can still list records. Anything
-		// under /api/tran/public/ that is not on the allowlist is not a private read.
+		// Private Morph data. Every method needs a session, including GET and HEAD.
+		// Published pages return earlier through publish.PageRoute.
 		if isMorphDataAPI(path) {
-			if strings.HasPrefix(path, "/api/tran/public/") || !isSafeMethod(c.Request.Method) {
-				if !ok {
-					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
-					return
-				}
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+				return
 			}
-			if ok {
-				h.applyAuthScope(c, scope)
-			}
+			h.applyAuthScope(c, scope)
 			c.Next()
 			return
 		}
@@ -139,21 +135,13 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 	}
 }
 
-// morphDataAPIPrefixes used to skip auth entirely (isOpenMorphDataAPI).
-// Writes on these prefixes now require a session. Reads do not.
+// morphDataAPIPrefixes are private. Every method requires a session.
+// Published HTML is publish.PageRoute, not these prefixes.
 var morphDataAPIPrefixes = []string{
 	"/api/tran/",
 	"/api/forms/",
 	"/api/knowledge/",
 	"/api/graph/",
-}
-
-// publicMorphReadKinds are the only unauthenticated published pages.
-// A new public route must be added here and registered as GET.
-var publicMorphReadKinds = map[string]struct{}{
-	"big-notes": {},
-	"timelines": {},
-	"research":  {},
 }
 
 func isMorphDataAPI(path string) bool {
@@ -165,36 +153,20 @@ func isMorphDataAPI(path string) bool {
 	return false
 }
 
-func isSafeMethod(method string) bool {
-	return method == http.MethodGet || method == http.MethodHead
-}
-
 // isPublicMorphRead is the allowlist for published HTML.
-// Only GET and HEAD of /api/tran/public/{kind}/{slug} match.
-// Other methods and unknown kinds under /api/tran/public/ are not public.
+// The rule lives in publish.PageRoute so MCP can call the same package.
 func isPublicMorphRead(method, path string) bool {
-	if method != http.MethodGet && method != http.MethodHead {
-		return false
-	}
-	rest, ok := strings.CutPrefix(path, "/api/tran/public/")
-	if !ok || rest == "" {
-		return false
-	}
-	kind, slug, ok := strings.Cut(rest, "/")
-	if !ok || kind == "" || slug == "" || strings.Contains(slug, "/") {
-		return false
-	}
-	if _, known := publicMorphReadKinds[kind]; !known {
-		return false
-	}
-	if isDotPathSegment(kind) || isDotPathSegment(slug) {
-		return false
-	}
-	return true
+	return publish.PageRoute(method, path)
 }
 
-func isDotPathSegment(segment string) bool {
-	return segment == "." || segment == ".." || strings.Contains(segment, "..")
+// requireSessionUserID is the chat user id. An empty id is not admin.
+func requireSessionUserID(c *gin.Context) (string, bool) {
+	id := strings.TrimSpace(c.GetHeader("X-User-ID"))
+	if id == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return "", false
+	}
+	return id, true
 }
 
 func (h *Handlers) applyAuthScope(c *gin.Context, scope userScope) {

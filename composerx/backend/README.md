@@ -27,7 +27,7 @@ cp ../../.env.example ../../.env
 
 ## AI
 
-DashScope / Qwen via [`pkg/morphai`](../../pkg/morphai):
+Default DashScope / Qwen via [`pkg/morphai`](../../pkg/morphai). The same client can select a named provider; see that README.
 
 ```bash
 MORPH_AI_API_KEY=sk-your-dashscope-key
