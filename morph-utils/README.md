@@ -69,7 +69,7 @@ With the embed variables unset, the production shell does not point those module
 
 The product owner creates the shell. This repo does not call Render. After merge, sync `render.yaml` on `main` in Render project `prj-dahc33dbedkc73a1v8n0`. That adds the Docker web service `morph-utils`. The same steps are in `deploy/README.md`.
 
-`PORT` is `3040`. `VITE_MORPH_API_URL` is required and is not a secret: set it to `https://<morph public host>` (no path), then restart so `/config.js` is rewritten. `VITE_USERS_PANEL_API_URL` is the optional alias, used only when the primary is unset or blank. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on this service. Story #114 sets them to `https://<event-logs public host>` after Event Logs (`formx`) is up. Content Maker, Data Access, and Project are not services in this Blueprint:
+`PORT` is `3040`. `VITE_MORPH_API_URL` is required and is not a secret: set it to `https://<morph public host>` (no path), then restart so `/config.js` is rewritten. `VITE_USERS_PANEL_API_URL` is the optional alias, used only when the primary is unset or blank. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on this service. Story #114 sets them to `https://<event-logs public host>` after Event Logs (`formx`) is up. Content Maker is the `composerx` service. This change does not set `VITE_COMPOSERX_URL` on `morph-utils`. Data Access and Project are not services in this Blueprint:
 
 | Variable | Module |
 |----------|--------|

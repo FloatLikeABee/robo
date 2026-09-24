@@ -1,0 +1,19 @@
+# Local Content Maker image. Does not start Morph or MorphUtils.
+services:
+  composerx:
+    build:
+      context: ..
+      dockerfile: composerx/Dockerfile
+    env_file:
+      - path: deploy/.env.production
+        required: false
+    environment:
+      PORT: "8043"
+      COMPOSERX_PORT: "8043"
+    ports:
+      - "127.0.0.1:${COMPOSERX_PUBLISH_PORT:-8043}:8043"
+    volumes:
+      - composerx-data:/data
+
+volumes:
+  composerx-data:
