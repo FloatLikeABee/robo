@@ -29,6 +29,8 @@ jobs:
           persist-credentials: false
       - name: Contract
         run: sh deploy/check-container-contract.sh
+      - name: MorphUtils stack runbook
+        run: sh deploy/check-stack-runbook.sh
       - name: Data Access contract
         run: sh SharpReport/deploy/check-container-contract.sh
       - name: Blueprint schema

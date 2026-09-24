@@ -119,6 +119,64 @@ Use Render disk snapshots of `morph-data`. Take a snapshot before an upgrade you
 
 Open `https://<the service host>/health`. It must return HTTP 200 and a JSON body with `"status": "healthy"`. The same path is the container healthcheck. `GET /` is the Morph AI UI.
 
+## MorphUtils stack on Render
+
+Forge must not create services on Render. The product owner creates the services in Render project `prj-dahc33dbedkc73a1v8n0` (Prod). This repository does not call Render.
+
+`morph` is already the Morph panel. Example already live (example, do not recreate): `https://morph-gjmb.onrender.com`. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name.
+
+### 1. Sync the Blueprint
+
+After this file is on `main`, sync `render.yaml` in that project. One sync creates any missing service:
+
+| Service | Product |
+|---------|---------|
+| `morph-utils` | MorphUtils |
+| `formx` | Event Logs |
+| `composerx` | Content Maker |
+| `sharpreport` | Data Access |
+| `morph-engi` | Project |
+
+If a service is already there, the sync updates it. Do not create a second copy.
+
+### 2. Copy each public HTTPS origin
+
+After the service is live, open the URL the dashboard shows. `GET /health` must succeed (`morph-utils` returns a body of `ok`; the others return HTTP 200). Write the origin down outside git. These hosts are examples the product owner already created. They are not required names.
+
+| Service | Product | Health | Example already live (example, do not recreate) |
+|---------|---------|--------|--------------------------------------------------|
+| `morph-utils` | MorphUtils | `GET /health` body `ok` | `https://morph-utils.onrender.com` |
+| `formx` | Event Logs | `GET /health` | `https://formx-vucj.onrender.com` |
+| `composerx` | Content Maker | `GET /health` | `https://composerx.onrender.com` |
+| `sharpreport` | Data Access | `GET /health` | `https://sharpreport.onrender.com` |
+| `morph-engi` | Project | `GET /health` | `https://morph-engi.onrender.com` |
+
+### 3. Dashboard env the create step can drop
+
+A Blueprint create can drop nested env vars. After create, open each service. If `USERS_PANEL_BASE_URL` is missing or blank on `formx`, `composerx`, `sharpreport`, or `morph-engi`, set it in the dashboard to `https://<morph public host>` with no path. The Morph panel example above is one such origin. It is not a secret. Save so that service starts again. `GET /health` does not call Morph, so a green health check does not prove this key is set.
+
+On `morph-utils`, set `VITE_MORPH_API_URL` to `https://<morph public host>` when it is missing or blank, then restart. The entrypoint rewrites `/config.js`. A MorphUtils image rebuild is not required for that key.
+
+Do not put a JWT, password, or API key in git. Fill those prompts in the dashboard only.
+
+### 4. Rebuild Morph after the MorphUtils origin exists
+
+Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not add this key to `render.yaml`. Do not commit the URL.
+
+### 5. Env matrix for story #114
+
+Leave these `VITE_*` keys unset on `morph-utils` in this change. Story #114 sets them. They are read when the MorphUtils container starts, so a later change does not require a MorphUtils image rebuild. Fill the recorded origin outside git.
+
+| Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
+|-----|---------|-------------|--------------------------------------------------|-----------------|
+| `REACT_APP_MORPH_UTILS_URL` (on `morph`; Morph image rebuild is required) | MorphUtils | `https://<morph-utils public host>` | `https://morph-utils.onrender.com` | |
+| `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
+| `VITE_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
+| `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
+| `VITE_PROJECTS_URL` (alias `VITE_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
+
+The sections below keep the per-service port, disk, and secret tables. Those sections still do not set `REACT_APP_MORPH_UTILS_URL` in the Blueprint.
+
 ## MorphUtils on Render
 
 The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `morph-engi` service. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
