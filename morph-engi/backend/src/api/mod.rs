@@ -88,12 +88,12 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/flow-log/entries", post(flow_log::create_entry))
         .route("/flow-log/entries/:id", delete(flow_log::delete_entry))
         .route("/flow-log/summary", get(flow_log::summary))
+        .route("/uploads/:org_id/:filename", get(modules::serve_upload))
         .layer(middleware::from_fn_with_state(state.clone(), auth_layer));
 
     let app = Router::new()
         .route("/health", get(|| async { axum::Json(serde_json::json!({"status":"ok","service":"morph-engi-api"})) }))
         .route("/api/v1/health", get(|| async { axum::Json(serde_json::json!({"status":"ok"})) }))
-        .route("/api/v1/uploads/:org_id/:filename", get(modules::serve_upload))
         .route("/api/v1/public/projects/:slug", get(project_docs::serve_public_project))
         .nest("/api/v1", api)
         .with_state(state.clone());
