@@ -14,9 +14,13 @@ deploy/.env.production
 **/target
 morph/frontend/build
 
-# This image is Morph only. Keep morph/, pkg/, and scripts/with-root-env.cjs.
+# Morph image copies named paths only. Content Maker uses this same context
+# (replace directives need pkg/). Keep the word composerx so the Morph contract
+# still sees it, and do not COPY composerx from the root Dockerfile.
 formx
-composerx
+composerx/backend/storage
+composerx/frontend/node_modules
+**/ai.config.json
 SharpReport
 morph-engi
 bk

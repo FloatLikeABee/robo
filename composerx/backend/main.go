@@ -89,9 +89,10 @@ func isAllowedDevOrigin(origin string) bool {
 		strings.HasPrefix(u, "https://127.0.0.1:")
 }
 
-func requireTranmailAccess(usersPanelBaseURL string) gin.HandlerFunc {
+func requireTranmailAccess(usersPanelBaseURL string, uiPaths map[string]struct{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/health" || strings.HasPrefix(c.Request.URL.Path, "/auth/") || strings.HasPrefix(c.Request.URL.Path, "/public/") {
+		path := c.Request.URL.Path
+		if path == "/health" || strings.HasPrefix(path, "/auth/") || strings.HasPrefix(path, "/public/") || uiPathOpen(uiPaths, path) {
 			c.Next()
 			return
 		}
@@ -251,7 +252,8 @@ func main() {
 	router.Use(corsMiddleware())
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(requireTranmailAccess(cfg.UsersPanelBaseURL))
+	uiPaths := map[string]struct{}{}
+	router.Use(requireTranmailAccess(cfg.UsersPanelBaseURL, uiPaths))
 
 	emailBodies := NewEmailContentStore(badgerDB)
 	refDocs := NewReferenceDocsStore(badgerDB)
@@ -271,8 +273,9 @@ func main() {
 	}
 
 	app.registerRoutes()
+	mountContentMakerUI(router, getEnv("COMPOSERX_UI_DIR", ""), uiPaths)
 
-	port := getEnv("COMPOSERX_PORT", "8043")
+	port := httpListenPort()
 	log.Printf("ComposerX listening on :%s (sqlite=%s badger=%s)", port, cfg.SQLitePath, cfg.BadgerPath)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to start HTTP server on %s: %v", port, err)

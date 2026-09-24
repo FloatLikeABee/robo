@@ -27,6 +27,9 @@ fi
 if grep -E '^[[:space:]]*ARG[[:space:]]+(JWT_SECRET|ADMIN_PASSWORD|MORPH_AI_API_KEY|GEMINI_API_KEY|BOOTSTRAP_ADMIN_PASSWORD)\b' "$df" >/dev/null; then
   fail "Dockerfile must not take secrets as ARG"
 fi
+if grep -E '^[[:space:]]*COPY[[:space:]].*composerx' "$df" >/dev/null; then
+  fail "Morph Dockerfile must not copy composerx"
+fi
 
 ignore="$root/.dockerignore"
 [ -f "$ignore" ] || fail "missing .dockerignore"

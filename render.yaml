@@ -119,3 +119,50 @@ services:
       # Public Morph origin, filled in the dashboard. Not a secret.
       - key: VITE_MORPH_API_URL
         sync: false
+
+  # Content Maker API + UI. SQLite and Badger need the disk. One instance.
+  - type: web
+    runtime: docker
+    name: composerx
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./composerx/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - composerx/**
+        - pkg/**
+        - composerx/Dockerfile
+        - .dockerignore
+        - composerx/deploy/docker-entrypoint.sh
+        - render.yaml
+    disk:
+      name: composerx-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8043"
+      - key: COMPOSERX_PORT
+        value: "8043"
+      - key: GIN_MODE
+        value: release
+      - key: COMPOSERX_SQLITE_PATH
+        value: /data/composerx.sqlite
+      - key: COMPOSERX_BADGER_PATH
+        value: /data/composerx_badger
+      - key: TRAN_FILE_STORAGE_PATH
+        value: /data/storage
+      # Public Morph origin, no path. Not a secret. Do not invent the host.
+      - key: USERS_PANEL_BASE_URL
+        sync: false
+      - key: MORPH_AI_API_KEY
+        sync: false
+      - key: TRAN_QWEN_API_KEY
+        sync: false
+      - key: TRAN_OPENAI_API_KEY
+        sync: false
