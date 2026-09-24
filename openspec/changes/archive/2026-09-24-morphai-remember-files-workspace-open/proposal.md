@@ -1,3 +1,6 @@
+> **Superseded** by `morphai-drop-files-workspace`. This change specified Morph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+> Pane open/closed and Notes or Knowledge tab persistence remain current and are restated by `morphai-drop-files-workspace`. A stored `files` tab means Context & Knowledge. That is not a reason to restore the Files tab.
+
 ## Why
 
 Morph AI operators who work with the right-hand **Files** workspace lose that layout when they come back. Folder bindings already survive in IndexedDB, but the workspace tab is only stored in `sessionStorage` (gone when the browser closes), and there is no persisted preference for whether the right workspace pane is open. Returning users should land on the same Files workspace they left—not an empty default.

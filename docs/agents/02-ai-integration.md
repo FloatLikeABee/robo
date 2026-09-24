@@ -4,7 +4,7 @@
 
 **Morph AI** (`morph/frontend`, port 3031) is the system chat. MorphUtils modules (Event Logs, Content Maker, Data Access, Project) do **not** ship a floating `@robo/platform-chat` drawer. Compose/progress UIs may copy a local `aiProgress` helper for status text.
 
-Backends still use shared DashScope clients for in-app LLM features (compose, tools, generate-document).
+Backends still use the shared Go client for in-app LLM features (compose, tools, generate-document). The default env path is DashScope. A named provider is optional.
 
 ```
   Morph AI UI (:3031)
@@ -16,7 +16,7 @@ Backends still use shared DashScope clients for in-app LLM features (compose, to
   pkg/morphai  (Go)     pkg/morphai-rs  (Rust)
         │
         ▼
-  DashScope / Qwen   (MORPH_AI_API_KEY, default model qwen3-max)
+  Selected provider (default: DashScope / Qwen via MORPH_AI_*, model qwen3-max)
 ```
 
 ## Shared client: `pkg/morphai` (Go)
@@ -33,6 +33,8 @@ if client.Configured() {
 
 Reads `MORPH_AI_API_KEY`, `MORPH_AI_MODEL`, `MORPH_AI_API_URL`, `MORPH_AI_BASE_URL`. Fallbacks: `GEMINI_API_KEY`, `TRAN_QWEN_*`. Default model: `qwen3-max`. ChatCompletion: 120s timeout, 3 retries. Long/vision helpers exist for longer jobs.
 
+Named providers (`openai`, `anthropic`, `xai`, `gemini`, `openrouter`, `ollama`, `dashscope`, `mistral`, `groq`, `openai-compatible`) are selected on `Config.Provider` or per call. Each uses its own env key. A missing key returns `ErrProviderNotConfigured` and is not sent to another vendor. Gemini uses Google's OpenAI-compatible endpoint. Anthropic uses the Messages API. Mistral and Groq are named OpenAI-compatible presets. The library does not store keys; a later resolver can pass an admin/workspace key, then a per-user key, on `Config.APIKey`.
+
 **Used by:** morph, formx, composerx.
 
 See [`pkg/morphai/README.md`](../../pkg/morphai/README.md).
@@ -46,7 +48,7 @@ Path dependency from Data Access and Project. Same env keys. Used for Project do
 - Chat sessions and messages in Morph Badger.
 - Header **Skills** (markdown upload + catalog).
 - **AI tools** workspace can open `bk` (Assistants, RAG, Documents, System).
-- Notes/knowledge belong in MorphNotes and Files workspace tabs, not a duplicate header shortcut.
+- Notes and knowledge belong in MorphNotes and in the agent workspace Notes & TODOs and Context & Knowledge tabs, not a duplicate header shortcut.
 
 ## Leftover `/assistant/chat` APIs
 

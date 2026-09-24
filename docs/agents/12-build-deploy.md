@@ -48,6 +48,8 @@ cp .env.example .env
 
 Logs: `.robo-dev/logs/<service>.log`. macOS Morph API is built before run.
 
+`stop` and `restart` kill the process group recorded for that service (the recorded process plus `go run`, cargo, or npm children), then wait until its port is free before the next start. Bash job control creates the group, so macOS does not need a `setsid` binary. The launcher never signals PID 0, PID 1, or an empty PID, and it group-kills only PIDs it recorded. A listener it did not start is stopped as that process tree only. `restart morph-api` waits until `/health` succeeds. Service names match exactly. If `lsof` is missing, the launcher warns that it cannot prove the port is free.
+
 Start **Morph API** first when bringing apps up one by one (auth hub).
 
 ### Environment
@@ -91,7 +93,7 @@ There is no `go.work`. Each Go module is tested from its own directory, using th
 | Go / Event Logs | `formx/backend` | `go vet ./...` then `go test ./...` |
 | Go / Content Maker | `composerx/backend` | `go vet ./...` then `go test ./...` |
 | Go / morphai | `pkg/morphai` | `go vet ./...` then `go test ./...` |
-| Morph frontend | `morph/frontend` | `npm ci`, then `CI=true npm test -- --watchAll=false`, then `CI=true npm run build` |
+| Morph frontend | `morph/frontend` | `python3 openspec/check_files_workspace_archive.py` once from the repo root, then `npm ci`, then `CI=true npm test -- --watchAll=false`, then `CI=true npm run build` |
 
 The frontend job uses Node.js 22 (the repo `engines.node` is `>=20`) and caches npm from `morph/frontend/package-lock.json`.
 
@@ -105,6 +107,7 @@ unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
 ( cd composerx/backend && go vet ./... && go test ./... )
 ( cd pkg/morphai && go vet ./... && go test ./... )
 
+python3 openspec/check_files_workspace_archive.py
 ( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
 ```
 

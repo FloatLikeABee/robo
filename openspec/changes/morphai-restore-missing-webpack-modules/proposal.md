@@ -1,3 +1,5 @@
+> **Superseded (Files modules only)** by `morphai-drop-files-workspace`. Do not restore `AgentFilesTab` or `filesWorkspaceStore`. The other modules this change restores (`AgentWorkspace`, `agentContext`, `AiToolsWorkspaceDrawer`, `appliedAssistantChannel`, `ExtractJsonFromTextDialog`) are still required.
+
 ## Why
 
 Morph AI webpack fails with `Module not found` for chat workspace helpers (`AiToolsWorkspaceDrawer`, `agentContext`, `filesWorkspaceStore`, `AgentWorkspace`, `appliedAssistantChannel`) and MorphNotes `ExtractJsonFromTextDialog`. Those files were left untracked, then dropped during the `main` rebase/stash, while `SkoolAiChat.js` and `AdminDataGrid.js` still import them.
