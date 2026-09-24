@@ -48,6 +48,8 @@ cp .env.example .env
 
 Logs: `.robo-dev/logs/<service>.log`. macOS Morph API is built before run.
 
+`stop` and `restart` kill the process group recorded for that service (the recorded process plus `go run`, cargo, or npm children), then wait until its port is free before the next start. Bash job control creates the group, so macOS does not need a `setsid` binary. The launcher never signals PID 0, PID 1, or an empty PID, and it group-kills only PIDs it recorded. A listener it did not start is stopped as that process tree only. `restart morph-api` waits until `/health` succeeds. Service names match exactly. If `lsof` is missing, the launcher warns that it cannot prove the port is free.
+
 Start **Morph API** first when bringing apps up one by one (auth hub).
 
 ### Environment
