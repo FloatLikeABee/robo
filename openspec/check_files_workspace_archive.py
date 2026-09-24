@@ -4,7 +4,7 @@
 The script is the regression check for openspec-files-workspace-archive.
 It exits 0 only when the five Files-workspace changes are dated archive
 history, their deltas were not merged into live specs, and the drop-files
-change is still the active Files policy.
+policy is either still active or archived with its delta synced.
 """
 
 from pathlib import Path
@@ -30,10 +30,47 @@ FORBIDDEN_LIVE_CAPABILITIES = (
     "morphai-files-folder-persist",
     "morphai-pinned-files-context",
     "morphai-workspace-open-persist",
-    "morphai-no-files-workspace",
 )
 
-POLICY_CAPABILITY = "openspec-files-workspace-archive"
+POLICY_CAPABILITIES = {
+    "openspec-files-workspace-archive",
+    # Synced drop policy. It names the same surfaces in order to forbid them.
+    "morphai-no-files-workspace",
+}
+
+LIVE_FILES_TERMS = (
+    "Files tab",
+    "AgentFilesTab",
+    "morphai-files-workspace",
+    "Open folder",
+    "recent folders",
+    "pin-from-folder",
+    "filesWorkspaceStore",
+)
+
+
+def archived_drop_dirs():
+    if not ARCHIVE.is_dir():
+        return []
+    return [
+        path
+        for path in ARCHIVE.iterdir()
+        if path.is_dir() and path.name.endswith("-morphai-drop-files-workspace")
+    ]
+
+
+def drop_policy_errors():
+    """Accept the drop policy active, or archived with its delta synced."""
+    active = (CHANGES / "morphai-drop-files-workspace" / "proposal.md").is_file()
+    archived = archived_drop_dirs()
+    synced = (SPECS / "morphai-no-files-workspace" / "spec.md").is_file()
+    if active:
+        return []
+    if archived and synced:
+        return []
+    if archived and not synced:
+        return ["morphai-drop-files-workspace is archived without a synced morphai-no-files-workspace spec"]
+    return ["morphai-drop-files-workspace is neither active nor archived with its spec synced"]
 
 
 def main() -> int:
@@ -83,20 +120,13 @@ def main() -> int:
     if SPECS.is_dir():
         for spec in SPECS.rglob("*.md"):
             text = spec.read_text(encoding="utf-8")
-            mentions_files = any(
-                needle in text
-                for needle in ("Files tab", "AgentFilesTab", "morphai-files-workspace")
-            )
+            mentions_files = any(needle in text for needle in LIVE_FILES_TERMS)
             if not mentions_files:
                 continue
-            if spec.parent.name != POLICY_CAPABILITY:
+            if spec.parent.name not in POLICY_CAPABILITIES:
                 errors.append(f"live spec describes the Files tab: {spec.relative_to(ROOT)}")
 
-    policy = CHANGES / "morphai-drop-files-workspace"
-    if not (policy / "proposal.md").is_file():
-        errors.append("morphai-drop-files-workspace is not an active change")
-    if (ARCHIVE / f"{DATE}-morphai-drop-files-workspace").exists():
-        errors.append("morphai-drop-files-workspace was archived")
+    errors.extend(drop_policy_errors())
 
     for name, needle in (
         (
@@ -106,6 +136,10 @@ def main() -> int:
         (
             "morphai-restore-missing-webpack-modules",
             "Do not restore `AgentFilesTab`",
+        ),
+        (
+            "platform-trim-readme-chat-skills",
+            "not permission to restore the IndexedDB Files tab",
         ),
     ):
         folder = CHANGES / name

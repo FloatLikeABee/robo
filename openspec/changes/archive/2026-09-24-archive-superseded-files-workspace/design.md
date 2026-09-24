@@ -58,7 +58,7 @@ The change exists so webpack can resolve `AgentWorkspace`, `agentContext`, `AiTo
 
 ### 4. Do not edit `platform-trim-readme-chat-skills`
 
-Its chrome spec still says “Files-workspace tabs MUST still exist.” That change is header chrome, not a Files-workspace implementation. Rewriting it is out of scope. The OpenSpec warning names that sentence so it is not permission to restore the tab.
+Its chrome spec used to say “Files-workspace tabs MUST still exist.” That sentence is reworded to Notes & TODOs and Context & Knowledge, and the proposal banner says the IndexedDB Files tab is superseded by `morphai-drop-files-workspace`. The rest of that change stays active.
 
 **Rejected:** Patch the chrome requirement in place. It is a real stale MUST, but this change does not take ownership of that chrome change.
 

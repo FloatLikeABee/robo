@@ -31,26 +31,31 @@ Each MUST live under `openspec/changes/archive/` with a `2026-09-24-` name prefi
 
 ### Requirement: Removed Files behavior is not a live spec
 
-`openspec/specs/` MUST NOT require the Morph AI agent shell to provide a Files tab, Open folder, recent folders, pin-from-folder, or an IndexedDB `morphai-files-workspace` database. Delta specs that belong only to the five archived changes MUST NOT be merged into `openspec/specs/`.
+`openspec/specs/` MUST NOT require the Morph AI agent shell to provide a Files tab, Open folder, recent folders, pin-from-folder, `filesWorkspaceStore`, or an IndexedDB `morphai-files-workspace` database. Delta specs that belong only to the five archived changes MUST NOT be merged into `openspec/specs/`. The synced drop-policy spec `morphai-no-files-workspace` MAY name those surfaces only to forbid them.
 
 #### Scenario: Main specs do not describe a Files tab
 
 - **WHEN** an agent reads requirements under `openspec/specs/`
 - **THEN** no requirement tells them to build a Morph AI Files tab or IndexedDB Files workspace
 
-### Requirement: Drop-files stays the Files policy
+### Requirement: Drop policy is the Files source of truth
 
-`morphai-drop-files-workspace` MUST remain the source of truth for current Morph AI Files policy. This work MUST leave that change active and MUST NOT merge its delta into `openspec/specs/`.
+Current Morph AI Files policy MUST come from `morphai-drop-files-workspace`: that change while it is active, or, after it is archived, the synced live spec `openspec/specs/morphai-no-files-workspace/spec.md`. Agents MUST NOT take Files policy from the five archived Files-workspace changes.
 
-#### Scenario: Policy change is still active
+#### Scenario: Active drop change is the policy
 
-- **WHEN** this archive work is complete
-- **THEN** `openspec/changes/morphai-drop-files-workspace/` is still an active change
-- **AND** `openspec/specs/` has no `morphai-no-files-workspace` spec produced from it
+- **WHEN** `morphai-drop-files-workspace` is an active change
+- **THEN** that change is the Files policy
+
+#### Scenario: Archived drop change stays the policy through its synced spec
+
+- **WHEN** `morphai-drop-files-workspace` is archived and its delta has been synced
+- **THEN** `openspec/specs/morphai-no-files-workspace/spec.md` is the Files policy
+- **AND** the five archived Files-workspace changes are not the policy
 
 ### Requirement: Mixed changes stay active and disclaim the Files tab
 
-`morphai-agent-workspace` and `morphai-restore-missing-webpack-modules` MUST remain active changes. Each proposal MUST state that any instruction to build or keep the Morph AI Files tab or `AgentFilesTab` is superseded by `morphai-drop-files-workspace` and is not permission to restore that tab. Requirements in those changes for the agent shell, Notes & TODOs, Context & Knowledge, orchestration, and the other webpack modules MUST remain in the active folders.
+`morphai-agent-workspace`, `morphai-restore-missing-webpack-modules`, and `platform-trim-readme-chat-skills` MUST remain active changes. Each proposal MUST state that any instruction to build or keep the Morph AI Files tab or IndexedDB Files workspace is superseded by `morphai-drop-files-workspace` and is not permission to restore that tab. Requirements in those changes for the agent shell, Notes & TODOs, Context & Knowledge, orchestration, header chrome, and the other webpack modules MUST remain in the active folders.
 
 #### Scenario: Agent workspace change disclaims the Files tab
 
@@ -63,6 +68,12 @@ Each MUST live under `openspec/changes/archive/` with a `2026-09-24-` name prefi
 - **WHEN** an agent opens the active `morphai-restore-missing-webpack-modules` proposal
 - **THEN** it states that `AgentFilesTab` must not be restored
 - **AND** the change still records the other chat modules the bundle has to resolve
+
+#### Scenario: Chrome change disclaims the Files tab
+
+- **WHEN** an agent opens the active `platform-trim-readme-chat-skills` proposal
+- **THEN** it states that the IndexedDB Files tab is superseded by `morphai-drop-files-workspace`
+- **AND** that change folder is not under `openspec/changes/archive/`
 
 ### Requirement: OpenSpec docs forbid restoring the Files tab
 

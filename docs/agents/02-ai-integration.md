@@ -46,7 +46,7 @@ Path dependency from Data Access and Project. Same env keys. Used for Project do
 - Chat sessions and messages in Morph Badger.
 - Header **Skills** (markdown upload + catalog).
 - **AI tools** workspace can open `bk` (Assistants, RAG, Documents, System).
-- Notes/knowledge belong in MorphNotes and Files workspace tabs, not a duplicate header shortcut.
+- Notes and knowledge belong in MorphNotes and in the agent workspace Notes & TODOs and Context & Knowledge tabs, not a duplicate header shortcut.
 
 ## Leftover `/assistant/chat` APIs
 
