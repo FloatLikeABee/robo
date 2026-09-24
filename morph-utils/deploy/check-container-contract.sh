@@ -80,8 +80,11 @@ if any(line.startswith("projects:") for line in lines):
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx"]:
-    errors.append("service names must be morph, morph-utils, formx, composerx, got " + ", ".join(names))
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport"]:
+    errors.append(
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, got "
+        + ", ".join(names)
+    )
 
 utils = next((block for block in blocks if service_name(block) == "morph-utils"), None)
 if utils is None:

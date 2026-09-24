@@ -87,8 +87,11 @@ if "REACT_APP_MORPH_UTILS_URL" in text and "key: REACT_APP_MORPH_UTILS_URL" in t
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx"]:
-    errors.append("service names must be morph, morph-utils, formx, composerx, got " + ", ".join(names))
+if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport"]:
+    errors.append(
+        "service names must be morph, morph-utils, formx, composerx, sharpreport, got "
+        + ", ".join(names)
+    )
 
 svc = next((block for block in blocks if service_name(block) == "composerx"), None)
 if svc is None:

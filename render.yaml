@@ -1,8 +1,9 @@
-# Morph API + Morph AI UI, the MorphUtils shell, Event Logs, and Content Maker. Attach this
-# file to the existing Render project. Secrets and public origins that are
-# filled in the dashboard are prompts. Do not put values on those keys.
-# VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are public origin prompts, not
-# secrets. Do not set VITE_SHEETX_URL or REACT_APP_MORPH_UTILS_URL here.
+# Morph API + Morph AI UI, the MorphUtils shell, Event Logs, Content Maker,
+# and Data Access. Attach this file to the existing Render project. Secrets
+# and public origins that are filled in the dashboard are prompts. Do not put
+# values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are public
+# origin prompts, not secrets. Do not set VITE_SHEETX_URL, VITE_DATAX_URL, or
+# REACT_APP_MORPH_UTILS_URL here.
 services:
   - type: web
     runtime: docker
@@ -210,4 +211,47 @@ services:
       - key: TRAN_QWEN_API_KEY
         sync: false
       - key: TRAN_OPENAI_API_KEY
+        sync: false
+
+  # Data Access API + UI. SQLite on one disk. Embed URL is story #114.
+  - type: web
+    runtime: docker
+    name: sharpreport
+    region: singapore
+    plan: starter
+    branch: main
+    dockerfilePath: ./SharpReport/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    buildFilter:
+      paths:
+        - SharpReport/**
+        - pkg/morphai-rs/**
+        - SharpReport/Dockerfile
+        - SharpReport/deploy/docker-entrypoint.sh
+        - .dockerignore
+        - render.yaml
+    disk:
+      name: sharpreport-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "3050"
+      - key: SHARPREPORT_PORT
+        value: "3050"
+      - key: SHARPREPORT_DATABASE_URL
+        value: "sqlite:///data/datapulse.db"
+      - key: SHARPREPORT_UI_DIR
+        value: /app/ui
+      - key: RUST_LOG
+        value: info
+      # Morph auth base URL. Not a secret. No value in git.
+      - key: USERS_PANEL_BASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MORPH_AI_API_KEY
         sync: false

@@ -111,7 +111,7 @@ python3 openspec/check_files_workspace_archive.py
 ( cd morph/frontend && npm ci && CI=true npm test -- --watchAll=false && CI=true npm run build )
 ```
 
-The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image. That workflow also validates `render.yaml` against the Render Blueprint schema. It does not add a check name to `ci.yml`.
+The Morph image build is a separate workflow (`.github/workflows/docker-image.yml`). It is not one of the five check names above. `sh deploy/check-container-contract.sh` is the fast local check; `docker build -t morph:local .` from the repo root builds the image. That workflow also validates `render.yaml` against the Render Blueprint schema and runs `sh SharpReport/deploy/check-container-contract.sh`. It does not add a check name to `ci.yml`.
 
 ## Production / cloud
 
@@ -121,6 +121,6 @@ Morph API and the Morph AI UI ship as one image. Content Maker ships as `compose
 
 - **Local:** `start-all.sh` (this file + root README).
 - **Project UI static preview on Vercel:** [`morph-engi/README.md`](../../morph-engi/README.md#vercel-static-preview) (`npm run vercel-build` → `morph-engi/frontend/dist`). No Morph API, no login, data in localStorage.
-- **Data Access Docker notes:** [`SharpReport/docs/DEPLOYMENT.md`](../../SharpReport/docs/DEPLOYMENT.md) if you are packaging that app alone.
+- **Data Access image:** [`SharpReport/README.md`](../../SharpReport/README.md) and the Data Access section of [`deploy/README.md`](../../deploy/README.md). `docker build -t sharpreport:local -f SharpReport/Dockerfile .` from the repo root. Do not follow `scripts/deploy.sh`.
 
 Optional GraphRAG: [`docs/MORPH_GRAPH_OPS.md`](../MORPH_GRAPH_OPS.md).

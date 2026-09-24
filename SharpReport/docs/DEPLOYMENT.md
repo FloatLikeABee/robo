@@ -1,5 +1,7 @@
 # DataPulse Deployment Guide
 
+The image runbook is [`../README.md`](../README.md) and [`../../deploy/README.md`](../../deploy/README.md). Do not use the compose example below: it committed a JWT and a database password, and that file has been removed. Do not follow `scripts/deploy.sh`.
+
 ## Requirements
 
 ### Server Requirements

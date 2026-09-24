@@ -69,7 +69,7 @@ With the embed variables unset, the production shell does not point those module
 
 The product owner creates the shell. This repo does not call Render. After merge, sync `render.yaml` on `main` in Render project `prj-dahc33dbedkc73a1v8n0`. That adds the Docker web service `morph-utils`. The same steps are in `deploy/README.md`.
 
-`PORT` is `3040`. `VITE_MORPH_API_URL` is required and is not a secret: set it to `https://<morph public host>` (no path), then restart so `/config.js` is rewritten. `VITE_USERS_PANEL_API_URL` is the optional alias, used only when the primary is unset or blank. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on this service. Story #114 sets them to `https://<event-logs public host>` after Event Logs (`formx`) is up. Content Maker is the `composerx` service. This change does not set `VITE_COMPOSERX_URL` on `morph-utils`. Data Access and Project are not services in this Blueprint:
+`PORT` is `3040`. `VITE_MORPH_API_URL` is required and is not a secret: set it to `https://<morph public host>` (no path), then restart so `/config.js` is rewritten. `VITE_USERS_PANEL_API_URL` is the optional alias, used only when the primary is unset or blank. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, or `VITE_COMPOSERX_URL` on this service. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. This change does not set `VITE_DATAX_URL`. The placeholder for story #114 is `https://<sharpreport public host>`. Project is not a service in this Blueprint:
 
 | Variable | Module |
 |----------|--------|
@@ -83,4 +83,4 @@ The product owner creates the shell. This repo does not call Render. After merge
 
 Morph already allows cross-origin `Authorization` for non-loopback origins. This change does not edit CORS. There is no disk and no secret on this service.
 
-When the deploy is live, copy the HTTPS URL Render shows. `GET /health` returns `ok`. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that origin as `REACT_APP_MORPH_UTILS_URL` on Morph. This change does not set `REACT_APP_MORPH_UTILS_URL`.
+When the deploy is live, copy the HTTPS URL Render shows. `GET /health` returns `ok`. The placeholder for story #106 is `https://<morph-utils public host>`. #106 sets that origin as `REACT_APP_MORPH_UTILS_URL` on Morph. This change does not set `REACT_APP_MORPH_UTILS_URL`. The placeholder for story #114 is `https://<sharpreport public host>`. This change does not set `VITE_DATAX_URL`.

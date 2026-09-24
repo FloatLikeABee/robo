@@ -17,7 +17,7 @@ If MorphUtils `/datax` says connection refused, start `sharpreport-ui` (`./start
 
 Reuse the Morph JWT cookie. Do not show a second password form. Do not clear the shared cookie on 502 from Data Access `/auth/me`.
 
-Key files: `SharpReport/backend/src/main.rs`, `config.rs`, `api/`. Frontend is SvelteKit. More: [`SharpReport/README.md`](../../SharpReport/README.md), [`SharpReport/docs/`](../../SharpReport/docs/).
+Key files: `SharpReport/backend/src/main.rs`, `config.rs`, `api/`. Frontend is SvelteKit. The container image is `SharpReport/Dockerfile` (context repo root). `SHARPREPORT_PORT` wins over `PORT` (both `3050` in the image). `GET /health` and `GET /ready` return `{"status":"ok"}` and do not call Morph. `USERS_PANEL_BASE_URL` is the Morph auth base URL (not a secret). SQLite defaults to `/data/datapulse.db` in the image; a checkout without that variable still uses `sqlite://./data/datapulse.db`. Metabase is not in the image. More: [`SharpReport/README.md`](../../SharpReport/README.md), [`deploy/README.md`](../../deploy/README.md).
 
 ## Project (`morph-engi/`)
 

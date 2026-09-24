@@ -107,12 +107,19 @@
 			<ul class="min-h-0 flex-1 space-y-1 overflow-auto">
 				{#each docs as doc (doc.id)}
 					<li>
-						<button
-							type="button"
+						<div
 							class="flex w-full items-start justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-bg-tertiary {selected?.id === doc.id
 								? 'bg-accent-primary/10'
 								: ''}"
+							role="button"
+							tabindex="0"
 							onclick={() => (selected = doc)}
+							onkeydown={(ev) => {
+								if (ev.key === 'Enter' || ev.key === ' ') {
+									ev.preventDefault();
+									selected = doc;
+								}
+							}}
 						>
 							<span class="min-w-0">
 								<span class="block truncate font-medium text-text-primary">{doc.title || 'Untitled'}</span>
@@ -126,7 +133,7 @@
 									void onDelete(doc);
 								}}>Delete</button
 							>
-						</button>
+						</div>
 					</li>
 				{/each}
 			</ul>

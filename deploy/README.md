@@ -121,7 +121,7 @@ Open `https://<the service host>/health`. It must return HTTP 200 and a JSON bod
 
 ## MorphUtils on Render
 
-The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service in this Blueprint. Content Maker is the `composerx` service below. Do not add Data Access or Project. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, or `VITE_COMPOSERX_URL` on `morph-utils`.
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Do not add Project. Do not set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, or `VITE_DATAX_URL` on `morph-utils`.
 
 ### Env
 
@@ -133,7 +133,7 @@ The product owner creates the shell. This repo does not call Render. After merge
 | `VITE_SHEETX_URL` | no | Event Logs origin. Alias: `VITE_FORMSX_URL`. Do not set this on `morph-utils`. Story #114 uses `https://<event-logs public host>`. |
 | `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Do not set this on `morph-utils`. |
 | `VITE_COMPOSERX_URL` | no | Content Maker origin. This change does not set it on `morph-utils`. #114 uses `https://<composerx public host>`. |
-| `VITE_DATAX_URL` | no | Data Access origin. Not a service in this Blueprint. |
+| `VITE_DATAX_URL` | no | Data Access origin. Do not set this on `morph-utils`. The placeholder for story #114 is `https://<sharpreport public host>`. |
 | `VITE_PROJECTS_URL` | no | Project origin. Alias: `VITE_MORPH_ENGI_URL`. Not a service in this Blueprint. |
 | `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. |
 | `VITE_MORPH_AI_URL` | no | Morph AI origin, if the header link in the shell should leave MorphUtils. |
@@ -211,3 +211,44 @@ Use Render disk snapshots of `composerx-data` before an upgrade you may need to 
 ### Public URL
 
 After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<composerx public host>`. #114 sets that value as `VITE_COMPOSERX_URL` on MorphUtils. This change does not set `VITE_COMPOSERX_URL`. Do not guess an `onrender.com` host from the service name.
+
+## Data Access on Render
+
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `sharpreport` (Singapore, starter) beside `morph`, `morph-utils`, `formx`, and `composerx`. Render builds `SharpReport/Dockerfile` with context `.` (the image needs `pkg/morphai-rs`). Deploys from `main` run only after CI checks pass.
+
+### Local image
+
+From the repo root:
+
+```bash
+docker build -t sharpreport:local -f SharpReport/Dockerfile .
+docker run --rm -p 127.0.0.1:3050:3050 sharpreport:local
+```
+
+`GET /health` and `GET /ready` return HTTP 200 and `{"status":"ok"}` without Morph. `GET /` is the Data Access UI. The image does not publish Vite port 5178. `sh SharpReport/deploy/check-container-contract.sh` checks the contract without a daemon.
+
+`docker compose -f SharpReport/docker-compose.yml up --build` uses `SharpReport/deploy/.env.production` when that file exists (copy from `SharpReport/deploy/.env.production.example`). Data is the named volume at `/data`.
+
+### Env
+
+| Key | Required | Value |
+|-----|----------|--------|
+| `PORT` | yes | `3050`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. `SHARPREPORT_PORT` is also `3050`. The process listens on `SHARPREPORT_PORT` when that is set. |
+| `SHARPREPORT_PORT` | yes | `3050` |
+| `SHARPREPORT_DATABASE_URL` | yes | `sqlite:///data/datapulse.db` |
+| `SHARPREPORT_UI_DIR` | yes | `/app/ui` |
+| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<morph public host>`, no path. This is the Morph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `GET /health` does not call it. |
+| `JWT_SECRET` | before storing connection passwords | Dashboard prompt. Empty still lets `/health` succeed. The development file secret is used until this is set. |
+| `MORPH_AI_API_KEY` | no | Data AI stays off until this is set. |
+
+Do not pass secrets as `docker build` arguments. Do not set `RUN_ENV=production` on this service. That file selects Postgres and placeholder passwords. Metabase is not in the image.
+
+### Disk
+
+`sharpreport-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service cannot do a zero-downtime deploy and must stay a single instance. SQLite is a single writer. Do not scale it out. The entrypoint starts as root, gives `/data` to uid 65532, and then runs the server as that user.
+
+Use Render disk snapshots of `sharpreport-data` before an upgrade you may need to undo.
+
+### Public URL
+
+After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder for story #114 is `https://<sharpreport public host>`. #114 sets that origin as `VITE_DATAX_URL` on MorphUtils. This change does not set `VITE_DATAX_URL`. Do not guess an `onrender.com` host from the service name.

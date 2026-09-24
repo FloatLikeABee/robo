@@ -14,14 +14,15 @@ deploy/.env.production
 **/target
 morph/frontend/build
 
-# Morph image copies named paths only. Content Maker uses this same context
-# (replace directives need pkg/). Keep the word composerx so the Morph contract
-# still sees it, and do not COPY composerx from the root Dockerfile.
+# Morph image copies named paths only. Event Logs uses formx/Dockerfile.dockerignore
+# for its own image, so a formx line here only drops Event Logs from the Morph
+# context. Content Maker and Data Access use this same root ignore (context .).
+# Keep the words composerx and SharpReport. Do not exclude those trees.
 formx
 composerx/backend/storage
 composerx/frontend/node_modules
 **/ai.config.json
-SharpReport
+SharpReport/frontend/node_modules
 morph-engi
 bk
 morph-utils

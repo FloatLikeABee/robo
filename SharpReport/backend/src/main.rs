@@ -77,7 +77,9 @@ async fn main() {
 
     // Build our application with routes
     let app = Router::new()
-        // Health check
+        // Health check. /health and /ready do not call Morph.
+        .route("/health", get(api::health::health))
+        .route("/ready", get(api::health::health))
         .route("/api/v1/health", get(|| async { "OK" }))
         .route("/api/v1/ai/status", get(api::ai_status::status))
         .route("/api/v1/ai/mcp-tools", get(api::mcp_tools::tools))
