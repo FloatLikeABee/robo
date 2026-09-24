@@ -82,7 +82,7 @@ Verified against the tree (after fast-forward to `origin/main`):
 - [`products/` writes under the working directory, which is not on `/data`] → accepted. Those routes are outside this capability. `/app` is not writable by `morph`, so a product upload returns an error instead of writing into the image layer.
 - [Health is process liveness, not a database probe] → existing `GET /health`. A bad volume still fails startup before listen, which fails the healthcheck.
 - [Image build time on every PR] → accepted. No path filter, separate from the required checks so a slow build does not rename or occupy them.
-- [Alpine `wget` and `PORT`] → `HEALTHCHECK` uses a shell so it reads `PORT` at runtime. Container `PORT` stays 9090; the host publish port is `MORPH_PUBLISH_PORT`.
+- [Alpine `wget` and `PORT`] → `HEALTHCHECK` uses a shell so it reads `PORT` at runtime via `${PORT}` (`$$` is the shell PID in a Dockerfile, not a Compose escape). Container `PORT` stays 9090; the host publish port is `MORPH_PUBLISH_PORT`.
 - [CRA `CI=true` promotes lint warnings] → the image build matches the frontend CI command. Do not set `NODE_ENV=production` before `npm ci` or devDependencies (`craco`) are omitted.
 
 ## Migration Plan

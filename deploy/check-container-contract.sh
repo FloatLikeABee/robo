@@ -14,6 +14,9 @@ df="$root/Dockerfile"
 grep -q 'CGO_ENABLED=0' "$df" || fail "Dockerfile must set CGO_ENABLED=0"
 grep -q 'HEALTHCHECK' "$df" || fail "Dockerfile must define HEALTHCHECK"
 grep -q '/health' "$df" || fail "HEALTHCHECK must call /health"
+if grep -F '$$' "$df" >/dev/null; then
+  fail "Dockerfile must not contain \$\$; shell-form HEALTHCHECK runs under /bin/sh -c, where \$\$ is the PID"
+fi
 entry="$root/deploy/docker-entrypoint.sh"
 [ -f "$entry" ] || fail "missing deploy/docker-entrypoint.sh"
 grep -q 'su-exec morph' "$entry" || fail "entrypoint must exec su-exec morph"

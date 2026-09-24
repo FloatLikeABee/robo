@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-09-24 — Dockerfile HEALTHCHECK `$$` is the shell PID
+
+- Trigger: Dockerfile `HEALTHCHECK` or other shell-form `CMD` using `$$` so a `$` reaches the shell
+- Rule: `$$` is a Compose escape, not a Dockerfile one. Shell-form `HEALTHCHECK` is `/bin/sh -c`, so `$$PORT` requests `<pid>PORT`. Use `${PORT}` and let sh expand the runtime port. `deploy/check-container-contract.sh` rejects `$$` in the Dockerfile.
+- Source: [containerize Morph](current)
+
 ## 2026-09-22 — Morph AI has no Files workspace
 
 - Trigger: Morph AI agent shell Files tab, Open folder, recents, local-folder pins, composer Files chip, IndexedDB `morphai-files-workspace`

@@ -38,6 +38,6 @@ ENV PORT=9090 \
     GIN_MODE=release
 EXPOSE 9090
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget -q -O /dev/null "http://127.0.0.1:$$PORT/health" || exit 1
+  CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/health" || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/morph-server"]
