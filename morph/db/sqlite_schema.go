@@ -502,7 +502,14 @@ func migrateAgentLessonColumns(db *sql.DB) error {
 	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lesson_owner_session ON agent_lesson(owner_user_id, source_session_id)`); err != nil {
 		return err
 	}
-	_, err := db.Exec(`
+	// ensureTranSQLiteSchema creates plat_users before this runs, including on a
+	// brand-new database. Skip the claim when that table is absent so a partial
+	// SQLite file cannot fail startup.
+	hasUsers, err := sqliteTableExists(db, "plat_users")
+	if err != nil || !hasUsers {
+		return err
+	}
+	_, err = db.Exec(`
 		UPDATE agent_lesson
 		SET owner_user_id = (SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1)
 		WHERE owner_user_id = ''

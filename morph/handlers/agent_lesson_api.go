@@ -5,25 +5,50 @@ import (
 	"net/http"
 	"strings"
 
+	"idongivaflyinfa/auth"
 	"idongivaflyinfa/db"
 
 	"github.com/gin-gonic/gin"
 )
 
-// requestUserID is the authenticated operator. AuthzMiddleware sets auth_user_id
-// and copies it onto X-User-ID; tests and internal callers may set the header.
-func requestUserID(c *gin.Context) string {
-	if c == nil {
-		return ""
+// trustedLessonUserID is the platform user id from a verified bearer token
+// whose subject still exists in plat_users. Client X-User-ID and the
+// auth_user_id value middleware copies from that header are not accepted.
+// ok is false when no trusted identity exists. This does not write a response.
+func (h *Handlers) trustedLessonUserID(c *gin.Context) (string, bool) {
+	if h == nil || c == nil || h.TranMySQL == nil {
+		return "", false
 	}
-	if v, ok := c.Get("auth_user_id"); ok {
-		if s, ok := v.(string); ok {
-			if id := strings.TrimSpace(s); id != "" {
-				return id
-			}
-		}
+	token := bearerToken(c.GetHeader("Authorization"))
+	if token == "" {
+		return "", false
 	}
-	return strings.TrimSpace(c.GetHeader("X-User-ID"))
+	claims, err := auth.DecodeToken(h.jwtCfg, token)
+	if err != nil || claims == nil {
+		return "", false
+	}
+	id := strings.TrimSpace(claims.Subject)
+	if id == "" {
+		return "", false
+	}
+	u, err := h.TranMySQL.GetPlatUserByID(c.Request.Context(), id)
+	if err != nil || u == nil || strings.TrimSpace(u.ID) == "" {
+		return "", false
+	}
+	return u.ID, true
+}
+
+func (h *Handlers) requireLessonUser(c *gin.Context) (string, bool) {
+	if h == nil || h.TranMySQL == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sqlite not available"})
+		return "", false
+	}
+	id, ok := h.trustedLessonUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return "", false
+	}
+	return id, true
 }
 
 func agentLessonJSON(l db.AgentLesson) gin.H {
@@ -41,11 +66,11 @@ func agentLessonJSON(l db.AgentLesson) gin.H {
 // ListAgentLessons GET /api/agent-lessons
 // Returns every lesson owned by the caller, including disabled ones.
 func (h *Handlers) ListAgentLessons(c *gin.Context) {
-	if h == nil || h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sqlite not available"})
+	userID, ok := h.requireLessonUser(c)
+	if !ok {
 		return
 	}
-	rows, err := h.TranMySQL.ListAgentLessons(c.Request.Context(), requestUserID(c), false, 0)
+	rows, err := h.TranMySQL.ListAgentLessons(c.Request.Context(), userID, false, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -67,8 +92,8 @@ type agentLessonPatchBody struct {
 // PatchAgentLesson PATCH /api/agent-lessons/:id
 // Body: {"enabled": true|false}. Another user's lesson is 404.
 func (h *Handlers) PatchAgentLesson(c *gin.Context) {
-	if h == nil || h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sqlite not available"})
+	userID, ok := h.requireLessonUser(c)
+	if !ok {
 		return
 	}
 	var body agentLessonPatchBody
@@ -80,7 +105,7 @@ func (h *Handlers) PatchAgentLesson(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "enabled is required"})
 		return
 	}
-	updated, err := h.TranMySQL.SetAgentLessonEnabled(c.Request.Context(), requestUserID(c), c.Param("id"), *body.Enabled)
+	updated, err := h.TranMySQL.SetAgentLessonEnabled(c.Request.Context(), userID, c.Param("id"), *body.Enabled)
 	if err == sql.ErrNoRows || (err == nil && updated == nil) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lesson not found"})
 		return
@@ -95,11 +120,11 @@ func (h *Handlers) PatchAgentLesson(c *gin.Context) {
 // DeleteAgentLesson DELETE /api/agent-lessons/:id
 // Another user's lesson is 404.
 func (h *Handlers) DeleteAgentLesson(c *gin.Context) {
-	if h == nil || h.TranMySQL == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sqlite not available"})
+	userID, ok := h.requireLessonUser(c)
+	if !ok {
 		return
 	}
-	err := h.TranMySQL.DeleteAgentLessonForOwner(c.Request.Context(), requestUserID(c), c.Param("id"))
+	err := h.TranMySQL.DeleteAgentLessonForOwner(c.Request.Context(), userID, c.Param("id"))
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lesson not found"})
 		return

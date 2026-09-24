@@ -135,6 +135,10 @@ func TestAgentLessonFreshSchemaDefaultsEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var platUsers string
+	if err := sqlDB.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='plat_users'`).Scan(&platUsers); err != nil || platUsers != "plat_users" {
+		t.Fatalf("brand-new database must include plat_users: %v %q", err, platUsers)
+	}
 	enabled, owner := lessonEnabledOwner(t, sqlDB, "fresh")
 	if enabled != 1 || owner != "" {
 		t.Fatalf("column default: enabled=%d owner=%q", enabled, owner)
@@ -145,6 +149,41 @@ func TestAgentLessonFreshSchemaDefaultsEnabled(t *testing.T) {
 	enabled, owner = lessonEnabledOwner(t, sqlDB, "fresh")
 	if enabled != 1 || owner != "" {
 		t.Fatalf("rerun changed fresh row: enabled=%d owner=%q", enabled, owner)
+	}
+}
+
+func TestMigrateAgentLessonColumnsSkipsBackfillWhenPlatUsersMissing(t *testing.T) {
+	sqlDB := openMemorySQLite(t)
+	_, err := sqlDB.Exec(`
+		CREATE TABLE agent_lesson (
+			id TEXT NOT NULL PRIMARY KEY,
+			trigger TEXT NOT NULL,
+			rule TEXT NOT NULL,
+			source_session_id TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = sqlDB.Exec(`
+		INSERT INTO agent_lesson (id, trigger, rule, source_session_id, created_at)
+		VALUES ('partial', 'when partial', 'keep', 'sess', '2024-01-01T00:00:00Z')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateAgentLessonColumns(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	enabled, owner := lessonEnabledOwner(t, sqlDB, "partial")
+	if enabled != 1 || owner != "" {
+		t.Fatalf("partial db: enabled=%d owner=%q", enabled, owner)
+	}
+	if err := migrateAgentLessonColumns(sqlDB); err != nil {
+		t.Fatal(err)
+	}
+	enabled, owner = lessonEnabledOwner(t, sqlDB, "partial")
+	if enabled != 1 || owner != "" {
+		t.Fatalf("second partial migrate: enabled=%d owner=%q", enabled, owner)
 	}
 }
 

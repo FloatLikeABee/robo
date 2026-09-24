@@ -60,15 +60,14 @@ func TestMaybeHarvestStoresOnceAndLaterContextIncludesRule(t *testing.T) {
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("duplicate harvest: %d err=%v", len(rows), err)
 	}
-	ctxBlock := h.buildAgentLessonsContext("u")
+	ctxBlock := h.lessonsPromptForUser("u")
 	if !strings.Contains(ctxBlock, "search the graph before answering") {
 		t.Fatalf("later context missing rule:\n%s", ctxBlock)
 	}
-	if h.buildAgentLessonsContext("someone-else") != "" {
+	if h.lessonsPromptForUser("someone-else") != "" {
 		t.Fatal("another user must not receive this lesson")
 	}
-	combined := h.agentSkillsAndLessonsContext("u", nil)
-	if !strings.Contains(combined, "search the graph before answering") {
-		t.Fatalf("skills+lessons missing rule:\n%s", combined)
+	if h.buildAgentLessonsContext(nil) != "" {
+		t.Fatal("prompt injection requires a verified bearer identity")
 	}
 }

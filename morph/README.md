@@ -59,7 +59,7 @@ The SPA sends `Authorization: Bearer` from the Morph cookie when the user is sig
 
 ## Agent lessons
 
-Significant chats distill one lesson per user and session into SQLite `agent_lesson`. Prompts and `GET /api/skills` include only the current user's enabled lessons. Operators manage the full set (including disabled) with the same auth as other `/api` routes:
+Significant chats distill one lesson per user and session into SQLite `agent_lesson`. Prompts and `GET /api/skills` include only the current user's enabled lessons. Callers need a verified Morph bearer token. A client `X-User-ID` header does not authenticate these routes:
 
 - `GET /api/agent-lessons` → `{ "lessons": [...], "total": N }`
 - `PATCH /api/agent-lessons/:id` with `{ "enabled": true|false }`

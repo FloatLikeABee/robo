@@ -45,7 +45,7 @@ Path dependency from Data Access and Project. Same env keys. Used for Project do
 
 - Chat sessions and messages in Morph Badger.
 - Header **Skills** (markdown upload + catalog). The catalog also lists that user's enabled session lessons.
-- Session lessons (`agent_lesson`) are per user. Only enabled lessons for the current user are injected into `/api/chat` prompts. Operators list, disable, and delete them at `/api/agent-lessons` (see [`03-morph.md`](03-morph.md)).
+- Session lessons (`agent_lesson`) are per user. Only enabled lessons for the bearer-authenticated user are injected into `/api/chat` prompts. A client `X-User-ID` does not select lessons. Operators list, disable, and delete them at `/api/agent-lessons` (see [`03-morph.md`](03-morph.md)).
 - **AI tools** workspace can open `bk` (Assistants, RAG, Documents, System).
 - Notes/knowledge belong in MorphNotes and Files workspace tabs, not a duplicate header shortcut.
 

@@ -220,7 +220,7 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 	if h.ginEngine != nil {
 		chatResponse, toolLog, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
 	} else {
-		skillsCtx := h.agentSkillsAndLessonsContext(userID, req.SkillIDs)
+		skillsCtx := h.agentSkillsAndLessonsContext(c, req.SkillIDs)
 		agentExtra := agentInstructions
 		if skillsCtx != "" {
 			if agentExtra != "" {
@@ -243,7 +243,11 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		SubAgents: applied.subAgents,
 	}
 	persistChatExchange(h, userID, sessionID, userVisible, &response)
-	h.maybeHarvestSession(userID, sessionID, userVisible, countUserTurns(h, userID, sessionID), len(toolLog), applied.hasDocuments)
+	// Chat still keys history off X-User-ID (see issue #22). Lessons are stored
+	// only for a verified bearer user, so a spoofed header cannot plant a lesson.
+	if lessonUserID, ok := h.trustedLessonUserID(c); ok {
+		h.maybeHarvestSession(lessonUserID, sessionID, userVisible, countUserTurns(h, lessonUserID, sessionID), len(toolLog), applied.hasDocuments)
+	}
 	c.JSON(http.StatusOK, response)
 }
 

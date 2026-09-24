@@ -11,6 +11,7 @@ import (
 	"idongivaflyinfa/ai"
 	"idongivaflyinfa/db"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/robo/morphai"
 )
@@ -51,7 +52,17 @@ func countUserTurns(h *Handlers, userID, sessionID string) int {
 	return n
 }
 
-func (h *Handlers) buildAgentLessonsContext(userID string) string {
+// buildAgentLessonsContext injects enabled lessons for a verified bearer user.
+// A missing or untrusted identity (including a client X-User-ID) injects nothing.
+func (h *Handlers) buildAgentLessonsContext(c *gin.Context) string {
+	userID, ok := h.trustedLessonUserID(c)
+	if !ok {
+		return ""
+	}
+	return h.lessonsPromptForUser(userID)
+}
+
+func (h *Handlers) lessonsPromptForUser(userID string) string {
 	if h == nil || h.TranMySQL == nil {
 		return ""
 	}
