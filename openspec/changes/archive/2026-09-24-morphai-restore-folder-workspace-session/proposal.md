@@ -1,3 +1,6 @@
+> **Superseded** by `morphai-drop-files-workspace`. This change specified Morph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+> Last-chat restore without a folder binding remains current and is restated by `morphai-drop-files-workspace`. Folder-bound restore and folder-derived titles do not.
+
 ## Why
 
 Opening a local folder in Morph AI Files already binds it to the current chat in IndexedDB, but Morph AI always starts on the `default` session. After a reload or a later visit, the operator lands on an empty chat instead of the folder workspace they were using. A folder plus its chat should be one workspace session that comes back when they enter Morph AI.
