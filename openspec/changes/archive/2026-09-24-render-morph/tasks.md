@@ -15,4 +15,4 @@
 
 ## 4. Image verification
 
-- [ ] 4.1 Run the image with `PORT=9090`, `MORPH_ENV=production`, throwaway secrets, and a named volume at `/data` that starts root-owned. Confirm `GET /health` is 200, restart the container, and confirm the data directory is still present. Do not pass `--user`.
+- [x] 4.1 Run the image with `PORT=9090`, `MORPH_ENV=production`, throwaway secrets, and a named volume at `/data` that starts root-owned. Confirm `GET /health` is 200, restart the container, and confirm the data directory is still present. Do not pass `--user`.
