@@ -14,8 +14,9 @@ The supported path is **local `start-all.sh`**. `scripts/deploy.sh` still mentio
 
 | Folder | Product | Stack |
 |--------|---------|-------|
-| `morph/` | Morph AI and MorphNotes | Go + React (CRA) |
+| `morph/` | Morph AI and MorphNotes (Tasks, Timelines, Big notes, Research, Generic data) | Go + React (CRA) |
 | `morph-utils/` | MorphUtils shell (Event Logs, Content Maker, Data Access, Project) | React (Vite) |
+| `invite-signup/` | Invite Signup (admin codes and user redeem) | React (Vite) |
 | `formx/` | Event Logs | Go + React (Vite) |
 | `composerx/` | Content Maker | Go + Svelte (Vite) |
 | `morph-engi/` | Project (in MorphUtils) | Rust + Svelte (Vite) |
@@ -99,6 +100,7 @@ Clone → `cp .env.example .env` → `./start-all.sh`. Data lives under each app
 | Morph API | http://localhost:9090 |
 | Morph AI / MorphNotes UI | http://localhost:3031 |
 | MorphUtils | http://localhost:3040 |
+| Invite Signup | http://localhost:3051 |
 | AI tools API | http://localhost:8000/docs |
 | AI tools UI | http://localhost:3000 |
 | Event Logs API | http://localhost:29909/swagger/index.html |
@@ -152,6 +154,7 @@ Data Access API port follows `SHARPREPORT_PORT` in `.env` (Vite on 5178 proxies 
 |-----|----|-------------------------|
 | `morph-api` | `morph-ui` | `morph` |
 | — | `morph-utils-ui` | `morph-utils` |
+| — | `invite-signup-ui` | — |
 | `bk-api` | `bk-ui` | `bk` |
 | `formx-api` | `formx-ui` | `formx` |
 | `composerx-api` | `composerx-ui` | `composerx` |

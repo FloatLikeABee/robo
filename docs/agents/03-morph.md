@@ -4,8 +4,8 @@
 
 **Morph** is the Go API (`:9090`) plus React CRA UI (`:3031`). It is two products in one SPA:
 
-- **Morph AI** — system chat, Skills, optional AI tools workspace
-- **MorphNotes** — Tasks, Timelines, Big notes, Generic data, Settings (Users)
+- **Morph AI** — system chat and header **Skills**. The agent workspace tabs are **Notes & TODOs** and **Context & Knowledge**. Header **AI tools** opens the AI tools drawer for `bk` (Assistants, RAG, Documents, System).
+- **MorphNotes** — Tasks, Timelines, Big notes, Research, Generic data
 
 Deep operator notes: [`morph/README.md`](../../morph/README.md).
 
@@ -32,24 +32,43 @@ On macOS, `start-all.sh` **builds** the binary before run (Badger `LC_UUID`).
 
 ## MorphNotes nav
 
-From `AppDrawer.js` (base `/morphdata`):
+Drawer order in `AppDrawer.js` (base `/morphdata`):
 
 | Label | Route |
 |-------|--------|
 | Tasks | `/morphdata/case-tasks` |
 | Timelines | `/morphdata/timelines` |
 | Big notes | `/morphdata/big-notes` |
+| Research | `/morphdata/research` |
 | Generic data | `/morphdata/generic-data` |
-| Settings → Users | `/morphdata/configuration/users` |
+
+These are the drawer items, not a claim that no other `/morphdata` route exists. `/morphdata/settings` and `/morphdata/configuration` redirect to `/morphdata/generic-data`.
 
 Case tasks require `start_at` / `end_at`. Do not add Morph AI / Notes header shortcuts on the MorphNotes chrome; chat is the Morph AI SPA.
+
+## Research
+
+Research is the MorphNotes module at `/morphdata/research`. A new job runs five verified online rounds. Optional reference files are `.txt`, `.pdf`, `.csv`, and `.json`.
+
+Publish a finished job with `POST /api/tran/research/:id/publish`. That write requires a Morph JWT. The stored public path is served as HTML by `GET /api/tran/public/research/:slug`, which is on the no-session allowlist. In dev, `morph/frontend` proxies `/api` to `:9090`, so a published link opened from the Research page on `:3031` reaches that handler. The same URL on the API origin (`http://localhost:9090`) serves the HTML directly.
+
+## Invite Signup
+
+New accounts are provisioned in [Invite Signup](../../invite-signup/) (`invite-signup/`), not from a MorphNotes Users page. Dev UI: `http://localhost:3051`. Launcher service: `invite-signup-ui` (UI only; no API process and no `start-all.sh` alias). Start it with `./start-all.sh start invite-signup-ui` after `morph-api` is up. The Vite app proxies `/api` to `:9090`. Without the launcher: `cd invite-signup/frontend && npm run build`.
+
+- `/redeem` is unauthenticated. It submits `POST /api/invite/redeem` and shows the new username and password once.
+- `/admin` signs in with a Morph admin account (`POST /api/auth/login`, then `GET /api/auth/me`) and creates codes with `POST /api/admin/invite-codes`.
+
+The signed-in user changes their own username or password in MorphUtils **Your account** (`PATCH /api/auth/me`). The bootstrap admin in the root README is unchanged.
 
 ## Important API groups
 
 | Prefix | Purpose |
 |--------|---------|
-| `/api/auth` | Login, me, user, permissions |
-| `/api/admin` | User CRUD |
+| `/api/auth` | Login, me, user, permissions. `PATCH /api/auth/me` updates the caller's own username and password |
+| `/api/admin/users` | Admin user CRUD API. There is no MorphNotes Users page |
+| `/api/admin/invite-codes` | List and create invitation codes for Invite Signup |
+| `/api/invite/redeem` | Redeem one code into a new `plat_users` row |
 | `/api/chat` | Morph AI sessions and messages |
 | `/api/tran/*` | MorphNotes entities (tasks, timelines, research, generic data, …) |
 | `/api/forms/*`, `/api/knowledge/*`, `/api/graph/*` | Quick sheets, knowledge files, graph search/health |
