@@ -9,6 +9,10 @@ WORKDIR /src/morph/frontend
 RUN npm ci
 COPY morph/frontend/ ./
 ENV CI=true
+# Public MorphUtils origin, inlined by CRA. Render passes service env vars as
+# build args. Empty or loopback omits the header link (see headerAppLinks.js).
+ARG REACT_APP_MORPH_UTILS_URL
+ENV REACT_APP_MORPH_UTILS_URL=${REACT_APP_MORPH_UTILS_URL}
 RUN npm run build
 
 FROM golang:1.25-bookworm AS build

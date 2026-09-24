@@ -171,12 +171,8 @@ func main() {
 		c.File("./presentation/form-answers.html")
 	})
 
-	// Serve static files (for React app)
-	r.Static("/static", "./frontend/build/static")
-	r.StaticFile("/", "./frontend/build/index.html")
-	r.NoRoute(func(c *gin.Context) {
-		c.File("./frontend/build/index.html")
-	})
+	// CRA build: /static chunks plus public/ files (icons) at the build root.
+	mountFrontend(r, "./frontend/build")
 
 	h.SetGinEngine(r)
 
