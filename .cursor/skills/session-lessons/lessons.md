@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-09-24 — Event Logs identity headers are not a session
+
+- Trigger: formx/composerx `X-User-Role` / `X-User-Permissions`, or a client-supplied auth base URL
+- Rule: Protected API routes require a bearer Morph accepts at the configured USERS_PANEL_BASE_URL. Strip client identity headers first. Headers alone, including a fake Morph base URL, must never grant a role.
+- Source: [Lens Event Logs auth](current)
+
 ## 2026-09-24 — Content Maker identity headers are not a session
 
 - Trigger: Content Maker `requireTranmailAccess`, `X-User-Role` / `X-User-Permissions` on `/templates`

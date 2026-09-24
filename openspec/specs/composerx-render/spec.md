@@ -7,7 +7,7 @@ Gives the product owner a Blueprint entry for Content Maker and the steps to cop
 ## Requirements
 
 ### Requirement: Content Maker is a Docker web service in the flat Blueprint
-`render.yaml` MUST declare a service named `composerx` with `type: web`, `runtime: docker`, `region: singapore`, `plan: starter`, and `branch: main`. That service MUST set `dockerfilePath: ./composerx/Dockerfile`, `dockerContext: .`, `healthCheckPath: /health`, and `autoDeployTrigger: checksPass`. The Blueprint MUST NOT declare a `projects` block. The service names MUST be `morph`, `morph-utils`, and `composerx`, in that order. Event Logs, Data Access, Project, AI tools, and Invite Signup MUST NOT be services in that file.
+`render.yaml` MUST declare a service named `composerx` with `type: web`, `runtime: docker`, `region: singapore`, `plan: starter`, and `branch: main`. That service MUST set `dockerfilePath: ./composerx/Dockerfile`, `dockerContext: .`, `healthCheckPath: /health`, and `autoDeployTrigger: checksPass`. The Blueprint MUST NOT declare a `projects` block. The service names MUST be `morph`, `morph-utils`, `formx`, and `composerx`, in that order. Data Access, Project, AI tools, and Invite Signup MUST NOT be services in that file.
 
 #### Scenario: Blueprint matches the Content Maker image
 - **WHEN** a reviewer reads the `composerx` service in `render.yaml`
@@ -16,7 +16,7 @@ Gives the product owner a Blueprint entry for Content Maker and the steps to cop
 
 #### Scenario: Existing services stay
 - **WHEN** a reviewer lists service names in `render.yaml`
-- **THEN** the names are `morph`, `morph-utils`, and `composerx`
+- **THEN** the names are `morph`, `morph-utils`, `formx`, and `composerx`
 - **AND** `morph` and `morph-utils` are still present
 
 ### Requirement: Data disk is a single instance with a pinned port

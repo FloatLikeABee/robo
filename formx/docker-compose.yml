@@ -1,0 +1,18 @@
+# Event Logs only. Does not start Morph or MorphUtils.
+services:
+  formx:
+    build:
+      context: ..
+      dockerfile: formx/Dockerfile
+    ports:
+      - "127.0.0.1:${FORMX_PUBLISH_PORT:-29909}:29909"
+    environment:
+      PORT: "29909"
+    env_file:
+      - path: deploy/.env.production
+        required: false
+    volumes:
+      - formx-data:/data
+
+volumes:
+  formx-data:

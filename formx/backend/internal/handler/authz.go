@@ -17,22 +17,28 @@ const (
 
 func requireWorkspaceAccess() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role := resolveRole(c.GetHeader("X-User-Role"), c.GetHeader("X-User-Roles"))
-		rawPermissions := c.GetHeader("X-User-Permissions")
-		token := bearerToken(c.GetHeader("Authorization"))
-		var panelPerms []string
-		if token != "" {
-			resolvedRole, perms := resolveRoleAndPermissionsFromUsersPanel(c, token)
-			panelPerms = perms
-			if resolvedRole != "" {
-				role = resolvedRole
-			}
-			if len(perms) > 0 {
-				rawPermissions = strings.Join(perms, ",")
-				c.Request.Header.Set("X-User-Permissions", rawPermissions)
-			}
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
 		}
-		// Morph-hosted auth: any authenticated user may use SheetX (no app permission gates).
+		// Client identity headers are not a session. Morph strips the same set
+		// before it trusts a JWT. Role and permissions come only from Morph's
+		// response to the bearer.
+		stripClientIdentityHeaders(c.Request)
+		token := bearerToken(c.GetHeader("Authorization"))
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		role, panelPerms, ok := resolveRoleAndPermissionsFromUsersPanel(c, token)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		// Morph-hosted auth: an authenticated admin, or any user Morph granted
+		// permissions, may use Event Logs. Employee still needs a form permission
+		// when Morph returned a role and an empty permission list.
+		rawPermissions := strings.Join(panelPerms, ",")
 		if role == "admin" || len(panelPerms) > 0 {
 			c.Next()
 			return
@@ -41,37 +47,52 @@ func requireWorkspaceAccess() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if token == "" && role == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
-			return
-		}
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "tranform access is restricted by admin policy"})
 	}
 }
 
-func resolveRoleAndPermissionsFromUsersPanel(c *gin.Context, token string) (string, []string) {
+func stripClientIdentityHeaders(r *http.Request) {
+	if r == nil {
+		return
+	}
+	for _, key := range []string{
+		"X-User-ID",
+		"X-User-Role",
+		"X-User-Roles",
+		"X-User-Email",
+		"X-User-Permissions",
+		"X-UsersPanel-BaseURL",
+	} {
+		r.Header.Del(key)
+	}
+}
+
+// resolveRoleAndPermissionsFromUsersPanel asks the configured Morph origin
+// whether the bearer is a user. The third result is false when that call does
+// not succeed. A client-supplied base URL is not an origin.
+func resolveRoleAndPermissionsFromUsersPanel(c *gin.Context, token string) (string, []string, bool) {
 	baseURL := ""
 	if hRaw, ok := c.Get("handler_instance"); ok {
-		if h, ok := hRaw.(*Handler); ok && h != nil {
+		if h, ok := hRaw.(*Handler); ok && h != nil && h.Cfg != nil {
 			baseURL = strings.TrimRight(h.Cfg.UsersPanelBaseURL, "/")
 		}
 	}
 	if baseURL == "" {
-		baseURL = strings.TrimRight(c.GetHeader("X-UsersPanel-BaseURL"), "/")
-	}
-	if baseURL == "" {
-		return "", nil
+		return "", nil, false
 	}
 
-	reqUser, _ := http.NewRequest(http.MethodGet, baseURL+"/api/auth/user", nil)
+	reqUser, err := http.NewRequest(http.MethodGet, baseURL+"/api/auth/user", nil)
+	if err != nil {
+		return "", nil, false
+	}
 	reqUser.Header.Set("Authorization", "Bearer "+token)
 	userResp, err := http.DefaultClient.Do(reqUser)
 	if err != nil {
-		return "", nil
+		return "", nil, false
 	}
 	defer userResp.Body.Close()
 	if userResp.StatusCode != http.StatusOK {
-		return "", nil
+		return "", nil, false
 	}
 	userBody, _ := io.ReadAll(userResp.Body)
 	var userPayload struct {
@@ -80,28 +101,31 @@ func resolveRoleAndPermissionsFromUsersPanel(c *gin.Context, token string) (stri
 		} `json:"user"`
 	}
 	if json.Unmarshal(userBody, &userPayload) != nil {
-		return "", nil
+		return "", nil, false
 	}
 	role := resolveRole("", strings.Join(userPayload.User.Roles, ","))
 
-	reqPerms, _ := http.NewRequest(http.MethodGet, baseURL+"/api/auth/permissions", nil)
+	reqPerms, err := http.NewRequest(http.MethodGet, baseURL+"/api/auth/permissions", nil)
+	if err != nil {
+		return role, nil, true
+	}
 	reqPerms.Header.Set("Authorization", "Bearer "+token)
 	permsResp, err := http.DefaultClient.Do(reqPerms)
 	if err != nil {
-		return role, nil
+		return role, nil, true
 	}
 	defer permsResp.Body.Close()
 	if permsResp.StatusCode != http.StatusOK {
-		return role, nil
+		return role, nil, true
 	}
 	permsBody, _ := io.ReadAll(permsResp.Body)
 	var permsPayload struct {
 		Permissions []string `json:"permissions"`
 	}
 	if json.Unmarshal(permsBody, &permsPayload) != nil {
-		return role, nil
+		return role, nil, true
 	}
-	return role, permsPayload.Permissions
+	return role, permsPayload.Permissions, true
 }
 
 func resolveRole(roleHeader, rolesHeader string) string {
@@ -140,4 +164,3 @@ func hasPermission(rawCSV, target string) bool {
 	}
 	return false
 }
-
