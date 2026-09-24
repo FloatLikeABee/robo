@@ -2,7 +2,7 @@
 
 ## Local development (supported)
 
-Source of truth: **`start-all.sh`**. Remaining services: morph, formx, composerx, morph-engi, bk, SharpReport, morph-utils.
+Source of truth: **`start-all.sh`**. Remaining services: morph, formx, composerx, morph-engi, bk, SharpReport, morph-utils, invite-signup (`invite-signup-ui` at http://localhost:3051; no separate API process and no alias).
 
 ### Prerequisites
 
@@ -44,6 +44,7 @@ cp .env.example .env
 | `sharpreport-api` | `sharpreport-ui` | `sharpreport` |
 | `bk-api` | `bk-ui` | `bk` |
 | — | `morph-utils-ui` | `morph-utils` |
+| — | `invite-signup-ui` | — |
 
 Logs: `.robo-dev/logs/<service>.log`. macOS Morph API is built before run.
 

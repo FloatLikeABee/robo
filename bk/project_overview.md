@@ -1,10 +1,10 @@
-# Project Overview: Ground Control with MCP Support
+# Project Overview: AI tools
 
 ## Project Name
-Ground Control with MCP Support
+AI tools (`bk/`)
 
 ## Description
-A comprehensive Retrieval-Augmented Generation (RAG) system with Model Context Protocol (MCP) support for Ollama models. This system provides a complete solution for building, managing, and deploying AI agents with RAG capabilities.
+A Retrieval-Augmented Generation (RAG) workbench for assistants and knowledge collections. It does not implement the Model Context Protocol. The platform MCP server is the Morph Go program `morph/cmd/morph-mcp`.
 
 ## Key Features
 
@@ -30,11 +30,8 @@ A comprehensive Retrieval-Augmented Generation (RAG) system with Model Context P
 - **Browser Automation**: AI-powered browser control using LangChain + Playwright
 - **Custom Tools**: Extensible tool system for custom functionality
 
-### 🔌 MCP (Model Context Protocol)
-- **Stable Communication**: Reliable protocol for AI model communication
-- **Real-time Updates**: Live status monitoring and updates
-- **Client Support**: Multiple client connections
-- **Message Broadcasting**: Broadcast messages to all connected clients
+### Model Context Protocol
+AI tools does not start a TCP or WebSocket MCP server. Connect clients to `morph/cmd/morph-mcp`.
 
 ### 🎨 Modern UI
 - **React + Material-UI**: Beautiful, responsive web interface
@@ -51,7 +48,6 @@ A comprehensive Retrieval-Augmented Generation (RAG) system with Model Context P
 │  Material-UI    │    │  Ground Control │    │  Local/Remote   │
 │  Components     │    │  Agent Manager  │    │  AI Models      │
 └─────────────────┘    │  Tool Manager   │    └─────────────────┘
-                       │  MCP Service    │
                        └─────────────────┘
                                 │
                        ┌─────────────────┐
@@ -147,9 +143,6 @@ A comprehensive Retrieval-Augmented Generation (RAG) system with Model Context P
 ### Tools
 - `GET /tools` - List tools
 - `PUT /tools/{id}` - Update tool config
-
-### MCP
-- `POST /mcp/start` - Start MCP server
 
 ## Configuration
 
