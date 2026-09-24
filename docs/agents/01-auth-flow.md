@@ -53,7 +53,27 @@ Every consuming app reads `USERS_PANEL_BASE_URL` (legacy name). Default: `http:/
 | `morph/db/plat_users.go` | `plat_users` in SQLite (legacy MySQL helpers may still exist in code) |
 | `morph/frontend/src/auth/morphSession.js` | Morph AI session helpers |
 
-Public routes include `POST /api/auth/login` and selected `/api/tran/public/*`. Other `/api/*` routes require a Bearer token.
+### Which `/api/*` routes are public
+
+Most `/api/*` routes need a Morph session (`Authorization: Bearer`). Published HTML is an explicit allowlist, not a prefix: only `GET` and `HEAD` of a single slug under these paths work with no session.
+
+| Method | Path | Why |
+|--------|------|-----|
+| POST | `/api/auth/login` | Sign-in |
+| POST | `/api/invite/redeem` | Invite signup |
+| GET, HEAD | `/api/tran/public/big-notes/:slug` | Published Big note HTML |
+| GET, HEAD | `/api/tran/public/timelines/:slug` | Published Timeline HTML |
+| GET, HEAD | `/api/tran/public/research/:slug` | Published Research HTML |
+
+`GET /api/auth/me`, `/api/auth/user`, and `/api/auth/permissions` are not rejected by the middleware; each handler checks the Bearer token itself.
+
+`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*` (including Research create, patch, cancel, publish, and delete), `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` (including `POST /api/graph/search`) return 401 with no session. `GET` and `HEAD` on those prefixes still succeed without a session, so MorphNotes can list records before login. That read exposure is intentional for this rule. `POST` and unknown kinds under `/api/tran/public/` are 401.
+
+The MorphNotes SPA and Morph AI attach the bearer token from `userspanel_session_token` (`tranApi`) when the user is signed in. MorphUtils copies the same token into iframes as `?userspanel_token=`. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls.
+
+A new published page must be registered as GET and added to `publicMorphReadKinds` in `morph/handlers/authz_middleware.go`.
+
+`X-User-ID` / `X-User-Role` still satisfy the session check. Removing that fallback is issue #23, not this rule.
 
 ### Admin bootstrap
 

@@ -33,7 +33,8 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if strings.HasPrefix(path, "/api/tran/public/") {
+		// Published HTML is an explicit GET/HEAD allowlist, not the whole /api/tran/public/ prefix.
+		if isPublicMorphRead(c.Request.Method, path) {
 			c.Next()
 			return
 		}
@@ -49,9 +50,16 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 
 		scope, ok := h.resolveUserScope(c)
 
-		// Morph Data surfaces are usable without login. When a Morph AI session is present,
-		// attach identity; otherwise continue anonymously.
-		if isOpenMorphDataAPI(path) {
+		// Former open data APIs. Unsafe methods need a session. GET/HEAD stay
+		// reachable without one so MorphNotes can still list records. Anything
+		// under /api/tran/public/ that is not on the allowlist is not a private read.
+		if isMorphDataAPI(path) {
+			if strings.HasPrefix(path, "/api/tran/public/") || !isSafeMethod(c.Request.Method) {
+				if !ok {
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+					return
+				}
+			}
 			if ok {
 				h.applyAuthScope(c, scope)
 			}
@@ -78,19 +86,59 @@ func (h *Handlers) AuthzMiddleware() gin.HandlerFunc {
 	}
 }
 
-func isOpenMorphDataAPI(path string) bool {
-	prefixes := []string{
-		"/api/tran/",
-		"/api/forms/",
-		"/api/knowledge/",
-		"/api/graph/",
-	}
-	for _, p := range prefixes {
+// morphDataAPIPrefixes used to skip auth entirely (isOpenMorphDataAPI).
+// Writes on these prefixes now require a session. Reads do not.
+var morphDataAPIPrefixes = []string{
+	"/api/tran/",
+	"/api/forms/",
+	"/api/knowledge/",
+	"/api/graph/",
+}
+
+// publicMorphReadKinds are the only unauthenticated published pages.
+// A new public route must be added here and registered as GET.
+var publicMorphReadKinds = map[string]struct{}{
+	"big-notes": {},
+	"timelines": {},
+	"research":  {},
+}
+
+func isMorphDataAPI(path string) bool {
+	for _, p := range morphDataAPIPrefixes {
 		if strings.HasPrefix(path, p) {
 			return true
 		}
 	}
 	return false
+}
+
+func isSafeMethod(method string) bool {
+	return method == http.MethodGet || method == http.MethodHead
+}
+
+// isPublicMorphRead is the allowlist for published HTML.
+// Only GET and HEAD of /api/tran/public/{kind}/{slug} match.
+// Other methods and unknown kinds under /api/tran/public/ are not public.
+func isPublicMorphRead(method, path string) bool {
+	if method != http.MethodGet && method != http.MethodHead {
+		return false
+	}
+	rest, ok := strings.CutPrefix(path, "/api/tran/public/")
+	if !ok || rest == "" || strings.Contains(rest, "..") {
+		return false
+	}
+	kind, slug, ok := strings.Cut(rest, "/")
+	if !ok {
+		return false
+	}
+	if _, known := publicMorphReadKinds[kind]; !known {
+		return false
+	}
+	slug = strings.Trim(slug, "/")
+	if slug == "" || strings.Contains(slug, "/") {
+		return false
+	}
+	return true
 }
 
 func (h *Handlers) applyAuthScope(c *gin.Context, scope userScope) {
@@ -127,8 +175,8 @@ func (h *Handlers) resolveUserScope(c *gin.Context) (userScope, bool) {
 		}
 		return userScope{
 			userID:  u.ID,
-			role:   role,
-			email:  u.Email,
+			role:    role,
+			email:   u.Email,
 			isAdmin: isAdmin,
 		}, true
 	}
@@ -146,8 +194,8 @@ func (h *Handlers) resolveUserScope(c *gin.Context) (userScope, bool) {
 	}
 	return userScope{
 		userID:  userID,
-		role:   role,
-		email:  strings.TrimSpace(c.GetHeader("X-User-Email")),
+		role:    role,
+		email:   strings.TrimSpace(c.GetHeader("X-User-Email")),
 		isAdmin: isAdmin,
 	}, true
 }
