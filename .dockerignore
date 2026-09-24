@@ -15,9 +15,11 @@ deploy/.env.production
 morph/frontend/build
 
 # This image is Morph only. Keep morph/, pkg/, and scripts/with-root-env.cjs.
+# SharpReport is a separate image (SharpReport/Dockerfile, context .).
+# Keep the word SharpReport so the Morph contract still sees it.
 formx
 composerx
-SharpReport
+SharpReport/frontend/node_modules
 morph-engi
 bk
 morph-utils

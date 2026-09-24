@@ -9,6 +9,7 @@ pub mod docs_bridge;
 pub mod docs_publish;
 pub mod embed;
 pub mod frontend;
+pub mod health;
 pub mod mcp_tools;
 pub mod metabase;
 pub mod queries;
