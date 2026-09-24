@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logger.info("Starting Ground Control with MCP support...")
+    logger.info("Starting AI tools API...")
 
     _root = os.path.dirname(os.path.abspath(__file__))
     _reload_excludes = []

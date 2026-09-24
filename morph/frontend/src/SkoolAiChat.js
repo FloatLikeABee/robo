@@ -117,6 +117,11 @@ function formatResponseTime(ms) {
   return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
 }
 
+function pickRestoredSession(list, lastId) {
+  const sessionIds = (Array.isArray(list) ? list : []).map((s) => s.id).filter(Boolean);
+  return resolveRestoredSessionId({ lastId, sessionIds });
+}
+
 /**
  * Skool AI chat — full page or embedded (e.g. admin drawer).
  * @param {{ variant?: 'page' | 'embedded', enableFileUpload?: boolean, singleSession?: boolean }} props
@@ -294,12 +299,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   };
 
 
-  const pickRestoredSession = (list, lastId) => {
-    const sessionIds = (Array.isArray(list) ? list : []).map((s) => s.id).filter(Boolean);
-    return resolveRestoredSessionId({ lastId, sessionIds });
-  };
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     try {
       const res = await tranApi.get('/api/chat/sessions');
       const list = Array.isArray(res.data) ? res.data : [];
@@ -316,7 +316,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
       setSessions([]);
       return [];
     }
-  };
+  }, [isAgentShell]);
 
   const loadSessionMessages = async (sessionId) => {
     try {
@@ -366,7 +366,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
   useEffect(() => {
     if (!singleSession) loadSessions();
-  }, [singleSession]);
+  }, [singleSession, loadSessions]);
 
   const headerAppLinks = useMemo(
     () => [

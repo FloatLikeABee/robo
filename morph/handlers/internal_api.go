@@ -133,21 +133,10 @@ func (h *Handlers) execManagementAPI(c *gin.Context, method, path, query string,
 		return 400, []byte(`{"error":"invalid assistant request URL"}`)
 	}
 
-	// AuthzMiddleware needs the same credentials as the outer request. Legacy mode used
-	// X-User-ID + role headers; Morph login uses Bearer only — without forwarding
-	// Authorization, internal tool calls always get 401 "authentication required".
+	// The inner request is a new session check. Forward the caller's bearer token.
+	// Identity headers are not credentials; do not copy them or invent an admin id.
 	if auth := strings.TrimSpace(c.GetHeader("Authorization")); auth != "" {
 		req.Header.Set("Authorization", auth)
-	}
-	uid := strings.TrimSpace(c.GetHeader("X-User-ID"))
-	if uid == "" {
-		uid = "admin"
-	}
-	req.Header.Set("X-User-ID", uid)
-	for _, key := range []string{"X-User-Role", "X-User-Roles", "X-User-Permissions"} {
-		if v := c.GetHeader(key); v != "" {
-			req.Header.Set(key, v)
-		}
 	}
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/json")

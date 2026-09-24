@@ -1,11 +1,11 @@
-jest.mock('../notesTodos/NotesTodosContent', () => () => null);
-jest.mock('../../HybridContextDrawer', () => () => null);
-
 import {
   readWorkspaceTab,
   resolveRestoredSessionId,
   workspaceTabStorageKey,
 } from './AgentWorkspace';
+
+jest.mock('../notesTodos/NotesTodosContent', () => () => null);
+jest.mock('../../HybridContextDrawer', () => () => null);
 
 test('keeps a last id that still exists', () => {
   expect(

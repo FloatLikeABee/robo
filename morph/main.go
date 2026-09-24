@@ -34,8 +34,40 @@ func corsAllowOrigin(requestOrigin string) string {
 	return "*"
 }
 
+// corsMiddleware sets browser CORS headers. OPTIONS is answered here with 204.
+// Allow-Headers is explicit; identity headers are not credentials.
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		allow := corsAllowOrigin(origin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allow)
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, CONNECT, TRACE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	cfg := config.GetConfig()
+	prod, err := config.ParseMorphEnv()
+	if err != nil {
+		log.Fatalf("refusing to start: %s", err.Error())
+	}
+	if err = config.ValidateStartup(cfg, prod); err != nil {
+		log.Fatalf("refusing to start: %s", err.Error())
+	}
+	for _, w := range config.DevelopmentWarnings(cfg, prod) {
+		log.Printf("warning: %s", w)
+	}
 
 	// Initialize Badger app database (forms, chat, etc.)
 	database, err := db.New(cfg.DBPath)
@@ -75,13 +107,36 @@ func main() {
 	log.Printf("Entity details Badger ready at %s", cfg.EntityDetailsBadger)
 
 	if err := tranSQL.EnsurePlatUsersTable(context.Background()); err != nil {
+		if prod {
+			log.Fatalf("refusing to start: plat_users schema: %v", err)
+		}
 		log.Printf("Warning: plat_users schema: %v", err)
-	} else if err := tranSQL.EnsurePlatInviteCodesTable(context.Background()); err != nil {
-		log.Printf("Warning: plat_invite_codes schema: %v", err)
-	} else if err := tranSQL.EnsureBootstrapAdmin(context.Background(), cfg.AdminEmail, cfg.AdminUsername, cfg.AdminPassword); err != nil {
-		log.Printf("Warning: bootstrap admin: %v", err)
 	} else {
-		log.Printf("Auth ready (admin %s / %s)", cfg.AdminUsername, cfg.AdminEmail)
+		if prod {
+			rotated, err := tranSQL.GuardStoredDefaultAdminPassword(context.Background(), cfg.AdminEmail, cfg.AdminUsername, config.RotateDefaultAdmin(), cfg.AdminPassword)
+			if err != nil {
+				log.Fatalf("refusing to start: %s", err.Error())
+			}
+			if rotated > 0 {
+				log.Printf("rotated %d account(s) off the development default admin password", rotated)
+			}
+		}
+		if err := tranSQL.EnsureBootstrapAdmin(context.Background(), cfg.AdminEmail, cfg.AdminUsername, cfg.AdminPassword); err != nil {
+			if prod {
+				log.Fatalf("refusing to start: bootstrap admin: %v", err)
+			}
+			log.Printf("Warning: bootstrap admin: %v", err)
+		} else {
+			log.Printf("Auth ready (admin %s / %s)", cfg.AdminUsername, cfg.AdminEmail)
+		}
+		if !prod {
+			if hit, err := tranSQL.HasStoredDefaultAdminPassword(context.Background(), cfg.AdminEmail, cfg.AdminUsername); err == nil && hit {
+				log.Printf("warning: an admin account in the database still uses the development default password. Allowed because MORPH_ENV is not production. See docs/security-hosting-checklist.md")
+			}
+		}
+	}
+	if err := tranSQL.EnsurePlatInviteCodesTable(context.Background()); err != nil {
+		log.Printf("Warning: plat_invite_codes schema: %v", err)
 	}
 
 	// Initialize handlers
@@ -99,23 +154,7 @@ func main() {
 	r := gin.Default()
 
 	// CORS: reflect localhost/127.0.0.1 origins for cross-port dev; otherwise *.
-	r.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		allow := corsAllowOrigin(origin)
-		c.Writer.Header().Set("Access-Control-Allow-Origin", allow)
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, CONNECT, TRACE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	r.Use(corsMiddleware())
 	r.Use(h.AuthzMiddleware())
 
 	// Swagger documentation

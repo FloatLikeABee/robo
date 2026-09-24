@@ -16,15 +16,19 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
 
 ```
                          Morph AI  :3031 / API :9090
-                         (login, chat, MorphNotes)
+                         login, chat, MorphNotes
+                         Tasks, Timelines, Big notes,
+                         Research, Generic data
                                    │
                     JWT cookie  userspanel_session_token
                                    │
-        ┌──────────────────────────┼──────────────────────────┐
-        ▼                          ▼                          ▼
-   MorphUtils :3040            AI tools                   optional
-   iframe shell                bk :3000/:8000             Neo4j :7687
-        │
+        ┌──────────────┬───────────┼──────────────┬──────────────┐
+        ▼              ▼           ▼              ▼              ▼
+   MorphUtils      Invite       AI tools       optional
+   :3040           Signup       bk             Neo4j :7687
+   iframe shell    :3051        :3000/:8000
+        │           UI only
+        │           /api → :9090
         ├── Event Logs     formx      UI :19909  API :29909
         ├── Content Maker  composerx  UI :8044   API :8043
         ├── Data Access    SharpReport UI :5178  API SHARPREPORT_PORT
@@ -36,6 +40,7 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
 | Product (folder) | Backend | Frontend | Local data | Auth |
 |------------------|---------|----------|------------|------|
 | Morph AI / MorphNotes (`morph/`) | Go (Gin) | React (CRA) | SQLite + Badger | Morph JWT (auth hub) |
+| Invite Signup (`invite-signup/`) | — (Morph API) | React (Vite) | — | Admin uses Morph JWT; redeem is open |
 | Event Logs (`formx/`) | Go (Gin) | React (Vite) | SQLite + Badger | Morph SSO |
 | Content Maker (`composerx/`) | Go (Gin) | Svelte (Vite) | SQLite + Badger | Morph SSO |
 | Data Access (`SharpReport/`) | Rust (Axum) | SvelteKit | SQLite | Morph SSO |
@@ -51,6 +56,7 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
 |---------|-----|-----|
 | Morph | 9090 | 3031 |
 | MorphUtils | — | 3040 |
+| Invite Signup | — | 3051 |
 | Event Logs | 29909 | 19909 |
 | Content Maker | 8043 | 8044 |
 | Project | 9096 | 5179 |
@@ -61,7 +67,8 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
 
 | Say this | Folder / URL id (do not “fix”) |
 |----------|--------------------------------|
-| Morph AI, MorphNotes | `morph/`, UI `/morphdata` |
+| Morph AI, MorphNotes (Tasks, Timelines, Big notes, Research, Generic data) | `morph/`, UI `/morphdata` |
+| Invite Signup | `invite-signup/`, launcher `invite-signup-ui`, UI :3051 |
 | MorphUtils | `morph-utils/` |
 | Event Logs | `formx/`, embed id `sheetx`, default embed `/events-info` |
 | Content Maker | `composerx/` |
@@ -85,3 +92,4 @@ Neo4j and `morphgraph-worker` are optional. The rest of the stack starts without
 - AI: `02-ai-integration.md`
 - Conventions: `13-conventions.md`
 - Run: `12-build-deploy.md`
+- Local MCP (stdio): `14-morph-mcp.md`

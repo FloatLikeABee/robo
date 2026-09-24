@@ -53,11 +53,33 @@ Every consuming app reads `USERS_PANEL_BASE_URL` (legacy name). Default: `http:/
 | `morph/db/plat_users.go` | `plat_users` in SQLite (legacy MySQL helpers may still exist in code) |
 | `morph/frontend/src/auth/morphSession.js` | Morph AI session helpers |
 
-Public routes include `POST /api/auth/login` and selected `/api/tran/public/*`. Other `/api/*` routes require a Bearer token.
+### Which `/api/*` routes are public
+
+Most `/api/*` routes need a Morph session (`Authorization: Bearer`). Published HTML is an explicit allowlist, not a prefix: only `GET` and `HEAD` of a single slug under these paths work with no session.
+
+| Method | Path | Why |
+|--------|------|-----|
+| POST | `/api/auth/login` | Sign-in |
+| POST | `/api/invite/redeem` | Invite signup |
+| GET, HEAD | `/api/tran/public/big-notes/:slug` | Published Big note HTML |
+| GET, HEAD | `/api/tran/public/timelines/:slug` | Published Timeline HTML |
+| GET, HEAD | `/api/tran/public/research/:slug` | Published Research HTML |
+
+`GET /api/auth/me`, `/api/auth/user`, and `/api/auth/permissions` are not rejected by the middleware; each handler checks the Bearer token itself.
+
+`POST`, `PUT`, `PATCH`, and `DELETE` on `/api/tran/*` (including Research create, patch, cancel, publish, and delete), `/api/forms/*`, `/api/knowledge/*`, and `/api/graph/*` (including `POST /api/graph/search`) return 401 with no session. `GET` and `HEAD` on those prefixes still succeed without a session, so MorphNotes can list records before login. That read exposure is intentional for this rule. `POST` and unknown kinds under `/api/tran/public/` are 401.
+
+The MorphNotes SPA and Morph AI attach the bearer token from `userspanel_session_token` (`tranApi`) when the user is signed in. MorphUtils copies the same token into iframes as `?userspanel_token=`. The API does not read that cookie. Morph AI's management tool loop (`internal_api.go`) forwards the caller's `Authorization` onto internal `/api/tran` calls and does not send identity headers.
+
+A new published page must be registered as GET and added to `publicMorphReadKinds` in `morph/handlers/authz_middleware.go`. The path must be exactly `/api/tran/public/{kind}/{slug}` with one non-empty slug segment.
+
+`X-User-ID`, `X-User-Role`, `X-User-Roles`, `X-User-Email`, and `X-User-Permissions` are not a session. There is no header fallback. Chat (`/api/chat`), admin (`/api/admin`), and the mutating MorphNotes routes above require `Authorization: Bearer` with a Morph JWT. Spoofed identity headers do not replace the user or role in that token. Anonymous `GET` and `HEAD` on the former open prefixes stay unauthenticated (issue #69).
 
 ### Admin bootstrap
 
-On startup Morph calls `EnsureBootstrapAdmin()` from env (`ADMIN_EMAIL` / `ADMIN_USERNAME` / `ADMIN_PASSWORD`). Default operator login in the root README: **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`).
+On startup Morph calls `EnsureBootstrapAdmin()` from env (`ADMIN_EMAIL` / `ADMIN_USERNAME` / `ADMIN_PASSWORD`). That insert does not change an existing row. Default operator login for local/dev (`MORPH_ENV` unset): **`morphadmin`** / **`admin123`** (or `morphadmin@local.com`). `./start-all.sh` needs no extra auth config.
+
+`MORPH_ENV=production` refuses the development JWT secret, the development admin password (including a hash already stored in `plat_users`), and a JWT lifetime outside 1–168 hours. Production default lifetime is 24 hours when `JWT_EXPIRY_HOURS` is unset. One start with `MORPH_ROTATE_DEFAULT_ADMIN=1` replaces stored development passwords and keeps account ids. Checklist: [`docs/security-hosting-checklist.md`](../security-hosting-checklist.md). Startup errors name the variable to set and do not print secret values.
 
 ### MorphUtils SSO
 

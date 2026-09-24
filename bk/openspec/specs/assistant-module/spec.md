@@ -29,7 +29,7 @@ The Assistant module MUST provide a single profile type that captures both advis
 - **THEN** each customization becomes an AssistantProfile with source='customization'
 
 ### Requirement: Tool system removal
-ToolManager, ToolRegistry, src/tools.py, and built-in tool wrappers MUST be removed. Agents and services MUST operate without tool binding.
+ToolManager, ToolRegistry, src/tools.py, and built-in tool wrappers MUST be removed. Agents and services MUST operate without tool binding. AI tools MUST NOT include an MCP service that answers tools/list.
 
 #### Scenario: Agent without tools
 
@@ -40,9 +40,9 @@ ToolManager, ToolRegistry, src/tools.py, and built-in tool wrappers MUST be remo
 
 #### Scenario: MCP tools/list after removal
 
-- **GIVEN** the tool system has been removed
-- **WHEN** MCPService receives tools/list
-- **THEN** it returns an empty list or host-only tools
+- **GIVEN** the BK TCP MCP server has been removed
+- **WHEN** the AI tools API is running
+- **THEN** it does not accept a tools/list message on a BK MCP server
 
 ### Requirement: API and storage consolidation
 API endpoints and TinyDB storage for advisers and customizations MUST be replaced by a single /assistants resource and assistants.json storage.
