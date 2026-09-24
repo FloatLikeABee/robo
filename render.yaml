@@ -25,6 +25,8 @@ services:
       name: morph-data
       mountPath: /data
       sizeGB: 1
+    # Optional Docker build arg: REACT_APP_MORPH_UTILS_URL. Unset or loopback
+    # omits the MorphUtils header link. Set a public URL when Utils is hosted.
     envVars:
       - key: MORPH_ENV
         value: production

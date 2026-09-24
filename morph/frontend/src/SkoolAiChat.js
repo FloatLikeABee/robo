@@ -30,6 +30,7 @@ import {
   writeStoredAppliedAssistant,
 } from './lib/appliedAssistantChannel';
 import { getMorphToken, clearMorphSession } from './auth/morphSession';
+import { HEADER_APP_ICONS, morphUtilsBaseURL } from './lib/headerAppLinks';
 import { useConfirm } from './components/ConfirmDialog';
 import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
 import './App.css';
@@ -48,14 +49,6 @@ const SESSION_SWATCH_COLORS = [
 ];
 const APP_URLS = {
   morphData: process.env.REACT_APP_MORPHDATA_URL || '/morphdata',
-  morphUtils: process.env.REACT_APP_MORPH_UTILS_URL || 'http://localhost:3040',
-  bk: process.env.REACT_APP_BK_URL || 'http://localhost:3000',
-};
-
-const HEADER_APP_ICONS = {
-  morphdata: `${process.env.PUBLIC_URL || ''}/icons/morph-data-icon.svg`,
-  morphutils: `${process.env.PUBLIC_URL || ''}/icons/morph-utils-icon.svg`,
-  bk: `${process.env.PUBLIC_URL || ''}/icons/bk-icon.svg`,
 };
 
 function hashSessionId(id) {
@@ -368,8 +361,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (!singleSession) loadSessions();
   }, [singleSession, loadSessions]);
 
-  const headerAppLinks = useMemo(
-    () => [
+  const headerAppLinks = useMemo(() => {
+    const links = [
       {
         id: 'morphdata',
         label: 'MorphNotes',
@@ -377,16 +370,19 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
         color: '#3b82f6',
         icon: HEADER_APP_ICONS.morphdata,
       },
-      {
+    ];
+    const utils = morphUtilsBaseURL(process.env.NODE_ENV, process.env.REACT_APP_MORPH_UTILS_URL);
+    if (utils) {
+      links.push({
         id: 'morphutils',
         label: 'MorphUtils',
-        href: appHrefWithSession(APP_URLS.morphUtils),
+        href: appHrefWithSession(utils),
         color: '#2563eb',
         icon: HEADER_APP_ICONS.morphutils,
-      },
-    ],
-    []
-  );
+      });
+    }
+    return links;
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
