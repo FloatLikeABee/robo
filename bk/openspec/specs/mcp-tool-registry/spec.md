@@ -6,7 +6,7 @@ Define how tools are registered, discovered, and invoked by the MCP service and 
 
 ## Requirements
 
-### Requirement: 
+### Requirement: Single tool registry
 The system MUST maintain a single tool registry that holds every available tool regardless of source (built-in, custom, or external MCP host).
 
 #### Scenario: Registry initialization
@@ -22,7 +22,7 @@ The system MUST maintain a single tool registry that holds every available tool 
 - **WHEN** the host is connected
 - **THEN** its exposed tools are registered under the same registry with prefixed tool_ids
 
-### Requirement: 
+### Requirement: Common tool list interface
 Tools MUST be discoverable by both the internal agent runtime and external MCP clients through a common list interface.
 
 #### Scenario: Agent tool selection
@@ -38,7 +38,7 @@ Tools MUST be discoverable by both the internal agent runtime and external MCP c
 - **WHEN** MCPService processes the message
 - **THEN** it returns the merged list of built-in, custom, and external host tools
 
-### Requirement: 
+### Requirement: Structured tool invocation
 Tool invocation MUST accept a structured arguments dict and route to the correct underlying implementation.
 
 #### Scenario: Built-in tool call

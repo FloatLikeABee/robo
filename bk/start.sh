@@ -2,7 +2,7 @@
 
 # Ground Control Startup Script
 
-echo "🚀 Starting Ground Control with MCP Support..."
+echo "🚀 Starting AI tools..."
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then

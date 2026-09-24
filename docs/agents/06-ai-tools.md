@@ -2,7 +2,7 @@
 
 ## Overview
 
-User-facing product: **AI tools**. Folder stays `bk/`. Morph AI can open this workspace (Assistants, RAG, Documents, System). It is not a separate “Ground Control” product.
+User-facing product: **AI tools**. Folder stays `bk/`. Morph AI can open this workspace (Assistants, RAG, Documents, System). It is not a separate “Ground Control” product. It does not run a Model Context Protocol server. The platform MCP program is `morph/cmd/morph-mcp` (not documented on `main` yet).
 
 | | |
 |--|--|
