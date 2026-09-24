@@ -32,5 +32,5 @@ test('login page alerts errors and does not change the shared viewport meta', ()
   const html = read('public/index.html');
   const meta = html.match(/<meta\s+name="viewport"\s+content="([^"]+)"/);
   expect(meta[1]).toContain('viewport-fit=cover');
-  expect(meta[1]).not.toContain('interactive-widget');
+  expect(meta[1]).toContain('interactive-widget=resizes-content');
 });
