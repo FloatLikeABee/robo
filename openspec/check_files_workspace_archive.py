@@ -8,6 +8,7 @@ policy is either still active or archived with its delta synced.
 """
 
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +48,27 @@ LIVE_FILES_TERMS = (
     "pin-from-folder",
     "filesWorkspaceStore",
 )
+
+
+def live_spec_requires_files_workspace(text):
+    """True when a non-policy spec tells an agent to build a removed Files surface.
+
+    Headings are skipped. A sentence that only forbids the surface
+    (MUST NOT / SHALL NOT) does not count.
+    """
+    body = " ".join(
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    )
+    sentences = re.split(r"(?<=[.!?])\s+", body)
+    for sentence in sentences:
+        if not any(term in sentence for term in LIVE_FILES_TERMS):
+            continue
+        if re.search(r"\b(?:MUST|SHALL)\s+NOT\b", sentence):
+            continue
+        return True
+    return False
 
 
 def archived_drop_dirs():
@@ -120,10 +142,9 @@ def main() -> int:
     if SPECS.is_dir():
         for spec in SPECS.rglob("*.md"):
             text = spec.read_text(encoding="utf-8")
-            mentions_files = any(needle in text for needle in LIVE_FILES_TERMS)
-            if not mentions_files:
+            if spec.parent.name in POLICY_CAPABILITIES:
                 continue
-            if spec.parent.name not in POLICY_CAPABILITIES:
+            if live_spec_requires_files_workspace(text):
                 errors.append(f"live spec describes the Files tab: {spec.relative_to(ROOT)}")
 
     errors.extend(drop_policy_errors())
