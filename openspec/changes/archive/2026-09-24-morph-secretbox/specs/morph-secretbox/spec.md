@@ -100,7 +100,7 @@ Canonical associated data for a provider-key row MUST be the UTF-8 string `provi
 
 ### Requirement: Dev key file and production refusal
 
-The process resolver MUST take an explicit production flag supplied by the caller. It MUST NOT read `MORPH_ENV` itself. The caller supplies the bool from `config.ParseMorphEnv()` (`production`/`prod` = production; unset/`development`/`dev`/`local`/`test` = local; anything else refuses to start) and `config.ValidateStartup(cfg, prod)` in `morph/config/startup.go`. When production is true, or when `MORPH_SECRETS_KEY` is set, the resolver MUST use only the environment and MUST NOT create or read a key file. A missing or invalid environment key in that case MUST be returned to the caller so startup can refuse. When production is false and both env vars are unset, the resolver MUST load or create a key file at the caller-supplied path. Creation MUST use mode `0600`, MUST write standard base64 of 32 random bytes plus a trailing newline, and MUST report that the file was created. An existing file MUST NOT be overwritten. The resolver MUST refuse a symlink, a non-regular file, a missing parent directory, a file it cannot prove is the same file it stat-ed, a file whose mode grants any group or other permission bits, and a file that does not decode to 32 bytes. When production is false, the current key is unset, and previous keys are set, the resolver MUST fail with the invalid-key sentinel and MUST NOT generate a file. The package MUST NOT log.
+The process resolver MUST take an explicit production flag supplied by the caller. It MUST NOT read `MORPH_ENV` itself. The caller supplies the bool from `config.ParseMorphEnv()` (`production`/`prod` = production; unset/`development`/`dev`/`local`/`test` = local; anything else refuses to start) and `config.ValidateStartup(cfg, prod)` in `morph/config/startup.go`. When production is true, or when `MORPH_SECRETS_KEY` is set, the resolver MUST use only the environment and MUST NOT create or read a key file. A missing or invalid environment key in that case MUST be returned to the caller so startup can refuse. When production is false and both env vars are unset, the resolver MUST load or create a key file at the caller-supplied path. Creation MUST use mode `0600`, MUST write standard base64 of 32 random bytes plus a trailing newline, and MUST report that the file was created. An existing file MUST NOT be overwritten. The resolver MUST refuse a symlink, a non-regular file, a missing parent directory, a file it cannot prove is the same file it stat-ed, a file whose mode grants any group or other permission bits, and a file that does not decode to 32 bytes. When production is false, the current key is unset, and previous keys are set, the resolver MUST fail with the invalid-key sentinel and MUST NOT generate a file. The package MUST NOT log. Morph startup MUST call the resolver after `NewTranSQL` with that bool. A resolver error MUST refuse process start. The refusal MUST name `MORPH_SECRETS_KEY` when that variable is missing or invalid, MUST name `MORPH_SECRETS_KEY_PREVIOUS` when that variable is the problem, and MUST NOT include either value. When the resolver creates the dev file, startup MUST log a warning that contains the path and MUST NOT log the key. A set `MORPH_SECRETS_KEY_PREVIOUS` MUST be loaded for decrypt.
 
 #### Scenario: Dev creates a private key file
 
@@ -132,6 +132,13 @@ The process resolver MUST take an explicit production flag supplied by the calle
 
 - **WHEN** an existing key file grants group or other permission bits
 - **THEN** the resolver returns an error and does not use the file's contents as a key
+
+#### Scenario: Startup refuses a bad production key and keeps a local file private
+
+- **WHEN** the Morph process reaches startup after the Tran data directory exists
+- **THEN** production with a missing or invalid `MORPH_SECRETS_KEY` refuses to start with an error that names that variable and does not include the value
+- **AND** local mode with both secrets env vars unset uses or creates `morph-secrets.key` at mode `0600` in that directory and logs a warning that contains the path and not the key
+- **AND** a set `MORPH_SECRETS_KEY_PREVIOUS` is available to open tokens sealed with that older key
 
 #### Scenario: Symlink is refused
 

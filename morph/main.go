@@ -76,6 +76,10 @@ func main() {
 	defer tranSQL.Close()
 	log.Printf("Tran SQLite ready at %s", cfg.TranSQLitePath)
 
+	if _, err = openSecretsBox(prod, cfg.TranSQLitePath); err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+
 	details, err := db.NewBadgerEntityDetails(cfg.EntityDetailsBadger)
 	if err != nil {
 		log.Fatalf("Entity details Badger: %v", err)

@@ -55,7 +55,7 @@ Start **Morph API** first when bringing apps up one by one (auth hub).
 - Local: one gitignored `.env` at the **repo root**
 - Nested leftover `.env` files are ignored
 - Production path remains `deploy/.env.production` **when that tree exists** (it is currently absent)
-- Sealed secrets: `MORPH_SECRETS_KEY`, generated with `openssl rand -base64 32`. Optional `MORPH_SECRETS_KEY_PREVIOUS` is decrypt-only during rotation. The key is not `JWT_SECRET`. Local dev (`MORPH_ENV` unset, or `development`/`dev`/`local`/`test`) can leave it unset. `MORPH_ENV=production` or `prod` must set it; `config.ParseMorphEnv` refuses any other value. Startup does not call `secretbox.Resolve` yet. See [`14-secrets-key.md`](14-secrets-key.md).
+- Sealed secrets: `MORPH_SECRETS_KEY`, generated with `openssl rand -base64 32`. Optional `MORPH_SECRETS_KEY_PREVIOUS` is decrypt-only during rotation and is loaded when set. The key is not `JWT_SECRET`. Local dev (`MORPH_ENV` unset, or `development`/`dev`/`local`/`test`) can leave the current key unset; startup then uses or creates `morph-secrets.key` (mode `0600`) next to the Tran database and logs a path-only warning. `MORPH_ENV=production` or `prod` refuses a missing or invalid key. The error names the variable and does not print the value. See [`14-secrets-key.md`](14-secrets-key.md).
 
 ## Per-app build (without the launcher)
 

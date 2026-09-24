@@ -2,7 +2,7 @@
 
 Stored secrets, starting with AI provider API keys, are sealed in the Morph API by `morph/internal/secretbox` (import `idongivaflyinfa/internal/secretbox`). A copy of `tran.sqlite` does not include the master key. The master key is not derived from `JWT_SECRET`.
 
-This package is not called from startup yet. `main` already calls `config.ParseMorphEnv` and `config.ValidateStartup` in `morph/config/startup.go`. The follow-up passes that same bool into `secretbox.Resolve` after `NewTranSQL`. Do not pass the master key into `pkg/morphai`; decrypt in the Morph API and pass the provider key as ordinary config.
+Startup calls `openSecretsBox` after `NewTranSQL`. That passes the bool from `config.ParseMorphEnv` (`config.ValidateStartup` already ran) into `secretbox.Resolve`. Do not pass the master key into `pkg/morphai`; decrypt in the Morph API and pass the provider key as ordinary config.
 
 ## Environment
 
@@ -45,9 +45,9 @@ A later dev start reuses the file and does not warn again. The file is not overw
 | unset, `development`, `dev`, `local`, `test` | local (`false`) |
 | anything else | error; the process refuses to start |
 
-`secretbox.Resolve` does not read `MORPH_ENV`. Startup does not call `Resolve` yet. When it does, call it after `NewTranSQL`, which creates the data directory, and pass the same bool already given to `config.ValidateStartup(cfg, production)`. `Resolve(true, keyPath)` uses only `MORPH_SECRETS_KEY`. A missing or invalid key refuses the process. Production does not read `morph-secrets.key`. Before enabling production, copy that file's base64 line into `MORPH_SECRETS_KEY`.
+`secretbox.Resolve` does not read `MORPH_ENV`. `main` calls `openSecretsBox(prod, cfg.TranSQLitePath)` after `NewTranSQL`, which creates the data directory. `Resolve(true, keyPath)` uses only the environment. A missing or invalid `MORPH_SECRETS_KEY` refuses the process. The error names `MORPH_SECRETS_KEY` (or `MORPH_SECRETS_KEY_PREVIOUS` when that value is the problem) and does not print the value. Production does not read `morph-secrets.key`. Before enabling production, copy that file's base64 line into `MORPH_SECRETS_KEY`. A set `MORPH_SECRETS_KEY_PREVIOUS` is loaded for decrypt.
 
-`ParseMorphEnv` and `ValidateStartup` are already in `main`. This change does not edit `morph/config` or `main.go`. The follow-up adds only the `Resolve` call:
+`morph/config` is unchanged. The `main.go` edit is the call after Tran SQLite opens, outside the CORS block:
 
 ```go
 cfg := config.GetConfig()
@@ -59,14 +59,8 @@ if err = config.ValidateStartup(cfg, production); err != nil {
     log.Fatalf("refusing to start: %s", err.Error())
 }
 // NewTranSQL creates filepath.Dir(cfg.TranSQLitePath).
-dataDir := filepath.Dir(cfg.TranSQLitePath)
-keyPath := filepath.Join(dataDir, "morph-secrets.key")
-box, created, err := secretbox.Resolve(production, keyPath)
-if err != nil {
-    log.Fatalf("secrets key: %v", err)
-}
-if created {
-    log.Printf("warning: generated dev MORPH_SECRETS_KEY file at %s (mode 0600); set MORPH_SECRETS_KEY before production", keyPath)
+if _, err = openSecretsBox(production, cfg.TranSQLitePath); err != nil {
+    log.Fatalf("%s", err.Error())
 }
 ```
 

@@ -5,7 +5,7 @@ Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update 
 ## 2026-09-24 — Morph production mode is MORPH_ENV
 
 - Trigger: Morph production vs local startup, sealed secrets, hosting checklist, `secretbox.Resolve`
-- Rule: The flag is `MORPH_ENV`, parsed by `config.ParseMorphEnv()` and checked by `config.ValidateStartup(cfg, prod)` in `morph/config/startup.go`. `production`/`prod` is production; unset/`development`/`dev`/`local`/`test` is local; anything else refuses to start. `Resolve` takes that bool and does not read the env var.
+- Rule: The flag is `MORPH_ENV`, parsed by `config.ParseMorphEnv()` and checked by `config.ValidateStartup(cfg, prod)` in `morph/config/startup.go`. `production`/`prod` is production; unset/`development`/`dev`/`local`/`test` is local; anything else refuses to start. `Resolve` takes that bool and does not read the env var. Startup calls `openSecretsBox` after `NewTranSQL`. Keep new `main.go` edits out of the CORS block.
 - Source: [secretbox MORPH_ENV](current)
 
 ## 2026-09-22 — Morph AI has no Files workspace

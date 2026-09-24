@@ -116,9 +116,9 @@ The package does not log. `createdDevKey == true` means the caller logs the path
 warning: generated dev MORPH_SECRETS_KEY file at %s (mode 0600); set MORPH_SECRETS_KEY before production
 ```
 
-### Startup wiring for the follow-up (not in this change)
+### Startup wiring
 
-After `cfg := config.GetConfig()`. Reuse the bool from `config.ParseMorphEnv` (`MORPH_ENV`) that `config.ValidateStartup(cfg, production)` already receives. Call `Resolve` only after `NewTranSQL` creates the data directory. Do not edit `morph/config` or `main.go` in this change.
+`main` calls `openSecretsBox(prod, cfg.TranSQLitePath)` after `NewTranSQL` creates the data directory. `morph/config` is unchanged. The `main.go` edit is that call, outside the CORS block. `openSecretsBox` passes the bool from `config.ParseMorphEnv` (`MORPH_ENV`) into `Resolve`. Production missing or invalid `MORPH_SECRETS_KEY` returns `refusing to start: ...` naming the variable and not the value. A created dev file logs the path-only warning. `MORPH_SECRETS_KEY_PREVIOUS` is loaded when set.
 
 ```go
 production, err := config.ParseMorphEnv()
@@ -129,18 +129,12 @@ if err = config.ValidateStartup(cfg, production); err != nil {
     log.Fatalf("refusing to start: %s", err.Error())
 }
 // NewTranSQL creates filepath.Dir(cfg.TranSQLitePath).
-dataDir := filepath.Dir(cfg.TranSQLitePath)
-keyPath := filepath.Join(dataDir, "morph-secrets.key")
-box, created, err := secretbox.Resolve(production, keyPath)
-if err != nil {
-    log.Fatalf("secrets key: %v", err)
-}
-if created {
-    log.Printf("warning: generated dev MORPH_SECRETS_KEY file at %s (mode 0600); set MORPH_SECRETS_KEY before production", keyPath)
+if _, err = openSecretsBox(production, cfg.TranSQLitePath); err != nil {
+    log.Fatalf("%s", err.Error())
 }
 ```
 
-Hold `box` for #29. Decrypt provider keys inside the Morph API. Pass plaintext into `pkg/morphai` the same way `MORPH_AI_API_KEY` is passed today. Do not pass the master key into `pkg/morphai`.
+`providerSecrets` holds the box for #29. Decrypt provider keys inside the Morph API. Pass plaintext into `pkg/morphai` the same way `MORPH_AI_API_KEY` is passed today. Do not pass the master key into `pkg/morphai`.
 
 Production with a missing or invalid key refuses the process and does not read `morph-secrets.key`. Before turning production on, the operator copies that file's base64 line into `MORPH_SECRETS_KEY`. Dev with a missing key creates the 0600 file and warns. An invalid env value refuses in both modes. A later dev start with the file present reuses it and does not warn.
 
