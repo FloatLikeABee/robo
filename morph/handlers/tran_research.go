@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"idongivaflyinfa/ai"
+	"idongivaflyinfa/publish"
 
 	"github.com/gin-gonic/gin"
 	"github.com/robo/morphai"
@@ -780,14 +781,18 @@ func (h *Handlers) ServePublicResearch(c *gin.Context) {
 		return
 	}
 	slug := strings.TrimSpace(c.Param("slug"))
-	if slug == "" {
+	if !publish.Visible(slug) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	var title, markdown, htmlContent string
+	var title, markdown, htmlContent, storedSlug string
 	err := h.TranMySQL.DB.QueryRow(
-		`SELECT title, markdown_content, html_content FROM research WHERE published_slug = ? LIMIT 1`, slug,
-	).Scan(&title, &markdown, &htmlContent)
+		`SELECT title, markdown_content, html_content, COALESCE(published_slug, '') FROM research WHERE published_slug = ? LIMIT 1`, slug,
+	).Scan(&title, &markdown, &htmlContent, &storedSlug)
+	if err == nil && !publish.Visible(storedSlug) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "published research not found"})
+		return
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "published research not found"})

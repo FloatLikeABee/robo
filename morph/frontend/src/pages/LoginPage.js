@@ -2,13 +2,27 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../apiBase';
 import { loginMorph, setMorphToken, setMorphAuthSnapshot } from '../auth/morphSession';
+import { safeReturnPath } from '../auth/returnTo';
 import { releaseStuckOverlays } from '../utils/releaseStuckOverlays';
+
+function returnTarget(location) {
+  const fromQuery = new URLSearchParams(location.search).get('returnTo') || '';
+  const stateFrom = location.state?.from;
+  const fromState = stateFrom
+    ? `${stateFrom.pathname || ''}${stateFrom.search || ''}${stateFrom.hash || ''}`
+    : '';
+  const chosen = safeReturnPath(fromQuery) || safeReturnPath(fromState) || '/';
+  if (chosen === '/login' || chosen.startsWith('/login?') || chosen.startsWith('/login#')) {
+    return '/';
+  }
+  return chosen;
+}
 
 /** UsersPanel-backed login — same session cookie as TranForm / TranMail when on same site. */
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
+  const from = returnTarget(location);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

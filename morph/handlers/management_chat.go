@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -247,8 +249,31 @@ func normalizeManagementPrompt(s string) string {
 	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(s))), " ")
 }
 
-func managementExactQueryKey(userID, agentInstructions, prompt string) string {
-	return fmt.Sprintf("mgmt:exact:%s:%s:%s", strings.TrimSpace(userID), normalizeManagementPrompt(agentInstructions), normalizeManagementPrompt(prompt))
+func managementExactQueryKey(userID, lessonFingerprint, agentInstructions, prompt string) string {
+	return fmt.Sprintf("mgmt:exact:%s:%s:%s:%s", strings.TrimSpace(userID), lessonFingerprint, normalizeManagementPrompt(agentInstructions), normalizeManagementPrompt(prompt))
+}
+
+// enabledLessonCacheFingerprint hashes the caller's enabled lessons.
+// Disable, delete, and a newly harvested lesson all change the hash, so an
+// exact-query entry built under the previous set cannot be read back.
+// ok is false when the lesson list cannot be read; the caller must skip the cache.
+func (h *Handlers) enabledLessonCacheFingerprint(userID string) (string, bool) {
+	if h == nil || h.TranMySQL == nil || strings.TrimSpace(userID) == "" {
+		return "", false
+	}
+	rows, err := h.TranMySQL.ListAgentLessons(context.Background(), userID, true, 0)
+	if err != nil {
+		return "", false
+	}
+	var b strings.Builder
+	for _, l := range rows {
+		b.WriteString(l.ID)
+		b.WriteByte(0)
+		b.WriteString(l.Rule)
+		b.WriteByte(0)
+	}
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:]), true
 }
 
 func managementSessionSnapshotKey(userID, sessionID string) string {
@@ -287,7 +312,9 @@ func persistManagementCachesAsync(cacheKey, userID, sessionID, prompt, reply str
 		return
 	}
 	go func() {
-		managementExactQueryCache.Set(cacheKey, reply, managementQueryCacheTTL)
+		if cacheKey != "" {
+			managementExactQueryCache.Set(cacheKey, reply, managementQueryCacheTTL)
+		}
 		setManagementSessionSnapshot(userID, sessionID, prompt, reply, toolLog)
 	}()
 }
@@ -297,12 +324,20 @@ func persistManagementCachesAsync(cacheKey, userID, sessionID, prompt, reply str
 // skillIDs optionally loads full skill bodies in addition to the enabled skills catalog.
 func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, userPrompt, agentInstructions string, skillIDs []string) (string, []string, error) {
 	ctx := context.Background()
-	cacheKey := managementExactQueryKey(userID, agentInstructions, userPrompt)
-	hybridSkipCache := h.hybridStore != nil && h.hybridStore.IsAttached(userID, sessionID)
-	if !hybridSkipCache {
+	// Key the exact cache on the bearer subject and the enabled-lesson fingerprint.
+	// The userID argument is the chat header, which a client can set. No trusted
+	// identity means the exact cache is neither read nor written.
+	cacheKey := ""
+	lessonUser, trusted := h.trustedLessonUserID(c)
+	if trusted && !(h.hybridStore != nil && h.hybridStore.IsAttached(userID, sessionID)) {
+		if fp, fpOK := h.enabledLessonCacheFingerprint(lessonUser); fpOK {
+			cacheKey = managementExactQueryKey(lessonUser, fp, agentInstructions, userPrompt)
+		}
+	}
+	if cacheKey != "" {
 		if cached, ok := managementExactQueryCache.Get(cacheKey); ok {
 			if reply, ok := cached.(string); ok && strings.TrimSpace(reply) != "" {
-				log.Printf("[MGMT-CHAT] exact-query cache hit user=%s session=%s", userID, sessionID)
+				log.Printf("[MGMT-CHAT] exact-query cache hit user=%s session=%s", lessonUser, sessionID)
 				return reply, nil, nil
 			}
 		}
@@ -310,7 +345,7 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 
 	hist := h.toolChatHistory(userID, sessionID)
 	first := managementToolInstructions
-	if skillsBlock := h.agentSkillsAndLessonsContext(skillIDs); skillsBlock != "" {
+	if skillsBlock := h.agentSkillsAndLessonsContext(c, skillIDs); skillsBlock != "" {
 		first += "\n\n" + skillsBlock
 	}
 	if strings.TrimSpace(agentInstructions) != "" {
@@ -338,7 +373,13 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 	toolLog := make([]string, 0, managementToolMaxRounds)
 
 	for round := 0; round < managementToolMaxRounds; round++ {
-		reply, err := h.aiService.ChatCompletion(ctx, messages)
+		var reply string
+		var err error
+		if h.managementReply != nil {
+			reply, err = h.managementReply(ctx, userPrompt)
+		} else {
+			reply, err = h.aiService.ChatCompletion(ctx, messages)
+		}
 		if err != nil {
 			return "", toolLog, err
 		}

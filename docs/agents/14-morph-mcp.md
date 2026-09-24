@@ -31,7 +31,7 @@ There is no separate API token yet. Do not commit the JWT. Pass it in the client
 
 On startup, after the token verifies, the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again, including the production lifetime cap. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
 
-MCP never exposes private data to unauthenticated callers. Task tools run only after the token verifies and the subject exists in `plat_users`. They return that user's own Notes & TODOs, not another user's rows.
+MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). It returns true for any verified user on any record, so it is not an owner check. `list_my_tasks` and `get_task` do not call it. They run only after the token verifies and the subject exists in `plat_users`, and `ownerClause` limits the SQL to that user's own Notes & TODOs.
 
 On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config.
 

@@ -131,6 +131,45 @@ func TestProductionDecodeRejectsMissingIatOrExp(t *testing.T) {
 	}
 }
 
+func TestProductionDecodeRejectsFutureIat(t *testing.T) {
+	// Break this catches: production accepting a token whose iat is minutes ahead of now.
+	secret := testSecret()
+	now := time.Now()
+	future, err := signRaw(secret, Claims{
+		Email: "a@example.com",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   "user-1",
+			IssuedAt:  jwt.NewNumericDate(now.Add(2 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(2*time.Minute + 24*time.Hour)),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	near, err := signRaw(secret, Claims{
+		Email: "a@example.com",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   "user-1",
+			IssuedAt:  jwt.NewNumericDate(now.Add(30 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("MORPH_ENV", "production")
+	t.Setenv("JWT_SECRET", string(secret))
+	t.Setenv("JWT_EXPIRY_HOURS", "24")
+	prod := LoadTokenConfig()
+	if _, err := DecodeToken(prod, future); err == nil {
+		t.Fatal("production accepted a token whose iat is two minutes in the future")
+	}
+	if _, err := DecodeToken(prod, near); err != nil {
+		t.Fatalf("production rejected iat within one minute of leeway: %v", err)
+	}
+}
+
 func signRaw(secret []byte, claims Claims) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
 }

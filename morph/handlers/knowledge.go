@@ -244,24 +244,20 @@ func (h *Handlers) DeleteKnowledgeFile(c *gin.Context) {
 }
 
 // GraphHealth GET /api/graph/health
+// Schema is created when the Tran store opens (NewTranSQL / NewTranMySQLLegacy).
+// This handler does not write, and it does not return the Neo4j URI or a raw error.
 func (h *Handlers) GraphHealth(c *gin.Context) {
 	cfg := morphgraph.LoadFromEnv()
 	pending := int64(-1)
 	if h.TranMySQL != nil {
-		_ = h.TranMySQL.EnsureGraphKnowledgeSchema()
 		if n, err := h.TranMySQL.GraphOutboxDepth(c.Request.Context()); err == nil {
 			pending = n
 		}
 	}
 	neoOK := false
-	neoErr := ""
 	if cfg.Enabled {
-		if store, err := morphgraph.OpenStore(cfg); err != nil {
-			neoErr = err.Error()
-		} else if store != nil {
-			if err := store.Ping(c.Request.Context()); err != nil {
-				neoErr = err.Error()
-			} else {
+		if store, err := morphgraph.OpenStore(cfg); err == nil && store != nil {
+			if err := store.Ping(c.Request.Context()); err == nil {
 				neoOK = true
 			}
 			_ = store.Close(c.Request.Context())
@@ -269,9 +265,7 @@ func (h *Handlers) GraphHealth(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"enabled":           cfg.Enabled,
-		"neo4j_uri":         cfg.Neo4jURI,
 		"neo4j_ok":          neoOK,
-		"neo4j_error":       neoErr,
 		"embeddings":        morphgraph.NewEmbedder(cfg).Configured(),
 		"outbox_pending":    pending,
 		"knowledge_library": h.TranMySQL != nil,
@@ -279,8 +273,8 @@ func (h *Handlers) GraphHealth(c *gin.Context) {
 }
 
 type graphSearchBody struct {
-	Query  string   `json:"query"`
-	Limit  int      `json:"limit"`
+	Query   string   `json:"query"`
+	Limit   int      `json:"limit"`
 	Sources []string `json:"sources"`
 }
 

@@ -35,8 +35,8 @@ function RootLayout() {
 }
 
 /**
- * Login lives only on Morph AI. Morph Data (admin) and Forms are open;
- * they reuse the Morph AI shared session cookie when present.
+ * Login lives on Morph AI. MorphNotes (/morphdata) requires that session.
+ * Legacy /forms redirects into MorphNotes and hits the same gate.
  */
 export const appRouter = createBrowserRouter([
   {
@@ -49,8 +49,11 @@ export const appRouter = createBrowserRouter([
       { path: '/skoolz/*', element: <LegacySkoolzRedirect /> },
       {
         path: ADMIN_BASE_PATH,
-        element: <AdminLayout />,
+        element: <ProtectedLayout />,
         children: [
+          {
+            element: <AdminLayout />,
+            children: [
           { index: true, element: <Navigate to="generic-data" replace /> },
           { path: 'assets', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
           { path: 'resources', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
@@ -107,6 +110,8 @@ export const appRouter = createBrowserRouter([
             element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
           },
           { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+            ],
+          },
         ],
       },
       {
