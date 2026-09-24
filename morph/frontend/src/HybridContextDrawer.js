@@ -45,15 +45,6 @@ export default function HybridContextDrawer({
     }
   }, [sessionId, onAttachmentChange]);
 
-  useEffect(() => {
-    if (!open && !isPanel) return;
-    refreshMeta();
-    setStatus('');
-    if (panel === 'knowledge') {
-      void refreshKnowledge();
-    }
-  }, [open, isPanel, refreshMeta, panel]);
-
   const refreshKnowledge = useCallback(async () => {
     try {
       const { data } = await tranApi.get('/api/knowledge/files');
@@ -63,6 +54,15 @@ export default function HybridContextDrawer({
       setKnowledgeStatus(e.response?.data?.error || e.message || 'Knowledge Library unavailable');
     }
   }, []);
+
+  useEffect(() => {
+    if (!open && !isPanel) return;
+    refreshMeta();
+    setStatus('');
+    if (panel === 'knowledge') {
+      void refreshKnowledge();
+    }
+  }, [open, isPanel, refreshMeta, panel, refreshKnowledge]);
 
   const onUploadKnowledge = async (ev) => {
     const fs = ev.target.files;

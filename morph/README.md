@@ -39,6 +39,10 @@ Repo-root `.env` (nested leftover `.env` is ignored):
 | `TRAN_SQLITE_PATH` | `./data/tran.sqlite` | MorphNotes + `plat_users` |
 | `DB_PATH` | app Badger | Chat / forms KV |
 | `MORPH_AI_API_KEY` | _(empty)_ | DashScope / Qwen |
+| `MORPH_ENV` | unset (local) | `production` refuses development JWT/admin secrets. See [`docs/security-hosting-checklist.md`](../docs/security-hosting-checklist.md) |
+| `JWT_SECRET` | development default in `.env.example` | Signing key. Production requires 32+ unique characters |
+| `ADMIN_PASSWORD` | development default in `.env.example` | Bootstrap password. Production requires 12+ unique characters |
+| `JWT_EXPIRY_HOURS` | `876000` local | Production default 24; allowed 1–168 |
 | `USERS_PANEL_BASE_URL` | n/a on Morph itself | Other apps point this **at** Morph `:9090` |
 
 Relative `./data/...` paths are cwd-relative.
