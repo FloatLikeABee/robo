@@ -3321,6 +3321,7 @@ html[data-chat-theme='light'] .skills-panel-alert {
   }
 
   .app.app--agent.app--workspace-collapsed {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
       'head'
@@ -3639,6 +3640,10 @@ html[data-chat-theme='light'] .skills-panel-alert {
 
   .app.app--agent.app--workspace-collapsed {
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .agent-include-bar {
+    display: none;
   }
 
   html[data-keyboard-open] .app.app--agent,
