@@ -55,7 +55,6 @@ export default function UserSettings() {
       await tranApi.put(tranEndpoints.userMe, {
         first_name: firstName.trim() || null,
         last_name: lastName.trim(),
-        email: email.trim() || null,
         phone: phone.trim() || null,
       });
       setSuccess('Settings saved');
@@ -144,9 +143,10 @@ export default function UserSettings() {
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 fullWidth
                 autoComplete="email"
+                helperText="Email follows your login account."
+                InputProps={{ readOnly: true }}
               />
               <TextField
                 label="Phone"
