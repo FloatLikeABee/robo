@@ -1,4 +1,4 @@
-import { readRuntimeConfig, resolvePublicUrl } from './publicUrl';
+import { readRuntimeConfig, resolvePublicUrl, sheetxEmbedUrl } from './publicUrl';
 
 export type UtilsModuleId = 'sheetx' | 'composerx' | 'datax' | 'projects';
 
@@ -58,7 +58,7 @@ export const UTILS_MODULES: UtilsModule[] = [
     description: 'Events & Info log.',
     accent: '#0ea5e9',
     icon: '/icons/sheetx-icon.svg',
-    embedUrl: `${sheetxUrl}/events-info`,
+    embedUrl: sheetxEmbedUrl(sheetxUrl),
   },
   {
     id: 'composerx',
