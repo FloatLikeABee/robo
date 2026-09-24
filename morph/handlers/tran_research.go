@@ -24,13 +24,16 @@ import (
 )
 
 const (
-	researchRoundCount     = 5
-	researchLegacyRounds   = 20
-	researchMaxFileBytes   = 8 * 1024 * 1024
-	researchMaxPromptRunes = 20000
-	researchComposePrefix  = "Compose a thesis-quality research conclusion."
-	researchCriticPrefix   = "You are a ruthless editor of a research thesis."
+	researchRoundCount             = 5
+	researchLegacyRounds           = 20
+	researchMaxFileBytes           = 8 * 1024 * 1024
+	researchMaxPromptRunes         = 20000
+	researchComposePrefix          = "Compose a thesis-quality research conclusion."
+	researchCriticPrefix           = "You are a ruthless editor of a research thesis."
+	researchAINotConfiguredMessage = "AI is not configured (set MORPH_AI_API_KEY)"
 )
+
+var errResearchAINotConfigured = errors.New(researchAINotConfiguredMessage)
 
 type researchDoc struct {
 	ID              int             `json:"id"`
@@ -109,14 +112,40 @@ func researchTitleFromPrompt(prompt string) string {
 	return p
 }
 
+func researchErrIsNotConfigured(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, errResearchAINotConfigured) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "not configured")
+}
+
+func (h *Handlers) researchAIReady() bool {
+	if researchLLMHook != nil {
+		return true
+	}
+	return h != nil && h.aiService != nil && h.aiService.Configured()
+}
+
 func (h *Handlers) researchLLM(ctx context.Context, prompt string) (string, error) {
 	if researchLLMHook != nil {
-		return researchLLMHook(ctx, prompt)
+		out, err := researchLLMHook(ctx, prompt)
+		if researchErrIsNotConfigured(err) {
+			return "", errResearchAINotConfigured
+		}
+		return out, err
 	}
-	if h == nil || h.aiService == nil {
-		return "", errors.New("AI service not configured")
+	if !h.researchAIReady() {
+		return "", errResearchAINotConfigured
 	}
-	return h.aiService.ChatCompletionLong(ctx, []ai.DashScopeMessage{{Role: "user", Content: prompt}})
+	out, err := h.aiService.ChatCompletionLong(ctx, []ai.DashScopeMessage{{Role: "user", Content: prompt}})
+	if researchErrIsNotConfigured(err) {
+		return "", errResearchAINotConfigured
+	}
+	return out, err
 }
 
 func (h *Handlers) researchOwnerKey(c *gin.Context) string {
@@ -314,22 +343,32 @@ func persistResearchPiece(db *sql.DB, researchID, round int, markdown, verificat
 	return err
 }
 
-func assembleResearchMarkdown(pieces []researchPiece, refined string) string {
-	refined = strings.TrimSpace(refined)
-	if refined != "" {
-		return refined
+func researchRoundSucceeded(status string) bool {
+	switch status {
+	case "ok", "unverified":
+		return true
+	default:
+		return false
 	}
-	var b strings.Builder
-	b.WriteString("# Research conclusion\n\n")
-	for _, p := range pieces {
-		b.WriteString(fmt.Sprintf("## Round %d\n\n%s\n\n", p.RoundIndex, strings.TrimSpace(p.Markdown)))
-		if strings.TrimSpace(p.Verification) != "" {
-			b.WriteString("### Verification\n\n")
-			b.WriteString(strings.TrimSpace(p.Verification))
-			b.WriteString("\n\n")
-		}
+}
+
+func researchPartialFailureText(failed []int, target int, sample string) string {
+	parts := make([]string, len(failed))
+	for i, n := range failed {
+		parts[i] = fmt.Sprintf("%d", n)
 	}
-	return b.String()
+	msg := fmt.Sprintf("%d of %d rounds failed (%s)", len(failed), target, strings.Join(parts, ", "))
+	if s := strings.TrimSpace(sample); s != "" {
+		msg += ": " + s
+	}
+	return msg
+}
+
+func failResearchJob(db *sql.DB, id int, reason string) {
+	_, _ = db.Exec(
+		`UPDATE research SET status = 'failed', markdown_content = '', html_content = '', error_text = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND status != 'cancelled'`,
+		reason, id,
+	)
 }
 
 func loadResearchRoundTarget(db *sql.DB, id int) int {
@@ -352,7 +391,7 @@ func researchSourcePack(prompt string, pieces []researchPiece) string {
 	return b.String()
 }
 
-func (h *Handlers) synthesizeResearchConclusion(ctx context.Context, prompt string, pieces []researchPiece) string {
+func (h *Handlers) synthesizeResearchConclusion(ctx context.Context, prompt string, pieces []researchPiece) (string, error) {
 	pack := researchSourcePack(prompt, pieces)
 	composePrompt := researchComposePrefix + ` Write one professional document in the manner of a doctoral thesis or expert essay. Structure by argument, not by research-round order. Absorb the best-supported essence of every round; do not concatenate round write-ups; do not use Round 1…Round N as headings. Qualify uncertain or unverified claims. Markdown only.
 
@@ -361,6 +400,9 @@ func (h *Handlers) synthesizeResearchConclusion(ctx context.Context, prompt stri
 ` + pack
 	draft, err := h.researchLLM(ctx, composePrompt)
 	draft = strings.TrimSpace(draft)
+	if researchErrIsNotConfigured(err) {
+		return "", errResearchAINotConfigured
+	}
 	criticPrompt := researchCriticPrefix + ` Improve the draft using the source pack. Fix structure, redundancy, holes, and voice so it reads as one finished piece. Do not reintroduce Round N as the outline. Markdown only.
 
 ` + morphai.VisualFirstInstructions + `
@@ -372,13 +414,22 @@ Draft:
 ` + draft
 	polished, err2 := h.researchLLM(ctx, criticPrompt)
 	polished = strings.TrimSpace(polished)
+	if researchErrIsNotConfigured(err2) {
+		return "", errResearchAINotConfigured
+	}
 	if err2 == nil && polished != "" {
-		return polished
+		return polished, nil
 	}
 	if err == nil && draft != "" {
-		return draft
+		return draft, nil
 	}
-	return assembleResearchMarkdown(pieces, "")
+	if err2 != nil {
+		return "", err2
+	}
+	if err != nil {
+		return "", err
+	}
+	return "", errors.New("thesis synthesis returned nothing")
 }
 
 func researchJobCancelled(db *sql.DB, id int) bool {
@@ -395,6 +446,13 @@ func (h *Handlers) runResearchJob(ctx context.Context, id int) {
 	if err := db.QueryRow(`SELECT prompt, title FROM research WHERE id = ?`, id).Scan(&prompt, &title); err != nil {
 		return
 	}
+	if researchJobCancelled(db, id) {
+		return
+	}
+	if !h.researchAIReady() {
+		failResearchJob(db, id, researchAINotConfiguredMessage)
+		return
+	}
 	_, _ = db.Exec(`UPDATE research SET status = 'running', last_updated = CURRENT_TIMESTAMP WHERE id = ? AND status != 'cancelled'`, id)
 
 	var startRound int
@@ -402,6 +460,8 @@ func (h *Handlers) runResearchJob(ctx context.Context, id int) {
 	startRound++
 	target := loadResearchRoundTarget(db, id)
 
+	configFailed := false
+	failSample := ""
 	for round := startRound; round <= target; round++ {
 		if ctx.Err() != nil || researchJobCancelled(db, id) {
 			_, _ = db.Exec(`UPDATE research SET status = 'cancelled', last_updated = CURRENT_TIMESTAMP WHERE id = ?`, id)
@@ -412,6 +472,11 @@ func (h *Handlers) runResearchJob(ctx context.Context, id int) {
 			query = fmt.Sprintf("%s\n\nFollow-up angle for research round %d of %d.", prompt, round, target)
 		}
 		qOut, qErr := h.researchLLM(ctx, "Propose one short web search query (no quotes) for this research prompt:\n"+query)
+		if researchErrIsNotConfigured(qErr) {
+			_ = persistResearchPiece(db, id, round, fmt.Sprintf("Round %d failed: %s", round, researchAINotConfiguredMessage), "", "[]", "error")
+			configFailed = true
+			break
+		}
 		if qErr == nil && strings.TrimSpace(qOut) != "" {
 			query = strings.Split(strings.TrimSpace(qOut), "\n")[0]
 			if utf8.RuneCountInString(query) > 400 {
@@ -434,20 +499,35 @@ Write 2-6 short paragraphs with headings. Do not invent citations.
 %s`, round, target, prompt, query, notes, ragBlock, morphai.VisualFirstInstructions)
 		piece, wErr := h.researchLLM(ctx, writePrompt)
 		status := "ok"
+		verification := ""
+		if researchErrIsNotConfigured(wErr) {
+			_ = persistResearchPiece(db, id, round, fmt.Sprintf("Round %d failed: %s", round, researchAINotConfiguredMessage), "", string(srcJSON), "error")
+			configFailed = true
+			break
+		}
 		if wErr != nil {
 			status = "error"
 			piece = fmt.Sprintf("Round %d failed: %s", round, wErr.Error())
+			if failSample == "" {
+				failSample = wErr.Error()
+			}
 		} else if strings.TrimSpace(piece) == "" {
 			piece = notes
 			if piece == "" {
 				piece = fmt.Sprintf("Round %d gathered no additional notes.", round)
 			}
 		}
-		verifyPrompt := fmt.Sprintf(`You verify research claims. Sources/notes:\n%s\n\nDraft:\n%s\n\nWrite a short Verification subsection: what is supported, what is uncertain.`, notes, piece)
-		verification, vErr := h.researchLLM(ctx, verifyPrompt)
-		if vErr != nil {
-			verification = "Verification unavailable: " + vErr.Error()
-			if status == "ok" {
+		if status == "ok" {
+			verifyPrompt := fmt.Sprintf(`You verify research claims. Sources/notes:\n%s\n\nDraft:\n%s\n\nWrite a short Verification subsection: what is supported, what is uncertain.`, notes, piece)
+			var vErr error
+			verification, vErr = h.researchLLM(ctx, verifyPrompt)
+			if researchErrIsNotConfigured(vErr) {
+				_ = persistResearchPiece(db, id, round, strings.TrimSpace(piece), "", string(srcJSON), "ok")
+				configFailed = true
+				break
+			}
+			if vErr != nil {
+				verification = "Verification unavailable: " + vErr.Error()
 				status = "unverified"
 			}
 		}
@@ -457,13 +537,62 @@ Write 2-6 short paragraphs with headings. Do not invent citations.
 	if researchJobCancelled(db, id) {
 		return
 	}
-	_, _ = db.Exec(`UPDATE research SET status = 'refining', last_updated = CURRENT_TIMESTAMP WHERE id = ?`, id)
 	pieces, _ := loadResearchPieces(db, id)
-	synthesized := h.synthesizeResearchConclusion(ctx, prompt, pieces)
+	var successful []researchPiece
+	var failedRounds []int
+	for _, p := range pieces {
+		if researchRoundSucceeded(p.Status) {
+			successful = append(successful, p)
+			continue
+		}
+		if p.Status == "error" {
+			failedRounds = append(failedRounds, p.RoundIndex)
+		}
+	}
+	if configFailed {
+		failResearchJob(db, id, researchAINotConfiguredMessage)
+		return
+	}
+	if len(successful) == 0 {
+		reason := "All research rounds failed"
+		if failSample != "" {
+			reason += ": " + failSample
+		}
+		failResearchJob(db, id, reason)
+		return
+	}
+	_, _ = db.Exec(`UPDATE research SET status = 'refining', last_updated = CURRENT_TIMESTAMP WHERE id = ? AND status != 'cancelled'`, id)
+	if researchJobCancelled(db, id) {
+		return
+	}
+	synthesized, synErr := h.synthesizeResearchConclusion(ctx, prompt, successful)
+	if researchJobCancelled(db, id) {
+		return
+	}
+	if researchErrIsNotConfigured(synErr) {
+		failResearchJob(db, id, researchAINotConfiguredMessage)
+		return
+	}
+	synthesized = strings.TrimSpace(synthesized)
+	if synErr != nil || synthesized == "" {
+		reason := "Thesis could not be synthesized"
+		if synErr != nil && strings.TrimSpace(synErr.Error()) != "" {
+			reason += ": " + synErr.Error()
+		}
+		if len(failedRounds) > 0 {
+			reason += ". " + researchPartialFailureText(failedRounds, target, failSample)
+		}
+		failResearchJob(db, id, reason)
+		return
+	}
+	errText := ""
+	if len(failedRounds) > 0 {
+		errText = researchPartialFailureText(failedRounds, target, failSample)
+	}
 	htmlOut := buildResearchHTML(title, synthesized)
 	_, _ = db.Exec(
-		`UPDATE research SET status = 'complete', markdown_content = ?, html_content = ?, current_round = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?`,
-		synthesized, htmlOut, target, id,
+		`UPDATE research SET status = 'complete', markdown_content = ?, html_content = ?, error_text = ?, current_round = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND status != 'cancelled'`,
+		synthesized, htmlOut, errText, target, id,
 	)
 }
 
@@ -623,6 +752,11 @@ func (h *Handlers) CreateResearch(c *gin.Context) {
 		}
 	}
 
+	if !h.researchAIReady() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": researchAINotConfiguredMessage})
+		return
+	}
+
 	owner := h.researchOwnerKey(c)
 	userID := h.tranUserIDFromContext(c)
 	title := researchTitleFromPrompt(prompt)
@@ -738,6 +872,14 @@ func (h *Handlers) PublishResearch(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if d.Status == "failed" {
+		msg := strings.TrimSpace(d.ErrorText)
+		if msg == "" {
+			msg = "research failed and cannot be published"
+		}
+		c.JSON(http.StatusConflict, gin.H{"error": msg})
 		return
 	}
 	if strings.TrimSpace(d.HTMLContent) == "" {

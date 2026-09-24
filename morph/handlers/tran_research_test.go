@@ -5,12 +5,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"idongivaflyinfa/ai"
 	morphdb "idongivaflyinfa/db"
 
 	"github.com/gin-gonic/gin"
@@ -107,9 +109,92 @@ func TestCreateResearchEmptyPromptRejected(t *testing.T) {
 	}
 }
 
+func TestCreateResearchRejectsWhenAIUnconfigured(t *testing.T) {
+	prev := researchLLMHook
+	researchLLMHook = nil
+	t.Cleanup(func() { researchLLMHook = prev })
+	db := openResearchDB(t)
+	r := researchRouter(db)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/tran/research", strings.NewReader(`{"prompt":"What is graphene?"}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "MORPH_AI_API_KEY") {
+		t.Fatalf("body %s", w.Body.String())
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM research`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("expected no row, got %d", n)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/tran/research", strings.NewReader(`{"prompt":"  "}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("empty prompt status %d body %s", w.Code, w.Body.String())
+	}
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	_ = mw.WriteField("prompt", "topic")
+	part, err := mw.CreateFormFile("file", "photo.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("not-an-image"))
+	_ = mw.Close()
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/tran/research", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("bad file status %d body %s", w.Code, w.Body.String())
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM research`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("expected no row after invalid creates, got %d", n)
+	}
+}
+
+func TestPublishFailedResearchRejected(t *testing.T) {
+	db := openResearchDB(t)
+	_, err := db.Exec(
+		`INSERT INTO research (user_id, owner_key, title, prompt, status, error_text, markdown_content) VALUES (1,'','T','p','failed',?,'')`,
+		researchAINotConfiguredMessage,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := researchRouter(db)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/tran/research/1/publish", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	var slug sql.NullString
+	if err := db.QueryRow(`SELECT published_slug FROM research WHERE id = 1`).Scan(&slug); err != nil {
+		t.Fatal(err)
+	}
+	if slug.Valid && strings.TrimSpace(slug.String) != "" {
+		t.Fatalf("published_slug %q", slug.String)
+	}
+}
+
 func TestCreateResearchPromptOnly(t *testing.T) {
 	researchSkipAsync = true
 	t.Cleanup(func() { researchSkipAsync = false })
+	stubResearchAIReady(t)
 	db := openResearchDB(t)
 	r := researchRouter(db)
 	w := httptest.NewRecorder()
@@ -336,8 +421,263 @@ func TestResearchComposePromptIncludesVisualFirst(t *testing.T) {
 		return "# ok", nil
 	}
 	h := &Handlers{}
-	_ = h.synthesizeResearchConclusion(context.Background(), "graphene batteries", nil)
+	if _, err := h.synthesizeResearchConclusion(context.Background(), "graphene batteries", nil); err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(got, "Visual-first") {
 		t.Fatalf("compose prompt missing Visual-first:\n%s", got)
+	}
+}
+
+func insertRunningResearch(t *testing.T, db *sql.DB, prompt string) {
+	t.Helper()
+	_, err := db.Exec(
+		`INSERT INTO research (user_id, owner_key, title, prompt, status, round_target) VALUES (1,'','T',?,'running', ?)`,
+		prompt, researchRoundCount,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func researchJobRow(t *testing.T, db *sql.DB) (status, markdown, errText string) {
+	t.Helper()
+	var errNS sql.NullString
+	if err := db.QueryRow(`SELECT status, markdown_content, error_text FROM research WHERE id = 1`).Scan(&status, &markdown, &errNS); err != nil {
+		t.Fatal(err)
+	}
+	if errNS.Valid {
+		errText = errNS.String
+	}
+	return status, markdown, errText
+}
+
+func stubResearchAIReady(t *testing.T) {
+	t.Helper()
+	prev := researchLLMHook
+	researchLLMHook = func(context.Context, string) (string, error) { return "ok", nil }
+	t.Cleanup(func() { researchLLMHook = prev })
+}
+
+func silenceResearchGather(t *testing.T) {
+	t.Helper()
+	prev := researchWebGather
+	t.Cleanup(func() { researchWebGather = prev })
+	researchWebGather = func(string) (string, []webresearch.Source) {
+		return "offline note", nil
+	}
+}
+
+func TestResearchAllRoundWritesFailEndsFailed(t *testing.T) {
+	sqlDB := openResearchDB(t)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	t.Cleanup(func() { researchLLMHook = prev })
+	researchLLMHook = func(_ context.Context, prompt string) (string, error) {
+		if strings.Contains(prompt, "Write markdown for research round") {
+			return "", errors.New("model unavailable")
+		}
+		if strings.Contains(prompt, "Propose one short") {
+			return "graphene", nil
+		}
+		return "", errors.New("model unavailable")
+	}
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "failed" {
+		t.Fatalf("status %q, want failed; conclusion %q", status, truncateRunes(markdown, 240))
+	}
+	if strings.TrimSpace(markdown) != "" {
+		t.Fatalf("conclusion should be empty, got %q", truncateRunes(markdown, 240))
+	}
+	if strings.TrimSpace(errText) == "" || !strings.Contains(strings.ToLower(errText), "failed") {
+		t.Fatalf("error_text %q", errText)
+	}
+	if strings.Contains(markdown, "Round ") {
+		t.Fatalf("failure text stored as thesis: %q", markdown)
+	}
+}
+
+func TestResearchPartialRoundFailureKeepsThesis(t *testing.T) {
+	sqlDB := openResearchDB(t)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	t.Cleanup(func() { researchLLMHook = prev })
+	researchLLMHook = func(_ context.Context, prompt string) (string, error) {
+		if strings.HasPrefix(prompt, researchComposePrefix) || strings.HasPrefix(prompt, researchCriticPrefix) {
+			return "# Partial thesis\n\nSupported claims only.", nil
+		}
+		if strings.Contains(prompt, "Write markdown for research round 2 of") || strings.Contains(prompt, "Write markdown for research round 4 of") {
+			return "", errors.New("model unavailable")
+		}
+		if strings.Contains(prompt, "Write markdown for research round") {
+			return "Supported finding.", nil
+		}
+		if strings.Contains(prompt, "Propose one short") {
+			return "graphene", nil
+		}
+		if strings.HasPrefix(prompt, "You verify research claims") {
+			return "Claims match the notes.", nil
+		}
+		return "", errors.New("unexpected prompt")
+	}
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "complete" {
+		t.Fatalf("status %q, want complete; error_text %q", status, errText)
+	}
+	if !strings.Contains(markdown, "Partial thesis") {
+		t.Fatalf("conclusion %q", truncateRunes(markdown, 240))
+	}
+	if strings.Contains(markdown, "Round 2 failed") || strings.Contains(markdown, "## Round ") {
+		t.Fatalf("conclusion used failure notes: %q", truncateRunes(markdown, 240))
+	}
+	if !strings.Contains(errText, "2 of 5") || !strings.Contains(errText, "2") || !strings.Contains(errText, "4") {
+		t.Fatalf("error_text %q", errText)
+	}
+}
+
+func TestResearchSynthesisFailureEndsFailed(t *testing.T) {
+	sqlDB := openResearchDB(t)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	t.Cleanup(func() { researchLLMHook = prev })
+	researchLLMHook = func(_ context.Context, prompt string) (string, error) {
+		if strings.HasPrefix(prompt, researchComposePrefix) || strings.HasPrefix(prompt, researchCriticPrefix) {
+			return "", nil
+		}
+		if strings.Contains(prompt, "Write markdown for research round") {
+			return "Supported finding.", nil
+		}
+		if strings.Contains(prompt, "Propose one short") {
+			return "graphene", nil
+		}
+		if strings.HasPrefix(prompt, "You verify research claims") {
+			return "Claims match the notes.", nil
+		}
+		return "", errors.New("unexpected prompt")
+	}
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "failed" {
+		t.Fatalf("status %q, want failed; conclusion %q", status, truncateRunes(markdown, 180))
+	}
+	if strings.TrimSpace(markdown) != "" {
+		t.Fatalf("conclusion should be empty, got %q", truncateRunes(markdown, 180))
+	}
+	if !strings.Contains(strings.ToLower(errText), "could not be synthesized") {
+		t.Fatalf("error_text %q", errText)
+	}
+	pieces, err := loadResearchPieces(sqlDB, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pieces) != researchRoundCount {
+		t.Fatalf("pieces %d, want %d", len(pieces), researchRoundCount)
+	}
+	for _, p := range pieces {
+		if p.Status != "ok" {
+			t.Fatalf("round %d status %s", p.RoundIndex, p.Status)
+		}
+	}
+}
+
+func TestResearchNotConfiguredAfterASuccessfulRound(t *testing.T) {
+	sqlDB := openResearchDB(t)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	t.Cleanup(func() { researchLLMHook = prev })
+	researchLLMHook = func(_ context.Context, prompt string) (string, error) {
+		if strings.Contains(prompt, "Write markdown for research round 2 of") {
+			return "", errResearchAINotConfigured
+		}
+		if strings.HasPrefix(prompt, researchComposePrefix) || strings.HasPrefix(prompt, researchCriticPrefix) {
+			return "", errors.New("synthesis should not run after AI becomes unconfigured")
+		}
+		if strings.Contains(prompt, "Write markdown for research round") {
+			return "Supported finding.", nil
+		}
+		if strings.Contains(prompt, "Propose one short") {
+			return "graphene", nil
+		}
+		if strings.HasPrefix(prompt, "You verify research claims") {
+			return "Claims match the notes.", nil
+		}
+		return "", errors.New("unexpected prompt")
+	}
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "failed" {
+		t.Fatalf("status %q, want failed", status)
+	}
+	if errText != researchAINotConfiguredMessage {
+		t.Fatalf("error_text %q", errText)
+	}
+	if strings.TrimSpace(markdown) != "" {
+		t.Fatalf("conclusion %q", markdown)
+	}
+	pieces, err := loadResearchPieces(sqlDB, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pieces) < 1 || pieces[0].Status != "ok" {
+		t.Fatalf("expected the successful round to remain, got %+v", pieces)
+	}
+}
+
+func TestResearchJobFailsWhenAIServiceNil(t *testing.T) {
+	sqlDB := openResearchDB(t)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	researchLLMHook = nil
+	t.Cleanup(func() { researchLLMHook = prev })
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "failed" {
+		t.Fatalf("status %q, want failed; conclusion %q", status, truncateRunes(markdown, 240))
+	}
+	if errText != "AI is not configured (set MORPH_AI_API_KEY)" {
+		t.Fatalf("error_text %q", errText)
+	}
+	if strings.TrimSpace(markdown) != "" {
+		t.Fatalf("conclusion should be empty, got %q", markdown)
+	}
+}
+
+func TestResearchJobFailsWhenAINotConfigured(t *testing.T) {
+	t.Setenv("MORPH_AI_API_KEY", "")
+	t.Setenv("GEMINI_API_KEY", "")
+	t.Setenv("TRAN_QWEN_API_KEY", "")
+	sqlDB := openResearchDB(t)
+	svc, err := ai.New("", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}, aiService: svc}
+	insertRunningResearch(t, sqlDB, "graphene batteries")
+	silenceResearchGather(t)
+	prev := researchLLMHook
+	researchLLMHook = nil
+	t.Cleanup(func() { researchLLMHook = prev })
+	h.runResearchJob(context.Background(), 1)
+	status, markdown, errText := researchJobRow(t, sqlDB)
+	if status != "failed" {
+		t.Fatalf("status %q, want failed; conclusion %q", status, truncateRunes(markdown, 240))
+	}
+	if errText != "AI is not configured (set MORPH_AI_API_KEY)" {
+		t.Fatalf("error_text %q", errText)
+	}
+	if strings.TrimSpace(markdown) != "" {
+		t.Fatalf("conclusion should be empty, got %q", markdown)
 	}
 }
