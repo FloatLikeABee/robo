@@ -25,6 +25,12 @@ if grep -E '^[[:space:]]*USER[[:space:]]' "$df" >/dev/null; then
 fi
 grep -q 'openjdk' "$df" && fail "Dockerfile must not install Java"
 grep -q 'SHARPREPORT_UI_DIR' "$df" || fail "Dockerfile must set SHARPREPORT_UI_DIR"
+grep -E '^COPY SharpReport/backend/migrations /app/migrations$' "$df" >/dev/null \
+  || fail "Dockerfile must copy SharpReport/backend/migrations to /app/migrations"
+last_workdir=$(grep -E '^WORKDIR ' "$df" | tail -n 1)
+[ "$last_workdir" = "WORKDIR /app" ] || fail "last WORKDIR must be /app so ./migrations resolves, got ${last_workdir}"
+set -- "$root"/backend/migrations/*.sql
+[ -f "$1" ] || fail "SharpReport/backend/migrations has no .sql file"
 
 entry="$root/deploy/docker-entrypoint.sh"
 [ -f "$entry" ] || fail "missing deploy/docker-entrypoint.sh"
@@ -39,6 +45,9 @@ if grep -E '^SharpReport$' "$ignore" >/dev/null; then
   fail ".dockerignore must not exclude the whole SharpReport tree"
 fi
 grep -q '\.env' "$ignore" || fail ".dockerignore missing .env"
+if grep -E '^(SharpReport/backend/migrations|\*\*/migrations|\*\.sql|\*\*/\*\.sql)(/)?$' "$ignore" >/dev/null; then
+  fail ".dockerignore must not exclude migrations SQL"
+fi
 
 example="$root/deploy/.env.production.example"
 [ -f "$example" ] || fail "missing deploy/.env.production.example"
