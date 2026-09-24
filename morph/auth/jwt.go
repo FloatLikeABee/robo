@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -23,6 +24,9 @@ type Claims struct {
 type TokenConfig struct {
 	Secret      []byte
 	ExpiryHours int64
+	// Production rejects tokens with no iat or exp, and tokens whose
+	// exp-iat window is longer than the production maximum (168 hours).
+	Production bool
 }
 
 func LoadTokenConfig() TokenConfig {
@@ -38,7 +42,11 @@ func LoadTokenConfig() TokenConfig {
 		log.Printf("warning: %s", err.Error())
 		hours = config.ProductionJWTExpiryHours
 	}
-	return TokenConfig{Secret: []byte(secret), ExpiryHours: hours}
+	production, envErr := config.ParseMorphEnv()
+	if envErr != nil {
+		production = true
+	}
+	return TokenConfig{Secret: []byte(secret), ExpiryHours: hours, Production: production}
 }
 
 func EncodeToken(cfg TokenConfig, userID, email, username string, roles []string, channelID string) (string, error) {
@@ -78,7 +86,27 @@ func DecodeToken(cfg TokenConfig, token string) (*Claims, error) {
 	if !ok || !parsed.Valid {
 		return nil, errors.New("invalid token")
 	}
+	if cfg.Production {
+		if err := enforceProductionLifetime(claims); err != nil {
+			return nil, err
+		}
+	}
 	return claims, nil
+}
+
+// enforceProductionLifetime rejects tokens that cannot prove they were issued
+// inside the production ceiling. EncodeToken always sets iat and exp; tokens
+// from before that, or issued for the old 876000-hour lifetime, fail here.
+func enforceProductionLifetime(claims *Claims) error {
+	if claims.IssuedAt == nil || claims.ExpiresAt == nil {
+		return errors.New("token is missing iat or exp")
+	}
+	lifetime := claims.ExpiresAt.Time.Sub(claims.IssuedAt.Time)
+	max := time.Duration(config.ProductionMaxJWTExpiryHours) * time.Hour
+	if lifetime <= 0 || lifetime > max {
+		return fmt.Errorf("token lifetime exceeds the production maximum of %d hours", config.ProductionMaxJWTExpiryHours)
+	}
+	return nil
 }
 
 func IsAdminRoles(roles []string) bool {

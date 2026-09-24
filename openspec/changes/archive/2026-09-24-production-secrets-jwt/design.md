@@ -44,7 +44,7 @@ Checked against current code:
 
 ### 3. Rotation is explicit, id-preserving, and production-only
 
-- **Choice**: `MORPH_ROTATE_DEFAULT_ADMIN` truthy (`1`, `true`, `yes`, `on`) in production replaces `password_hash` on each matched account with one bcrypt hash of the configured password. Account ids stay. The flag does nothing in local/dev, so a line left in a dev `.env` cannot change the documented `morphadmin` / `admin123` login. A later start with the flag still set finds no matching hashes and does not write.
+- **Choice**: `MORPH_ROTATE_DEFAULT_ADMIN` truthy (`1`, `true`, `yes`, `on`) in production replaces `password_hash` on each matched account with a fresh bcrypt hash of the configured password (one hash per row, not one hash shared across rows). Account ids stay. The flag does nothing in local/dev, so a line left in a dev `.env` cannot change the documented `morphadmin` / `admin123` login. A later start with the flag still set finds no matching hashes and does not write.
 - **Matched accounts**: Admin role, or email/username equal to `morphadmin@local.com` / `morphadmin`, or equal to the configured bootstrap email/username. A non-admin who is none of those does not block startup or get rotated.
 - **Rejected**: `EnsureBootstrapAdminForce` — it rewrites email, username, and roles on a single `email OR username` match and leaves any other admin on the default password. Deleting the row and reseeding — new user id. Rotating in dev — breaks the documented local login if the flag leaks into `.env`.
 
@@ -57,12 +57,13 @@ Checked against current code:
 ### 5. One expiry helper shared by the guard and `LoadTokenConfig`
 
 - **Choice**: Production, unset → 24 hours. Production, integer 1 through 168 → that value. Production, anything else → startup error naming `JWT_EXPIRY_HOURS` and the max of 168. Local/dev, unset or invalid → 876000. Local/dev, any positive integer, including 876000 → that value. `LoadTokenConfig` calls the same helper. If it is ever invoked when the helper returns an error, it signs with 24 hours and logs the error, not with 876000.
-- **Rationale**: `LoadTokenConfig` and `GetConfig` read the env separately today. Validating in config while leaving `LoadTokenConfig` unchanged would let production start (implicit 24h check) and still issue 100-year tokens. There is no revoke list, so the cap is 7 days rather than 30.
+- **Decode**: `EncodeToken` sets both `iat` and `exp`. In production, `DecodeToken` rejects a token with either claim missing, or with `exp - iat` longer than 168 hours (the production ceiling, not the current `JWT_EXPIRY_HOURS`). Local/dev decode does not apply that window check, so an existing 876000-hour token still verifies locally. The ceiling is 168 rather than the operator's current setting so shortening `JWT_EXPIRY_HOURS` from 48 to 24 does not invalidate tokens that were already inside the ceiling.
+- **Rationale**: `LoadTokenConfig` and `GetConfig` read the env separately today. Validating in config while leaving `LoadTokenConfig` unchanged would let production start (implicit 24h check) and still issue 100-year tokens. There is no revoke list, so the cap is 7 days rather than 30. Checking only new issuances leaves tokens already signed for 876000 hours valid after `MORPH_ENV=production`, which is the same hole. Project validates the same secret on its own and does not apply this window, so the checklist also requires a new `JWT_SECRET` when production mode is first enabled.
 - **Rejected**: Change the global default to 24h — local sessions and the current dev default change. Cap at 720 hours — too long for an unrevocable admin bearer. Require an explicit `JWT_EXPIRY_HOURS` with no production default — fails a host that set secrets and expected the documented 24h default.
 
 ### 6. Docs and local ergonomics
 
-- **Choice**: New `docs/security-hosting-checklist.md`. Point to it from the root README, `morph/README.md`, `docs/agents/01-auth-flow.md`, and `docs/agents/03-morph.md`. `.env.example` keeps the development secret, password, and `JWT_EXPIRY_HOURS=876000`, with comments that those are local-only and that hosting sets `MORPH_ENV=production` plus the overrides. Do not set `MORPH_ENV` inside `start-all.sh`. Do not enable the rotate flag in the example file. Checklist also notes that Project reads the same `JWT_SECRET` and otherwise uses a dev fallback. No production secret is committed.
+- **Choice**: New `docs/security-hosting-checklist.md`. Point to it from the root README, `morph/README.md`, `docs/agents/01-auth-flow.md`, `docs/agents/03-morph.md`, and the auth section of `.env.example` (the file header does not send hosts to `deploy/.env.production`). `.env.example` keeps the development secret, password, and `JWT_EXPIRY_HOURS=876000`, with comments that those are local-only and that hosting sets `MORPH_ENV=production` plus the overrides. Do not set `MORPH_ENV` inside `start-all.sh`. Do not enable the rotate flag in the example file. The checklist says to generate a new `JWT_SECRET` when first enabling production mode, and to copy it to every service that validates Morph tokens (Project / morph-engi included). No production secret is committed.
 - **Rejected**: Putting `MORPH_ENV=production` in `.env.example` — a copied example would refuse to start locally. Changing `start-all.sh` — unnecessary if unset means dev.
 
 ## Risks / Trade-offs
@@ -73,11 +74,12 @@ Checked against current code:
 - [Unrecognized `MORPH_ENV` on a laptop] → Process exits with the recognized values. Safer than serving defaults.
 - [Invite-table warning no longer skips bootstrap] → A database that previously skipped admin creation because invite schema failed will now create the bootstrap admin. That is the intended auth startup.
 - [`LoadTokenConfig` 24h fallback if validation was skipped] → Avoids a 100-year token. `main` still refuses to start when the helper returns an error, so the fallback is not the hosted path.
+- [Already-issued 876000-hour token, same strong secret] → Morph rejects it in production because `exp - iat` exceeds 168 hours. Project does not. Checklist requires a new `JWT_SECRET` on first production enable so those other verifiers drop the old sessions too.
 
 ## Migration Plan
 
 1. Ship the guard with local mode as the default. Existing `./start-all.sh` checkouts keep working.
-2. Before hosting: set `MORPH_ENV=production`, a 32+ character `JWT_SECRET`, a 12+ character `ADMIN_PASSWORD`, and `JWT_EXPIRY_HOURS` from 1 to 168 (or leave it unset for 24). If SQLite was seeded earlier, set `MORPH_ROTATE_DEFAULT_ADMIN=1` for one start, confirm the log, then unset it.
+2. Before hosting: set `MORPH_ENV=production`, a new 32+ character `JWT_SECRET` (even if the current secret is already strong), a 12+ character `ADMIN_PASSWORD`, and `JWT_EXPIRY_HOURS` from 1 to 168 (or leave it unset for 24). Copy the new secret to every service that validates Morph tokens. If SQLite was seeded earlier, set `MORPH_ROTATE_DEFAULT_ADMIN=1` for one start, confirm the log, then unset it.
 3. Rollback: revert the commit. Local data is unchanged unless the rotate flag ran; that password change is a hash update only and is not automatically reversed.
 
 ## Open Questions

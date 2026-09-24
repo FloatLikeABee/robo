@@ -147,9 +147,35 @@ Issued Morph JWTs MUST use one lifetime rule for both the startup check and toke
 - **WHEN** local/dev mode is on and `JWT_EXPIRY_HOURS` is unset or `876000`
 - **THEN** newly issued tokens expire in 876000 hours
 
+### Requirement: Production rejects oversized or unbounded token lifetimes
+
+Tokens Morph issues MUST include both `iat` and `exp`. In production mode, Morph MUST reject a bearer token that has no `iat`, no `exp`, or whose `exp` minus `iat` is longer than 168 hours. The rejection MUST NOT include the signing secret. Local/dev mode MUST still accept an unexpired, validly signed token that omits `iat` or `exp`, and a token whose `iat` and `exp` are 876000 hours apart.
+
+#### Scenario: Legacy long-lived token in production
+
+- **WHEN** production mode is on and a token signed with the current secret has `iat` and `exp` 876000 hours apart
+- **THEN** Morph rejects the token
+
+#### Scenario: Legacy long-lived token in local mode
+
+- **WHEN** local/dev mode is on and that same token is presented
+- **THEN** Morph accepts the token
+
+#### Scenario: Token missing iat or exp
+
+- **WHEN** production mode is on and a validly signed unexpired token omits `iat` or omits `exp`
+- **THEN** Morph rejects the token
+- **AND** local/dev mode still accepts that token
+
+#### Scenario: Lifetime at the production ceiling
+
+- **WHEN** production mode is on and a token's `exp` minus `iat` is 168 hours
+- **THEN** Morph accepts the token
+- **AND** a token whose window is 169 hours is rejected
+
 ### Requirement: Hosting checklist lists secrets to set
 
-The repository MUST include a hosting checklist that tells an operator to set `MORPH_ENV=production`, replace `JWT_SECRET`, replace `ADMIN_PASSWORD` (and rotate an already-seeded development password), and set `JWT_EXPIRY_HOURS` within the production range. The checklist MUST also list `MORPH_AI_API_KEY` and state that `.env` must not be committed. Root `.env.example` MUST document `MORPH_ENV`, the production overrides, and that the checked-in development values are for local runs only. The root README MUST state that local/dev still starts with the development admin login and that hosting uses the checklist.
+The repository MUST include a hosting checklist that tells an operator to set `MORPH_ENV=production`, replace `JWT_SECRET`, replace `ADMIN_PASSWORD` (and rotate an already-seeded development password), and set `JWT_EXPIRY_HOURS` within the production range. The checklist MUST tell the operator to set a new `JWT_SECRET` when first enabling production mode, including when the current secret is already strong, because that invalidates earlier sessions, and MUST say that other services which validate Morph tokens with that secret (including Project) need the new value. The checklist MUST also list `MORPH_AI_API_KEY` and state that `.env` must not be committed. Root `.env.example` MUST document `MORPH_ENV`, point the auth section at the hosting checklist, and state that the checked-in development values are for local runs only. The root README MUST state that local/dev still starts with the development admin login and that hosting uses the checklist.
 
 #### Scenario: Operator follows the checklist
 

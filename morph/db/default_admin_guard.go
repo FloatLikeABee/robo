@@ -40,12 +40,12 @@ func (m *TranSQL) GuardStoredDefaultAdminPassword(ctx context.Context, email, us
 	if newPassword == "" || strings.EqualFold(newPassword, config.DefaultAdminPassword) || len(newPassword) < config.MinAdminPasswordLength {
 		return 0, fmt.Errorf("MORPH_ENV=production: MORPH_ROTATE_DEFAULT_ADMIN is set, but ADMIN_PASSWORD is missing, still the development default, or shorter than %d characters. Set ADMIN_PASSWORD to a unique password of at least %d characters", config.MinAdminPasswordLength, config.MinAdminPasswordLength)
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
-	if err != nil {
-		return 0, err
-	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	for _, id := range ids {
+		hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+		if err != nil {
+			return 0, err
+		}
 		if _, err := m.DB.ExecContext(ctx, `UPDATE plat_users SET password_hash = ?, updated_at = ? WHERE id = ?`, string(hash), now, id); err != nil {
 			return 0, err
 		}

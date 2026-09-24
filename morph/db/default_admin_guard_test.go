@@ -106,6 +106,9 @@ func TestGuardRotatesStoredDefaultPasswordsAndKeepsID(t *testing.T) {
 	if !VerifyPassword(other.PasswordHash, replacement) || VerifyPassword(other.PasswordHash, "admin123") {
 		t.Fatal("second admin password was not replaced")
 	}
+	if after.PasswordHash == other.PasswordHash {
+		t.Fatal("rotated accounts share one bcrypt hash")
+	}
 	n, err = m.GuardStoredDefaultAdminPassword(ctx, "morphadmin@local.com", "morphadmin", false, replacement)
 	if err != nil || n != 0 {
 		t.Fatalf("after rotate n=%d err=%v", n, err)
