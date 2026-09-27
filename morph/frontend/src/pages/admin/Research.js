@@ -32,6 +32,13 @@ import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { useConfirm } from '../../components/ConfirmDialog';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
+import {
+  researchAlert,
+  researchCanPublish,
+  researchEmptyThesisMessage,
+  researchListSecondary,
+  researchShowsThesisEditor,
+} from './researchJobStatus';
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const BUSY = new Set(['ingesting', 'running', 'refining']);
@@ -156,6 +163,8 @@ export default function Research() {
   const pieces = Array.isArray(selected?.pieces) ? selected.pieces : [];
   const roundCount = selected?.round_count || 5;
   const currentRound = selected?.current_round || 0;
+  const outcomeAlert = researchAlert(selected);
+  const showThesisEditor = researchShowsThesisEditor(selected);
 
   const resetCreateForm = () => {
     setPrompt('');
@@ -393,13 +402,7 @@ export default function Research() {
                 >
                   <ListItemText
                     primary={n.title || `Research #${n.id}`}
-                    secondary={
-                      <>
-                        {n.status || ''}
-                        {n.current_round ? ` · ${n.current_round}/${n.round_count || 5}` : ''}
-                        {n.published_path ? ' · published' : ''}
-                      </>
-                    }
+                    secondary={researchListSecondary(n)}
                     primaryTypographyProps={{ noWrap: true, fontWeight: 600 }}
                     secondaryTypographyProps={{ noWrap: true }}
                   />
@@ -449,7 +452,11 @@ export default function Research() {
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }} noWrap>
                       {selected.title || `Research #${selected.id}`}
                     </Typography>
-                    <Chip size="small" label={selected.status || '—'} />
+                    <Chip
+                      size="small"
+                      color={selected.status === 'failed' ? 'error' : 'default'}
+                      label={selected.status || '—'}
+                    />
                   </Stack>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                     Round {currentRound}/{roundCount} · {formatWhen(selected.last_updated)}
@@ -500,7 +507,7 @@ export default function Research() {
                   )}
                   <Tooltip title="Publish">
                     <span>
-                      <IconButton size="small" aria-label="Publish" onClick={onPublish} disabled={publishing || busy}>
+                      <IconButton size="small" aria-label="Publish" onClick={onPublish} disabled={publishing || busy || !researchCanPublish(selected)}>
                         {publishing ? <CircularProgress size={18} /> : <PublishOutlinedIcon fontSize="small" />}
                       </IconButton>
                     </span>
@@ -514,6 +521,12 @@ export default function Research() {
                   </Tooltip>
                 </Stack>
               </Stack>
+
+              {outcomeAlert ? (
+                <Alert severity={outcomeAlert.severity} sx={{ mx: 1.5, mt: 1.5 }}>
+                  {outcomeAlert.message}
+                </Alert>
+              ) : null}
 
               <Tabs
                 value={previewTab}
@@ -536,23 +549,31 @@ export default function Research() {
                 }}
               >
                 {previewTab === 0 ? (
-                  <MarkdownEditor
-                    value={draftMd}
-                    onChange={busy ? undefined : setDraftMd}
-                    minRows={14}
-                    hint={false}
-                  />
+                  showThesisEditor ? (
+                    <MarkdownEditor
+                      value={draftMd}
+                      onChange={busy ? undefined : setDraftMd}
+                      minRows={14}
+                      hint={false}
+                    />
+                  ) : (
+                    <Typography color="text.secondary">{researchEmptyThesisMessage}</Typography>
+                  )
                 ) : null}
                 {previewTab === 1 ? (
-                  <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: '#0b1220' }}>
-                    <Box
-                      component="iframe"
-                      title="Research HTML preview"
-                      srcDoc={withDarkPreviewSrcDoc(selected.html_content || '<p>No HTML yet</p>')}
-                      sandbox=""
-                      sx={darkPreviewIframeSx}
-                    />
-                  </Box>
+                  showThesisEditor ? (
+                    <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: '#0b1220' }}>
+                      <Box
+                        component="iframe"
+                        title="Research HTML preview"
+                        srcDoc={withDarkPreviewSrcDoc(selected.html_content || '<p>No HTML yet</p>')}
+                        sandbox=""
+                        sx={darkPreviewIframeSx}
+                      />
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">{researchEmptyThesisMessage}</Typography>
+                  )
                 ) : null}
                 {previewTab === 2 ? (
                   <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>

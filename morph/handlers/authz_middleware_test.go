@@ -321,6 +321,7 @@ func TestPublicPublishedPagesStayOpen(t *testing.T) {
 func TestJWTAllowsResearchCreateAndPublish(t *testing.T) {
 	researchSkipAsync = true
 	t.Cleanup(func() { researchSkipAsync = false })
+	stubResearchAIReady(t)
 
 	ts := openAuthzResearchDB(t)
 	h := &Handlers{TranMySQL: ts, jwtCfg: auth.LoadTokenConfig()}
@@ -430,6 +431,7 @@ func TestManagementAPIWithoutAuthorizationIs401(t *testing.T) {
 func TestManagementAPICreatesResearchWithForwardedJWT(t *testing.T) {
 	researchSkipAsync = true
 	t.Cleanup(func() { researchSkipAsync = false })
+	stubResearchAIReady(t)
 
 	h, _, user := authzHandlers(t)
 	token := bearerFor(t, h, user)
@@ -447,6 +449,7 @@ func TestManagementAPICreatesResearchWithForwardedJWT(t *testing.T) {
 func TestHeaderOnlyIdentityIsRejected(t *testing.T) {
 	researchSkipAsync = true
 	t.Cleanup(func() { researchSkipAsync = false })
+	stubResearchAIReady(t)
 
 	ts := openAuthzResearchDB(t)
 	h := &Handlers{TranMySQL: ts, jwtCfg: auth.LoadTokenConfig()}

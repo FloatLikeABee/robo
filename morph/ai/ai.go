@@ -45,6 +45,14 @@ func (a *AIService) Close() error {
 	return nil
 }
 
+// Configured reports whether this service has an API key. It does not call the provider.
+func (a *AIService) Configured() bool {
+	if a == nil || a.llm == nil {
+		return false
+	}
+	return a.llm.Configured()
+}
+
 func (a *AIService) callDashScopeAPI(ctx context.Context, messages []DashScopeMessage) (string, error) {
 	return a.llm.ChatCompletion(ctx, toMorphMessages(messages))
 }
