@@ -10,7 +10,7 @@ import LegacySkoolzRedirect from './LegacySkoolzRedirect';
 import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
 import SkillsPage from './pages/SkillsPage';
-import AgentNotesPage from './pages/AgentNotesPage';
+import { agentNotesRoute } from './agentNotesRoute';
 import { ADMIN_BASE_PATH } from './adminPaths';
 import DistrictsSchools from './pages/admin/DistrictsSchools';
 import CaseTasks from './pages/admin/CaseTasks';
@@ -39,7 +39,7 @@ function RootLayout() {
  * Login lives on Morph AI. MorphNotes (/morphdata) requires that session.
  * Legacy /forms redirects into MorphNotes and hits the same gate.
  */
-export const appRouter = createBrowserRouter([
+export const appRoutes = [
   {
     element: <RootLayout />,
     children: [
@@ -118,11 +118,13 @@ export const appRouter = createBrowserRouter([
       {
         element: <ProtectedLayout />,
         children: [
-          { path: 'agent-notes', element: <AgentNotesPage /> },
+          agentNotesRoute,
           { path: 'skills', element: <SkillsPage /> },
           { path: '*', element: <App /> },
         ],
       },
     ],
   },
-]);
+];
+
+export const appRouter = createBrowserRouter(appRoutes);

@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import ChatMarkdown from './ChatMarkdown';
 import HybridContextDrawer from './HybridContextDrawer';
 import ChatNotesTodosDrawer from './components/chat/ChatNotesTodosDrawer';
 import AiToolsWorkspaceDrawer from './components/chat/AiToolsWorkspaceDrawer';
+import AgentNotesModal from './components/chat/AgentNotesModal';
 import SkillsModal from './components/SkillsModal';
 import { tranApi } from './api/tranClient';
 import { runAiProgress } from './lib/aiProgress';
@@ -159,6 +161,10 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
   const [aiToolsOpen, setAiToolsOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [agentNotesOpen, setAgentNotesOpen] = useState(() => searchParams.get('agent-notes') === '1');
+  const agentNotesRestoreRef = useRef(null);
+  const closeAgentNotes = useCallback(() => setAgentNotesOpen(false), []);
   const [skills, setSkills] = useState([]);
   const [skillsPickerOpen, setSkillsPickerOpen] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState([]);
@@ -179,6 +185,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const didRestoreSessionRef = useRef(!isAgentShell);
 
   useEffect(() => bindKeyboardInset(), []);
+
+  useEffect(() => {
+    if (searchParams.get('agent-notes') !== '1') return;
+    setAgentNotesOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('agent-notes');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-chat-theme', theme);
@@ -901,8 +915,13 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                   id: 'agent-notes',
                   label: 'Agent notes',
                   color: '#38bdf8',
+                  hasPopup: 'dialog',
+                  expanded: agentNotesOpen,
                   onClick: () => {
-                    window.location.assign('/agent-notes');
+                    const active = document.activeElement;
+                    const more = active && typeof active.closest === 'function' ? active.closest('.header-more') : null;
+                    agentNotesRestoreRef.current = more ? more.querySelector('.header-more-button') : active;
+                    setAgentNotesOpen(true);
                   },
                 },
                 {
@@ -1241,6 +1260,13 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           onFrameReady={() => postStateToIframe(aiToolsFrameRef.current, appliedAssistantRef.current)}
         />
         <SkillsModal open={skillsOpen} onClose={() => setSkillsOpen(false)} />
+        {agentNotesOpen ? (
+          <AgentNotesModal
+            onClose={closeAgentNotes}
+            restoreFocusRef={agentNotesRestoreRef}
+            fallbackFocusRef={inputRef}
+          />
+        ) : null}
 
         {isAgentShell ? (
           <div className="agent-include-bar" role="group" aria-label="Context included on next send">
