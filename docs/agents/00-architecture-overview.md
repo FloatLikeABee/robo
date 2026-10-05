@@ -93,3 +93,4 @@ Neo4j and `morphgraph-worker` are optional. The rest of the stack starts without
 - Conventions: `13-conventions.md`
 - Run: `12-build-deploy.md`
 - Local MCP (stdio): `14-morph-mcp.md`
+- Agent notes (self-use): `15-morph-notes-self-use.md`
