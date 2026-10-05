@@ -1,9 +1,10 @@
 // Package mcp is the Model Context Protocol server for Morph.
 //
 // The stdio process does not open Badger. morph-api holds an exclusive
-// Badger directory lock (DB_PATH and ENTITY_DETAILS_BADGER). SQLite is
-// opened read-only (mode=ro and query_only) so a WAL writer in morph-api
-// can keep the file. This package must not call db.New,
+// Badger directory lock (DB_PATH and ENTITY_DETAILS_BADGER). List and get
+// open SQLite read-only (mode=ro and query_only) so a WAL writer in morph-api
+// can keep the file. create_note opens a second mode=rw connection and does
+// not migrate or set the journal mode. This package must not call db.New,
 // db.NewBadgerEntityDetails, or db.NewTranSQL: the last one runs schema writes.
 //
 // Identity is a Morph session JWT from the environment, checked with

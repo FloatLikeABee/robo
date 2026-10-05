@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"log/slog"
 	"strings"
+	"sync"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -14,23 +16,27 @@ const (
 	// ServerName is the MCP serverInfo.name reported to clients.
 	ServerName = "morph-mcp"
 	// ServerVersion is the MCP serverInfo.version for this build.
-	ServerVersion = "0.2.0"
+	ServerVersion = "0.3.0"
 )
 
-const instructions = "Morph MCP stdio server. Read-only. whoami returns the Morph user from the verified session token. list_my_tasks and get_task return that user's own Notes and TODOs, not the shared MorphNotes Tasks board. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
+const instructions = "Morph MCP stdio server. whoami, list_my_tasks, and get_task are read-only. They return the Morph user from the verified session token and that user's own Notes and TODOs, not the shared MorphNotes Tasks board. create_note stores a note for that user and marks it [morph-mcp]. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
 
-// NewServer builds an MCP server that advertises whoami, list_my_tasks, and
-// get_task. tasks is the read-only SQLite pool; nil makes the task tools
-// return an error. recheck runs on every tool call; nil skips that check.
-// logger receives server diagnostics. A nil logger discards them. The server
-// does not bind a network port and does not open Badger.
-func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Logger) (*sdkmcp.Server, error) {
+// NewServer builds an MCP server that advertises whoami, list_my_tasks,
+// get_task, and create_note. tasks is the read-only SQLite pool; nil makes
+// the read tools return an error. sqlitePath is opened mode=rw on the first
+// create_note. recheck runs on every tool call; nil skips that check.
+// logger receives server diagnostics. A nil logger discards them. The closer
+// releases the write connection. The server does not bind a network port and
+// does not open Badger.
+func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Logger, sqlitePath string) (*sdkmcp.Server, func(), error) {
+	noop := func() {}
 	if logger == nil {
 		logger = slog.New(slog.DiscardHandler)
 	}
 	if strings.TrimSpace(id.UserID) == "" {
-		return nil, errors.New("morph user id is required")
+		return nil, noop, errors.New("morph user id is required")
 	}
+	notes := &noteStore{path: sqlitePath}
 	logger.Info("morph-mcp server ready")
 
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{
@@ -49,6 +55,7 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 		},
 	})
 	closedWorld := false
+	additive := false
 	readOnly := func(name, title, description string) *sdkmcp.Tool {
 		return &sdkmcp.Tool{
 			Name:        name,
@@ -75,7 +82,53 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 		"Get task",
 		"Read one of the signed-in user's Notes or TODOs by id. An id that is missing or belongs to someone else is not found.",
 	), getTask(id, tasks, recheck))
-	return server, nil
+	sdkmcp.AddTool(server, &sdkmcp.Tool{
+		Name:        "create_note",
+		Description: "Create a note in the signed-in user's Notes and TODOs (user_note_todo). The stored title starts with [morph-mcp] and the body starts with source: morph-mcp. Title or body is required. Title max 200 characters. Body max 32000 characters. Does not create a TODO or a shared MorphNotes Tasks board row.",
+		Annotations: &sdkmcp.ToolAnnotations{
+			Title:           "Create note",
+			ReadOnlyHint:    false,
+			DestructiveHint: &additive,
+			OpenWorldHint:   &closedWorld,
+		},
+	}, createNote(id, notes, recheck))
+	return server, notes.close, nil
+}
+
+type noteStore struct {
+	path string
+	mu   sync.Mutex
+	db   *sql.DB
+}
+
+func (s *noteStore) close() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db != nil {
+		_ = s.db.Close()
+		s.db = nil
+	}
+}
+
+func (s *noteStore) writer() (*sql.DB, error) {
+	if s == nil || strings.TrimSpace(s.path) == "" {
+		return nil, errors.New("note store is not open")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db != nil {
+		return s.db, nil
+	}
+	db, err := OpenReadWrite(s.path)
+	if err != nil {
+		log.Printf("create note: %v", err)
+		return nil, errors.New("note store is not open")
+	}
+	s.db = db
+	return db, nil
 }
 
 func callRecheck(recheck func() error) error {
@@ -135,6 +188,28 @@ func listMyTasks(id Identity, tasks *sql.DB, recheck func() error) func(context.
 			return nil, ListResult{}, err
 		}
 		return nil, out, nil
+	}
+}
+
+type createNoteInput struct {
+	Title string `json:"title,omitempty" jsonschema:"Note title. Optional. At most 200 characters."`
+	Body  string `json:"body,omitempty" jsonschema:"Note text. Optional. At most 32000 characters. Title or body is required."`
+}
+
+func createNote(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, createNoteInput) (*sdkmcp.CallToolResult, Task, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in createNoteInput) (*sdkmcp.CallToolResult, Task, error) {
+		if err := callRecheck(recheck); err != nil {
+			return nil, Task{}, err
+		}
+		db, err := notes.writer()
+		if err != nil {
+			return nil, Task{}, err
+		}
+		task, err := CreateMyNote(ctx, db, id.UserID, in.Title, in.Body)
+		if err != nil {
+			return nil, Task{}, err
+		}
+		return nil, task, nil
 	}
 }
 
