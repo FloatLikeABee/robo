@@ -58,6 +58,8 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 
 `create_note` takes `title` and `body`. At least one is required. The title limit is 200 characters and the body limit is 32000 characters. The stored title starts with `[morph-mcp]` and the stored body starts with `source: morph-mcp`, so the owning human can see the note came from an agent in Notes & TODOs. A second call with the same title and body returns the existing id. The result includes the id and the stored content. `get_task` with that id, and `list_my_tasks` when the note fits on the page, return the same content. Empty input, an over-long field, a missing Tran user, or a bad token inserts nothing.
 
+An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). The human still reviews them at `http://localhost:3031/`. The agent calls the tools in this chapter.
+
 ## Local Morph
 
 The human UI is [http://localhost:3031/](http://localhost:3031/). Notes & TODOs on that origin is the list a person reviews. The API listens on `http://127.0.0.1:9090`. The UI dev server proxies `/api` to that port. `morph-mcp` is not an HTTP server on either port. The stdio process below talks to the same SQLite file the API on `:9090` uses, and the note shows up at `:3031` after Notes & TODOs reloads.
