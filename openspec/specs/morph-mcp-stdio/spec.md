@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Let a local MCP client attach to Morph over stdio, complete the handshake, see which Morph user the server is acting as, and list, read, and create that user's own notes. List and get open SQLite read-only. create_note writes through a separate connection on the same file. The process does not open Badger.
+Let a local MCP client attach to Morph over stdio, complete the handshake, see which Morph user the server is acting as, and list, read, and create that user's own notes. An MCP Apps host can load the notes panel for those three actions. List and get open SQLite read-only. create_note writes through a separate connection on the same file. The process does not open Badger.
 
 ## Requirements
 

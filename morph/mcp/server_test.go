@@ -90,9 +90,101 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources.Resources) != 0 {
+	if len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://morph/notes" {
 		t.Fatalf("resources = %+v", resources.Resources)
 	}
+	if resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
+		t.Fatalf("mime = %q", resources.Resources[0].MIMEType)
+	}
+}
+
+func TestNotesAppSurface(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok := signToken(t, cfg, "ada-id", "ada@example.com", "ada", nil)
+	id, err := mcp.ResolveIdentity(tok, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path, _ := seedTwoUsers(t)
+	ro, err := mcp.OpenReadOnly(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ro.Close() })
+	server, cleanup, err := mcp.NewServer(id, ro, nil, nil, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cleanup)
+	session := connectInMemory(t, server, "2025-06-18")
+	init := session.InitializeResult()
+	if init == nil || init.Capabilities == nil || init.Capabilities.Resources == nil || init.Capabilities.Resources.ListChanged {
+		t.Fatalf("capabilities = %+v", init)
+	}
+	ext := init.Capabilities.Extensions["io.modelcontextprotocol/ui"]
+	mimes := extensionMimes(t, ext)
+	if !containsString(mimes, "text/html;profile=mcp-app") {
+		t.Fatalf("ui extension = %#v", ext)
+	}
+
+	ctx := context.Background()
+	listed, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"list_my_tasks", "get_task", "create_note"} {
+		tool := toolByName(t, listed.Tools, name)
+		nested, flat, visibility := toolUI(tool)
+		if nested != "ui://morph/notes" || flat != "ui://morph/notes" {
+			t.Fatalf("%s ui = nested %q flat %q meta %#v", name, nested, flat, tool.Meta)
+		}
+		if !containsString(visibility, "model") || !containsString(visibility, "app") {
+			t.Fatalf("%s visibility = %#v", name, visibility)
+		}
+	}
+	who := toolByName(t, listed.Tools, "whoami")
+	nested, flat, _ := toolUI(who)
+	if nested != "" || flat != "" {
+		t.Fatalf("whoami ui = nested %q flat %q", nested, flat)
+	}
+
+	listedRes, err := session.ListResources(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listedRes.Resources) != 1 {
+		t.Fatalf("resources = %+v", listedRes.Resources)
+	}
+	assertNoExternalCSP(t, listedRes.Resources[0].Meta)
+
+	page, err := session.CallTool(ctx, &sdkmcp.CallToolParams{Name: "list_my_tasks"})
+	if err != nil || page.IsError {
+		t.Fatalf("list err=%v res=%+v", err, page)
+	}
+	listText := toolText(t, page)
+	if strings.Contains(strings.ToLower(listText), "<html") || !strings.Contains(listText, "Ada open") {
+		t.Fatalf("list = %s", listText)
+	}
+	body := structuredMap(t, page.StructuredContent)
+	tasks, _ := body["tasks"].([]any)
+	if len(tasks) == 0 {
+		t.Fatalf("list = %#v", body)
+	}
+
+	read, err := session.ReadResource(ctx, &sdkmcp.ReadResourceParams{URI: "ui://morph/notes"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read == nil || len(read.Contents) != 1 {
+		t.Fatalf("read = %+v", read)
+	}
+	doc := read.Contents[0]
+	if doc.MIMEType != "text/html;profile=mcp-app" || doc.URI != "ui://morph/notes" {
+		t.Fatalf("content = %+v", doc)
+	}
+	assertClosedNotesHTML(t, doc.Text, tok, secret)
+	assertNoExternalCSP(t, doc.Meta)
 }
 
 func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
@@ -509,6 +601,117 @@ func structuredMap(t *testing.T, v any) map[string]any {
 		t.Fatalf("structured content %s: %v", raw, err)
 	}
 	return got
+}
+
+func toolUI(tool *sdkmcp.Tool) (nested, flat string, visibility []string) {
+	if tool == nil || tool.Meta == nil {
+		return "", "", nil
+	}
+	if s, ok := tool.Meta["ui/resourceUri"].(string); ok {
+		flat = s
+	}
+	ui, _ := tool.Meta["ui"].(map[string]any)
+	if ui == nil {
+		return "", flat, nil
+	}
+	nested, _ = ui["resourceUri"].(string)
+	switch raw := ui["visibility"].(type) {
+	case []any:
+		for _, item := range raw {
+			if s, ok := item.(string); ok {
+				visibility = append(visibility, s)
+			}
+		}
+	case []string:
+		visibility = append(visibility, raw...)
+	}
+	return nested, flat, visibility
+}
+
+func extensionMimes(t *testing.T, ext any) []string {
+	t.Helper()
+	obj, _ := ext.(map[string]any)
+	if obj == nil {
+		t.Fatalf("extension = %#v", ext)
+	}
+	switch raw := obj["mimeTypes"].(type) {
+	case []any:
+		var out []string
+		for _, item := range raw {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	case []string:
+		return raw
+	default:
+		t.Fatalf("mimeTypes = %#v", obj["mimeTypes"])
+	}
+	return nil
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
+}
+
+func assertNoExternalCSP(t *testing.T, meta sdkmcp.Meta) {
+	t.Helper()
+	ui, _ := meta["ui"].(map[string]any)
+	if ui == nil {
+		t.Fatalf("resource ui meta = %#v", meta)
+	}
+	csp, _ := ui["csp"].(map[string]any)
+	if csp == nil {
+		t.Fatal("resource csp meta missing")
+	}
+	for _, key := range []string{"connectDomains", "resourceDomains", "frameDomains", "baseUriDomains"} {
+		raw, ok := csp[key]
+		if !ok {
+			continue
+		}
+		switch vals := raw.(type) {
+		case []any:
+			if len(vals) != 0 {
+				t.Fatalf("%s = %#v", key, vals)
+			}
+		case []string:
+			if len(vals) != 0 {
+				t.Fatalf("%s = %#v", key, vals)
+			}
+		default:
+			t.Fatalf("%s type %T", key, raw)
+		}
+	}
+}
+
+func assertClosedNotesHTML(t *testing.T, html, token, secret string) {
+	t.Helper()
+	lower := strings.ToLower(html)
+	for _, banned := range []string{"http:", "https:", "url(", "innerhtml", "insertadjacenthtml", "outerhtml", "document.write"} {
+		if strings.Contains(lower, banned) {
+			t.Fatalf("html contains %q", banned)
+		}
+	}
+	if !strings.Contains(html, "textContent") || !strings.Contains(html, "Content-Security-Policy") {
+		t.Fatal("html missing text rendering or CSP")
+	}
+	if !strings.Contains(lower, "connect-src 'none'") || !strings.Contains(lower, "frame-src 'none'") || !strings.Contains(lower, "object-src 'none'") {
+		t.Fatal("CSP does not block network, frames, and objects")
+	}
+	for _, name := range []string{"list_my_tasks", "get_task", "create_note", "tools/call"} {
+		if !strings.Contains(html, name) {
+			t.Fatalf("html missing %s", name)
+		}
+	}
+	if strings.Contains(html, token) || strings.Contains(html, secret) || strings.Contains(html, "MORPH_MCP_TOKEN") {
+		t.Fatal("html contains a token or secret")
+	}
 }
 
 func toolText(t *testing.T, res *sdkmcp.CallToolResult) string {

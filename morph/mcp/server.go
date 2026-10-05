@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"errors"
 	"log"
 	"log/slog"
@@ -12,6 +13,15 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+//go:embed notes_app.html
+var notesAppHTML string
+
+const (
+	notesAppURI  = "ui://morph/notes"
+	notesAppMIME = "text/html;profile=mcp-app"
+	uiExtension  = "io.modelcontextprotocol/ui"
+)
+
 const (
 	// ServerName is the MCP serverInfo.name reported to clients.
 	ServerName = "morph-mcp"
@@ -19,15 +29,15 @@ const (
 	ServerVersion = "0.3.0"
 )
 
-const instructions = "Morph MCP stdio server. whoami, list_my_tasks, and get_task are read-only. They return the Morph user from the verified session token and that user's own Notes and TODOs, not the shared MorphNotes Tasks board. create_note stores a note for that user and marks it [morph-mcp]. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
+const instructions = "Morph MCP stdio server. whoami, list_my_tasks, and get_task are read-only. They return the Morph user from the verified session token and that user's own Notes and TODOs, not the shared MorphNotes Tasks board. create_note stores a note for that user and marks it [morph-mcp]. An MCP Apps host renders the notes panel from ui://morph/notes. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
 
 // NewServer builds an MCP server that advertises whoami, list_my_tasks,
-// get_task, and create_note. tasks is the read-only SQLite pool; nil makes
-// the read tools return an error. sqlitePath is opened mode=rw on the first
-// create_note. recheck runs on every tool call; nil skips that check.
-// logger receives server diagnostics. A nil logger discards them. The closer
-// releases the write connection. The server does not bind a network port and
-// does not open Badger.
+// get_task, and create_note, plus the ui://morph/notes app resource.
+// tasks is the read-only SQLite pool; nil makes the read tools return an
+// error. sqlitePath is opened mode=rw on the first create_note. recheck runs
+// on every tool call; nil skips that check. logger receives server diagnostics.
+// A nil logger discards them. The closer releases the write connection. The
+// server does not bind a network port and does not open Badger.
 func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Logger, sqlitePath string) (*sdkmcp.Server, func(), error) {
 	noop := func() {}
 	if logger == nil {
@@ -39,6 +49,13 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 	notes := &noteStore{path: sqlitePath}
 	logger.Info("morph-mcp server ready")
 
+	caps := &sdkmcp.ServerCapabilities{
+		// ListChanged stays false: this process never emits list_changed.
+		Resources: &sdkmcp.ResourceCapabilities{ListChanged: false},
+	}
+	caps.AddExtension(uiExtension, map[string]any{
+		"mimeTypes": []string{notesAppMIME},
+	})
 	server := sdkmcp.NewServer(&sdkmcp.Implementation{
 		Name:    ServerName,
 		Title:   "Morph",
@@ -47,12 +64,8 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 		Instructions: instructions,
 		Logger:       logger,
 		// A non-nil capabilities value suppresses the SDK's historical logging
-		// capability. Tools are inferred when whoami is registered. Resources
-		// are advertised with an empty list until a later story registers URIs.
-		// ListChanged stays false: this process never emits list_changed.
-		Capabilities: &sdkmcp.ServerCapabilities{
-			Resources: &sdkmcp.ResourceCapabilities{ListChanged: false},
-		},
+		// capability. Tools are inferred when whoami is registered.
+		Capabilities: caps,
 	})
 	closedWorld := false
 	additive := false
@@ -72,19 +85,24 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 		"Who am I",
 		"Return the Morph user this read-only MCP server is acting as.",
 	), whoami(id, recheck))
-	sdkmcp.AddTool(server, readOnly(
+	listTool := readOnly(
 		"list_my_tasks",
 		"List my tasks",
 		"List the signed-in user's own Notes and TODOs (user_note_todo). Does not return the shared MorphNotes Tasks board. Optional type is all, note, or todo. Optional status is all, open, or done. Limit defaults to 50 and is capped at 100.",
-	), listMyTasks(id, tasks, recheck))
-	sdkmcp.AddTool(server, readOnly(
+	)
+	listTool.Meta = notesAppToolMeta()
+	sdkmcp.AddTool(server, listTool, listMyTasks(id, tasks, recheck))
+	getTool := readOnly(
 		"get_task",
 		"Get task",
 		"Read one of the signed-in user's Notes or TODOs by id. An id that is missing or belongs to someone else is not found.",
-	), getTask(id, tasks, recheck))
+	)
+	getTool.Meta = notesAppToolMeta()
+	sdkmcp.AddTool(server, getTool, getTask(id, tasks, recheck))
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "create_note",
 		Description: "Create a note in the signed-in user's Notes and TODOs (user_note_todo). The stored title starts with [morph-mcp] and the body starts with source: morph-mcp. Title or body is required. Title max 200 characters. Body max 32000 characters. Does not create a TODO or a shared MorphNotes Tasks board row.",
+		Meta:        notesAppToolMeta(),
 		Annotations: &sdkmcp.ToolAnnotations{
 			Title:           "Create note",
 			ReadOnlyHint:    false,
@@ -92,7 +110,51 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 			OpenWorldHint:   &closedWorld,
 		},
 	}, createNote(id, notes, recheck))
+	server.AddResource(notesAppResource(), readNotesApp)
 	return server, notes.close, nil
+}
+
+func notesAppToolMeta() sdkmcp.Meta {
+	return sdkmcp.Meta{
+		"ui": map[string]any{
+			"resourceUri": notesAppURI,
+			"visibility":  []string{"model", "app"},
+		},
+		"ui/resourceUri": notesAppURI,
+	}
+}
+
+func notesAppUIMeta() map[string]any {
+	return map[string]any{
+		"csp": map[string]any{
+			"connectDomains":  []string{},
+			"resourceDomains": []string{},
+			"frameDomains":    []string{},
+		},
+		"prefersBorder": true,
+	}
+}
+
+func notesAppResource() *sdkmcp.Resource {
+	return &sdkmcp.Resource{
+		URI:         notesAppURI,
+		Name:        "morph-notes",
+		Title:       "Morph notes",
+		Description: "Create, list, and open the signed-in user's Morph notes.",
+		MIMEType:    notesAppMIME,
+		Meta:        sdkmcp.Meta{"ui": notesAppUIMeta()},
+	}
+}
+
+func readNotesApp(context.Context, *sdkmcp.ReadResourceRequest) (*sdkmcp.ReadResourceResult, error) {
+	return &sdkmcp.ReadResourceResult{
+		Contents: []*sdkmcp.ResourceContents{{
+			URI:      notesAppURI,
+			MIMEType: notesAppMIME,
+			Text:     notesAppHTML,
+			Meta:     sdkmcp.Meta{"ui": notesAppUIMeta()},
+		}},
+	}, nil
 }
 
 type noteStore struct {
