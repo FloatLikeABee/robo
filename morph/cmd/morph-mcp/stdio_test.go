@@ -116,16 +116,21 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		item := tool.(map[string]any)
 		names[item["name"].(string)] = true
 		ann, _ := item["annotations"].(map[string]any)
-		if ann["readOnlyHint"] != true {
-			t.Fatalf("%v annotations = %#v", item["name"], ann)
+		name := item["name"].(string)
+		if name == "create_note" {
+			if ann["readOnlyHint"] != false {
+				t.Fatalf("create_note annotations = %#v", ann)
+			}
+		} else if ann["readOnlyHint"] != true {
+			t.Fatalf("%v annotations = %#v", name, ann)
 		}
 	}
-	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note"} {
 		if !names[name] {
 			t.Fatalf("missing %s in %#v", name, tools)
 		}
 	}
-	if len(tools) != 3 {
+	if len(tools) != 4 {
 		t.Fatalf("tools = %#v", tools)
 	}
 
@@ -585,7 +590,10 @@ func TestSDKClientCreateListGetAndFailClosed(t *testing.T) {
 	if strings.Contains(foreignText, "Shift report") || strings.Contains(foreignText, "dock 4") || strings.Contains(foreignText, "forbidden") {
 		t.Fatalf("bea get = %s", foreignText)
 	}
-	if strings.Contains(bea.stderr.String(), beaTok) || strings.Contains(adaErr.String(), adaTok) || strings.Contains(beaErr.String(), beaTok) {
+	bea.stop(t)
+	adaStderr := adaErr.String()
+	beaStderr := beaErr.String()
+	if strings.Contains(adaStderr, adaTok) || strings.Contains(beaStderr, beaTok) {
 		t.Fatal("stderr included a token")
 	}
 
