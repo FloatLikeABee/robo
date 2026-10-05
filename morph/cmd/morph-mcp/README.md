@@ -1,6 +1,6 @@
 # morph-mcp
 
-Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools and resources. Tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` (not read-only). `resources/list` is empty.
+Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui`. Tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` (not read-only). `resources/list` returns `ui://morph/notes` (`text/html;profile=mcp-app`). `resources.listChanged` is not advertised.
 
 `list_my_tasks` and `get_task` return the signed-in user's own Notes & TODOs (`user_note_todo`), not the shared MorphNotes Tasks board. Rows are filtered by the token subject. Optional list filters: `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), `limit` (default 50, max 100). `get_task` takes an integer `id`. Someone else's id is not found.
 
@@ -57,7 +57,11 @@ Put the JSON `token` in `MORPH_MCP_TOKEN`. Placeholders only. Do not commit a re
 }
 ```
 
-## Claude Desktop (`claude_desktop_config.json`)
+## MCP Apps (Claude Desktop)
+
+`list_my_tasks`, `get_task`, and `create_note` point at `ui://morph/notes`. Claude Desktop renders that page in a sandboxed iframe. The page lists notes, opens one, and creates one by calling those tools through the host. The page does not receive the token. The MCP Apps overview also names Claude, VS Code GitHub Copilot, Microsoft 365 Copilot, Goose, Postman, MCPJam, and Archestra.AI as renderers of this same stdio server.
+
+Local Morph is http://localhost:3031/. The API is http://127.0.0.1:9090. Get the token with the login request in [Token for local Morph](#token-for-local-morph), then put these three variables in `claude_desktop_config.json`. Placeholders only.
 
 ```json
 {
@@ -73,3 +77,5 @@ Put the JSON `token` in `MORPH_MCP_TOKEN`. Placeholders only. Do not commit a re
   }
 }
 ```
+
+Restart Claude Desktop and ask it to open Morph notes. A client that does not render MCP Apps, including Cursor with the snippet above, still receives the plain tool results.

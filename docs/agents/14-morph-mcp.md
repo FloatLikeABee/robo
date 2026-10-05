@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools and resources. This build has four tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note`, which is not read-only. `resources/list` is empty. There are no prompts or `morph://` resources.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). This build has four tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note`, which is not read-only. `resources/list` returns one resource, `ui://morph/notes`. There are no prompts or `morph://` resources. `resources.listChanged` is not advertised.
 
 ## Build
 
@@ -78,9 +78,15 @@ curl -s -X POST http://localhost:3031/api/auth/login \
 
 Use the JSON `token` value as `MORPH_MCP_TOKEN`. Do not commit it.
 
-## Cursor
+## MCP Apps
 
-Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
+`list_my_tasks`, `get_task`, and `create_note` set `_meta.ui.resourceUri` to `ui://morph/notes`. The same URI is also on the older flat key `_meta["ui/resourceUri"]`. `whoami` does not declare a UI. A host that supports [MCP Apps](https://modelcontextprotocol.org/extensions/apps/overview) (SEP-1865) reads that resource and renders the HTML in a sandboxed iframe. The page lists notes (`list_my_tasks` with type `note`), opens one (`get_task`), and creates one (`create_note`). Those calls go through the host to this process, so the page never sees `MORPH_MCP_TOKEN`. Owner checks stay on the server. The HTML has no external URL.
+
+The MCP Apps overview names these renderers: Claude, Claude Desktop, VS Code GitHub Copilot, Microsoft 365 Copilot, Goose, Postman, MCPJam, and Archestra.AI. They launch this same stdio binary. The steps below are for Claude Desktop against local Morph at `http://localhost:3031/`.
+
+### Claude Desktop
+
+Obtain the token with the login request in [Local Morph](#local-morph). Put it in `claude_desktop_config.json` with the other two variables. Placeholders only. Do not commit the token.
 
 ```json
 {
@@ -97,9 +103,15 @@ Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
 }
 ```
 
-## Claude Desktop
+Restart Claude Desktop after saving the file. Ask it to open Morph notes. The panel lists that user's notes, opens one, and creates one. The stored title still starts with `[morph-mcp]`, and the human reads it in Notes & TODOs at `http://localhost:3031/`.
 
-The same `mcpServers` object goes in Claude Desktop's config file (`claude_desktop_config.json`):
+### Plain tools
+
+A client that does not render MCP Apps, including Cursor, uses the same binary and the same three environment variables. It ignores the UI metadata and receives the tool results for `whoami`, `list_my_tasks`, `get_task`, and `create_note`. The Cursor snippet is in [Cursor](#cursor).
+
+## Cursor
+
+Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
 
 ```json
 {

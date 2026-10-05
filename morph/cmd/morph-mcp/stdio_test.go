@@ -391,6 +391,132 @@ func TestSDKClientOverStdio(t *testing.T) {
 		listedText, listText, getText, foreignText)
 }
 
+func TestStdioNotesApp(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok, err := auth.EncodeToken(cfg, "sdk-stdio", "ada@example.com", "ada", []string{"employee"}, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbPath := seedStdioDB(t, "sdk-stdio", "ada@example.com", "Ada sdk task", "Bea sdk secret")
+	bin := filepath.Join(t.TempDir(), "morph-mcp")
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	proc, stderr := startSDK(t, bin, childEnv(
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+tok,
+		"TRAN_SQLITE_PATH="+dbPath,
+	))
+	defer proc.stop(t)
+	ctx := context.Background()
+
+	init := proc.session.InitializeResult()
+	if init == nil || init.Capabilities == nil || init.Capabilities.Resources == nil || init.Capabilities.Resources.ListChanged {
+		t.Fatalf("capabilities = %+v", init)
+	}
+	extRaw, _ := json.Marshal(init.Capabilities.Extensions["io.modelcontextprotocol/ui"])
+	if !strings.Contains(string(extRaw), "text/html;profile=mcp-app") {
+		t.Fatalf("ui extension = %s", extRaw)
+	}
+
+	listed, err := proc.session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	metaDump := map[string]any{}
+	for _, tool := range listed.Tools {
+		nested, flat, visibility := stdioToolUI(tool)
+		metaDump[tool.Name] = map[string]any{
+			"ui.resourceUri": nested,
+			"ui/resourceUri": flat,
+			"visibility":     visibility,
+		}
+		switch tool.Name {
+		case "list_my_tasks", "get_task", "create_note":
+			if nested != "ui://morph/notes" || flat != "ui://morph/notes" || !strings.Contains(strings.Join(visibility, ","), "model") || !strings.Contains(strings.Join(visibility, ","), "app") {
+				t.Fatalf("%s meta = %#v", tool.Name, tool.Meta)
+			}
+		case "whoami":
+			if nested != "" || flat != "" {
+				t.Fatalf("whoami meta = %#v", tool.Meta)
+			}
+		}
+	}
+
+	resources, err := proc.session.ListResources(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://morph/notes" || resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
+		t.Fatalf("resources = %+v", resources.Resources)
+	}
+	read, err := proc.session.ReadResource(ctx, &sdkmcp.ReadResourceParams{URI: "ui://morph/notes"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read == nil || len(read.Contents) != 1 || read.Contents[0].MIMEType != "text/html;profile=mcp-app" {
+		t.Fatalf("read = %+v", read)
+	}
+	html := read.Contents[0].Text
+	lower := strings.ToLower(html)
+	for _, banned := range []string{"http:", "https:", "url(", "innerhtml", "insertadjacenthtml", "outerhtml", "document.write"} {
+		if strings.Contains(lower, banned) {
+			t.Fatalf("html contains %q", banned)
+		}
+	}
+	if strings.Contains(html, tok) || strings.Contains(html, secret) {
+		t.Fatal("html contained the token or secret")
+	}
+	for _, name := range []string{"list_my_tasks", "get_task", "create_note"} {
+		if !strings.Contains(html, name) {
+			t.Fatalf("html missing %s", name)
+		}
+	}
+
+	page, err := proc.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "list_my_tasks",
+		Arguments: map[string]any{"type": "note"},
+	})
+	if err != nil || page.IsError {
+		t.Fatalf("list err=%v res=%+v stderr=%s", err, page, stderr.String())
+	}
+	listText := redactToken(toolTextSDK(t, page), tok)
+	if strings.Contains(strings.ToLower(listText), "<html") {
+		t.Fatalf("list returned HTML: %s", listText)
+	}
+	metaJSON, _ := json.Marshal(metaDump)
+	t.Logf("MCP Apps go-sdk stdio transcript (token redacted)\ninitialize ui extension: %s\ntools/list ui meta: %s\nresources/read uri: %s mime: %s htmlBytes: %d\ntools/call list_my_tasks type=note: %s",
+		redactToken(string(extRaw), tok), redactToken(string(metaJSON), tok), read.Contents[0].URI, read.Contents[0].MIMEType, len(html), listText)
+}
+
+func stdioToolUI(tool *sdkmcp.Tool) (nested, flat string, visibility []string) {
+	if tool == nil || tool.Meta == nil {
+		return "", "", nil
+	}
+	if s, ok := tool.Meta["ui/resourceUri"].(string); ok {
+		flat = s
+	}
+	ui, _ := tool.Meta["ui"].(map[string]any)
+	if ui == nil {
+		return "", flat, nil
+	}
+	nested, _ = ui["resourceUri"].(string)
+	switch raw := ui["visibility"].(type) {
+	case []any:
+		for _, item := range raw {
+			if s, ok := item.(string); ok {
+				visibility = append(visibility, s)
+			}
+		}
+	case []string:
+		visibility = append(visibility, raw...)
+	}
+	return nested, flat, visibility
+}
+
 func toolTextSDK(t *testing.T, res *sdkmcp.CallToolResult) string {
 	t.Helper()
 	var b strings.Builder

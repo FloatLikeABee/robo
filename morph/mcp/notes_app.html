@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Morph notes</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --color-background-primary: #0b1220;
+    --color-background-secondary: #121a2b;
+    --color-text-primary: #e7eefc;
+    --color-text-secondary: #a9b6d0;
+    --color-border-primary: #2a3854;
+    --font-sans: system-ui, sans-serif;
+  }
+  body {
+    margin: 0;
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+  }
+  header, main, form, button, input, textarea { font: inherit; color: inherit; }
+  header { padding: 12px 14px 0; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  h2 { font-size: 15px; margin: 0 0 6px; }
+  .muted { color: var(--color-text-secondary); }
+  #status { min-height: 1.2em; }
+  ul { list-style: none; margin: 0; padding: 8px 14px; }
+  li { margin: 0 0 6px; }
+  button.row, button.action {
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    text-align: left;
+    width: 100%;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+  form { padding: 8px 14px 14px; display: grid; gap: 8px; }
+  input, textarea {
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  #detail { padding: 0 14px 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Morph notes</h1>
+  <p id="status" class="muted">Open this panel from an MCP Apps host.</p>
+</header>
+<ul id="list"></ul>
+<section id="detail"></section>
+<form id="create">
+  <input id="title" name="title" maxlength="200" placeholder="Title" autocomplete="off">
+  <textarea id="body" name="body" maxlength="32000" placeholder="Note"></textarea>
+  <button class="action" id="save" type="button">Create note</button>
+</form>
+<script>
+(function () {
+  var nextId = 1;
+  var pending = {};
+
+  function clear(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function el(tag, text) {
+    var node = document.createElement(tag);
+    if (text != null) node.textContent = String(text);
+    return node;
+  }
+
+  function morphNotesRenderList(root, tasks) {
+    clear(root);
+    if (!tasks || !tasks.length) {
+      root.appendChild(el("li", "No notes."));
+      return;
+    }
+    for (var i = 0; i < tasks.length; i++) {
+      var task = tasks[i] || {};
+      var row = el("button");
+      row.type = "button";
+      row.className = "row";
+      row.appendChild(el("strong", task.title == null ? "" : String(task.title)));
+      if (task.id != null) row.setAttribute("data-id", String(task.id));
+      var item = el("li");
+      item.appendChild(row);
+      root.appendChild(item);
+    }
+  }
+
+  function morphNotesRenderDetail(root, task) {
+    clear(root);
+    if (!task) return;
+    root.appendChild(el("h2", task.title == null ? "" : String(task.title)));
+    root.appendChild(el("p", task.body == null ? "" : String(task.body)));
+  }
+
+  globalThis.morphNotesRenderList = morphNotesRenderList;
+  globalThis.morphNotesRenderDetail = morphNotesRenderDetail;
+
+  function showStatus(text) {
+    var status = document.getElementById("status");
+    if (status) status.textContent = text;
+  }
+
+  function showResult(result) {
+    if (!result) return;
+    if (result.isError) {
+      var bits = [];
+      var content = result.content || [];
+      for (var i = 0; i < content.length; i++) {
+        if (content[i] && content[i].text) bits.push(String(content[i].text));
+      }
+      showStatus(bits.join(" ") || "Request failed");
+      return;
+    }
+    var data = result.structuredContent;
+    if (data && Array.isArray(data.tasks)) {
+      morphNotesRenderList(document.getElementById("list"), data.tasks);
+      showStatus("");
+      return;
+    }
+    if (data && data.id != null && (data.title != null || data.body != null)) {
+      morphNotesRenderDetail(document.getElementById("detail"), data);
+      showStatus("");
+    }
+  }
+
+  function sendRequest(method, params) {
+    var id = nextId++;
+    return new Promise(function (resolve, reject) {
+      pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params }, "*");
+    });
+  }
+
+  function sendNotification(method, params) {
+    window.parent.postMessage({ jsonrpc: "2.0", method: method, params: params || {} }, "*");
+  }
+
+  function onMessage(event) {
+    var data = event.data;
+    if (!data || data.jsonrpc !== "2.0") return;
+    if (data.id != null && pending[data.id]) {
+      var waiter = pending[data.id];
+      delete pending[data.id];
+      if (data.error) waiter.reject(data.error);
+      else waiter.resolve(data.result);
+      return;
+    }
+    if (data.method === "ui/notifications/tool-result") showResult(data.params || {});
+  }
+
+  function callTool(name, args) {
+    return sendRequest("tools/call", { name: name, arguments: args || {} }).then(function (result) {
+      showResult(result);
+      return result;
+    });
+  }
+
+  function reportSize() {
+    if (typeof ResizeObserver !== "function") return;
+    var lastW = 0;
+    var lastH = 0;
+    var observer = new ResizeObserver(function () {
+      var width = Math.ceil(document.documentElement.scrollWidth);
+      var height = Math.ceil(document.documentElement.scrollHeight);
+      if (width === lastW && height === lastH) return;
+      lastW = width;
+      lastH = height;
+      sendNotification("ui/notifications/size-changed", { width: width, height: height });
+    });
+    observer.observe(document.documentElement);
+  }
+
+  function boot() {
+    window.addEventListener("message", onMessage);
+    document.getElementById("list").addEventListener("click", function (event) {
+      var node = event.target;
+      var list = document.getElementById("list");
+      while (node && node !== list) {
+        if (node.getAttribute && node.getAttribute("data-id")) {
+          callTool("get_task", { id: Number(node.getAttribute("data-id")) });
+          return;
+        }
+        node = node.parentNode;
+      }
+    });
+    document.getElementById("save").addEventListener("click", function () {
+      callTool("create_note", {
+        title: document.getElementById("title").value,
+        body: document.getElementById("body").value
+      }).then(function (result) {
+        if (result && result.isError) return;
+        document.getElementById("title").value = "";
+        document.getElementById("body").value = "";
+        return callTool("list_my_tasks", { type: "note" });
+      });
+    });
+    reportSize();
+    sendRequest("ui/initialize", {
+      protocolVersion: "2026-01-26",
+      appInfo: { name: "Morph notes", version: "0.3.0" },
+      appCapabilities: { availableDisplayModes: ["inline"] }
+    }).then(function () {
+      sendNotification("ui/notifications/initialized", {});
+      return callTool("list_my_tasks", { type: "note" });
+    }).catch(function (err) {
+      var message = err && err.message ? err.message : "Could not open notes";
+      showStatus(String(message));
+    });
+  }
+
+  if (typeof window !== "undefined" && window.parent && window.parent !== window) boot();
+})();
+</script>
+</body>
+</html>
