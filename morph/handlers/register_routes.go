@@ -158,6 +158,8 @@ func RegisterAPIRoutes(r *gin.Engine, h *Handlers) {
 	r.PUT("/api/tran/tool-notes/:id", h.UpdateToolNote)
 	r.DELETE("/api/tran/tool-notes/:id", h.DeleteToolNote)
 	r.POST("/api/tran/tool-notes/:id/read", h.MarkToolNoteRead)
+	r.GET("/api/tran/agent-notes", h.ListAgentNotes)
+	r.GET("/api/tran/agent-notes/:id", h.GetAgentNote)
 	r.GET("/api/tran/notes-todos", h.ListUserNotesTodos)
 	r.GET("/api/tran/notes-todos/:id", h.GetUserNoteTodo)
 	r.POST("/api/tran/notes-todos", h.CreateUserNoteTodo)

@@ -83,6 +83,9 @@ export const tranEndpoints = {
   comment: (id) => `/api/tran/comments/${id}`,
   /** Personal notes & TODOs (per UserID; default user until auth) */
   notesTodos: '/api/tran/notes-todos',
+  /** Agent-authored notes for the signed-in user. Ignores a client user id. */
+  agentNotes: '/api/tran/agent-notes',
+  agentNote: (id) => `/api/tran/agent-notes/${id}`,
   notesTodo: (id) => `/api/tran/notes-todos/${id}`,
   bigNotes: '/api/tran/big-notes',
   bigNote: (id) => `/api/tran/big-notes/${id}`,

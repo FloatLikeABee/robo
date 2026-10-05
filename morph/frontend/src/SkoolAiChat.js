@@ -898,6 +898,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             <HeaderMoreMenu
               items={[
                 {
+                  id: 'agent-notes',
+                  label: 'Agent notes',
+                  color: '#38bdf8',
+                  onClick: () => {
+                    window.location.assign('/agent-notes');
+                  },
+                },
+                {
                   id: 'skills',
                   label: 'Skills',
                   color: '#38bdf8',

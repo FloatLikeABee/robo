@@ -18,6 +18,19 @@
 const MERMAID_DIR = /[\\/]node_modules[\\/]mermaid[\\/]/;
 
 module.exports = {
+  jest: {
+    configure: (jestConfig) => {
+      // Jest 27 does not match react-router-dom's export conditions.
+      jestConfig.moduleNameMapper = {
+        ...(jestConfig.moduleNameMapper || {}),
+        '^react-router-dom$': '<rootDir>/node_modules/react-router-dom/dist/index.js',
+        '^react-router/dom$': '<rootDir>/node_modules/react-router/dist/development/dom-export.js',
+        '^react-router$': '<rootDir>/node_modules/react-router/dist/development/index.js',
+      };
+      jestConfig.setupFiles = [...(jestConfig.setupFiles || []), '<rootDir>/src/jestPolyfill.js'];
+      return jestConfig;
+    },
+  },
   webpack: {
     configure: (webpackConfig) => {
       const ignore = [/Failed to parse source map/];

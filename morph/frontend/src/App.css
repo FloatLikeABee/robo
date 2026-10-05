@@ -3370,6 +3370,125 @@ html[data-chat-theme='light'] .skills-panel-alert {
   display: none;
 }
 
+.agent-notes-page {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--chat-page-bg);
+  color: var(--chat-text);
+}
+
+.agent-notes-page-inner {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.agent-notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.agent-notes-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  text-wrap: balance;
+}
+
+.agent-notes-home {
+  color: var(--chat-accent-soft);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.agent-notes-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+  align-items: start;
+}
+
+.agent-notes-list,
+.agent-notes-detail {
+  min-width: 0;
+  background: var(--chat-panel);
+  border: 1px solid var(--chat-panel-border);
+  border-radius: 12px;
+}
+
+.agent-notes-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--chat-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-notes-row.is-selected {
+  background: var(--chat-surface2);
+}
+
+.agent-notes-title,
+.agent-notes-detail h2 {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.agent-notes-meta,
+.agent-notes-empty,
+.agent-notes-error {
+  margin: 0;
+  color: var(--chat-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.agent-notes-empty,
+.agent-notes-error {
+  padding: 16px;
+}
+
+.agent-notes-error {
+  color: #fecaca;
+}
+
+.agent-notes-detail {
+  padding: 16px;
+}
+
+.agent-notes-detail h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.agent-notes-body {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.agent-notes-back {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .header-app-links--bar,
   .header-action-clear {
@@ -3655,6 +3774,33 @@ html[data-chat-theme='light'] .skills-panel-alert {
   }
 
   html[data-keyboard-open] .app.app--agent .agent-workspace {
+    display: none;
+  }
+
+  .agent-notes-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agent-notes-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin-bottom: 8px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--chat-border);
+    background: var(--chat-surface);
+    color: inherit;
+    font: inherit;
+  }
+
+  .agent-notes-layout.is-detail .agent-notes-list {
+    display: none;
+  }
+
+  .agent-notes-layout:not(.is-detail) .agent-notes-detail {
     display: none;
   }
 }

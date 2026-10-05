@@ -10,6 +10,7 @@ import LegacySkoolzRedirect from './LegacySkoolzRedirect';
 import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
 import SkillsPage from './pages/SkillsPage';
+import AgentNotesPage from './pages/AgentNotesPage';
 import { ADMIN_BASE_PATH } from './adminPaths';
 import DistrictsSchools from './pages/admin/DistrictsSchools';
 import CaseTasks from './pages/admin/CaseTasks';
@@ -117,6 +118,7 @@ export const appRouter = createBrowserRouter([
       {
         element: <ProtectedLayout />,
         children: [
+          { path: 'agent-notes', element: <AgentNotesPage /> },
           { path: 'skills', element: <SkillsPage /> },
           { path: '*', element: <App /> },
         ],
