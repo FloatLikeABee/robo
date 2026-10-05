@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	_ "modernc.org/sqlite"
 )
@@ -16,6 +18,10 @@ import (
 const (
 	defaultTaskLimit = 50
 	maxTaskLimit     = 100
+	maxNoteTitleLen  = 200
+	maxNoteBodyLen   = 32000
+	agentTitleMark   = "[morph-mcp]"
+	agentBodyMark    = "source: morph-mcp"
 )
 
 // ErrNotFound means the id is missing or belongs to someone else.
@@ -56,10 +62,7 @@ func CheckStartup(ctx context.Context) (Identity, *sql.DB, error) {
 	if err != nil {
 		return Identity{}, nil, err
 	}
-	path := strings.TrimSpace(os.Getenv("TRAN_SQLITE_PATH"))
-	if path == "" {
-		path = "./data/tran.sqlite"
-	}
+	path := SQLitePath()
 	db, err := OpenReadOnly(path)
 	if err != nil {
 		return Identity{}, nil, fmt.Errorf("TRAN_SQLITE_PATH: %w", err)
@@ -71,11 +74,31 @@ func CheckStartup(ctx context.Context) (Identity, *sql.DB, error) {
 	return id, db, nil
 }
 
+// SQLitePath is TRAN_SQLITE_PATH, or the API default when that variable is unset.
+func SQLitePath() string {
+	path := strings.TrimSpace(os.Getenv("TRAN_SQLITE_PATH"))
+	if path == "" {
+		return "./data/tran.sqlite"
+	}
+	return path
+}
+
 // OpenReadOnly opens TRAN_SQLITE_PATH without taking a write lock or running
 // migrations. A file: URI is required: modernc treats "path?mode=ro" as a
 // filename and would create the file. mode=ro plus _query_only=1 rejects
 // writes even when the OS file is writable. journal_mode is left to the API.
 func OpenReadOnly(path string) (*sql.DB, error) {
+	return openSQLite(path, "mode=ro&_query_only=1&_busy_timeout=5000", false)
+}
+
+// OpenReadWrite opens TRAN_SQLITE_PATH for one create_note insert.
+// mode=rw fails when the file is missing, so this does not create a database.
+// It does not set journal_mode and does not migrate.
+func OpenReadWrite(path string) (*sql.DB, error) {
+	return openSQLite(path, "mode=rw&_busy_timeout=5000", true)
+}
+
+func openSQLite(path, rawQuery string, mustExist bool) (*sql.DB, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil, errors.New("sqlite path is empty")
@@ -84,10 +107,15 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	if mustExist {
+		if _, err := os.Stat(abs); err != nil {
+			return nil, err
+		}
+	}
 	dsn := (&url.URL{
 		Scheme:   "file",
 		Path:     filepath.ToSlash(abs),
-		RawQuery: "mode=ro&_query_only=1&_busy_timeout=5000",
+		RawQuery: rawQuery,
 	}).String()
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -100,6 +128,93 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// CreateMyNote inserts one note for the verified JWT subject.
+// tokenUserID is plat_users.id. The owner subquery is the same one ownerClause uses.
+// An identical stored title and body returns the existing row.
+// ponytail: two concurrent identical calls can both insert; a unique index would block the SPA's duplicate titles.
+func CreateMyNote(ctx context.Context, db *sql.DB, tokenUserID, title, body string) (Task, error) {
+	if db == nil {
+		return Task{}, errors.New("note store is not open")
+	}
+	title = strings.TrimSpace(title)
+	body = strings.TrimSpace(body)
+	if title == "" && body == "" {
+		return Task{}, errors.New("title or body is required")
+	}
+	if utf8.RuneCountInString(title) > maxNoteTitleLen {
+		return Task{}, errors.New("title is too long")
+	}
+	if utf8.RuneCountInString(body) > maxNoteBodyLen {
+		return Task{}, errors.New("body is too long")
+	}
+	if _, _, ok := ownerClause(tokenUserID); !ok {
+		return Task{}, errors.New("not a notes user for this session")
+	}
+	storedTitle := agentTitle(title)
+	storedBody := agentBody(body)
+	res, err := db.ExecContext(ctx, `
+		INSERT INTO user_note_todo (UserID, ItemType, Title, Body, Completed, DeadlineAt)
+		SELECT owner.UserID, 'note', ?, ?, 0, NULL
+		FROM (`+ownerUserSelect()+`) AS owner
+		WHERE NOT EXISTS (
+			SELECT 1 FROM user_note_todo AS existing
+			WHERE existing.UserID = owner.UserID
+				AND existing.ItemType = 'note'
+				AND existing.Title = ?
+				AND existing.Body = ?
+		)`, storedTitle, storedBody, strings.TrimSpace(tokenUserID), storedTitle, storedBody)
+	if err != nil {
+		log.Printf("create note: %v", err)
+		return Task{}, errors.New("could not store the note")
+	}
+	if n, _ := res.RowsAffected(); n > 1 {
+		log.Printf("create note: inserted %d rows", n)
+		return Task{}, errors.New("could not store the note")
+	}
+	task, err := findMyNote(ctx, db, tokenUserID, storedTitle, storedBody)
+	if errors.Is(err, ErrNotFound) {
+		return Task{}, errors.New("not a notes user for this session")
+	}
+	return task, err
+}
+
+func agentTitle(title string) string {
+	if title == "" {
+		return agentTitleMark
+	}
+	if title == agentTitleMark || strings.HasPrefix(title, agentTitleMark+" ") {
+		return title
+	}
+	return agentTitleMark + " " + title
+}
+
+func agentBody(body string) string {
+	if body == "" || body == agentBodyMark || strings.HasPrefix(body, agentBodyMark+"\n") {
+		if body == "" {
+			return agentBodyMark
+		}
+		return body
+	}
+	return agentBodyMark + "\n\n" + body
+}
+
+func findMyNote(ctx context.Context, db *sql.DB, tokenUserID, title, body string) (Task, error) {
+	clause, clauseArgs, ok := ownerClause(tokenUserID)
+	if !ok {
+		return Task{}, ErrNotFound
+	}
+	row := db.QueryRowContext(ctx, `
+		SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
+		FROM user_note_todo
+		WHERE ItemType = 'note' AND Title = ? AND Body = ? AND `+clause+`
+		ORDER BY ID DESC LIMIT 1`, append([]any{title, body}, clauseArgs...)...)
+	task, err := scanTask(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Task{}, ErrNotFound
+	}
+	return task, err
 }
 
 // ListMyTasks returns the caller's user_note_todo rows. tokenUserID is the
@@ -219,26 +334,31 @@ func normalizeStatus(raw string) (string, error) {
 	}
 }
 
-// ownerClause is the only owner check in this package. Every user_note_todo
-// read ANDs it into the WHERE clause. tokenUserID is the verified JWT subject
-// (plat_users.id), bound as p.id, so the statement cannot return another
-// user's rows. Issue #69 will add a shared visibility function for REST and
-// MCP. Replace this body with that call; keep ANDing the result here.
+// ownerUserSelect is the only copy of the Tran-user join. ownerClause and
+// CreateMyNote both use it. Issue #69 will add a shared visibility function
+// for REST and MCP. Replace this body with that call.
 // ponytail: LIMIT 1 if two active User rows share the plat user's email; a unique email index is the upgrade.
-func ownerClause(tokenUserID string) (string, []any, bool) {
-	tokenUserID = strings.TrimSpace(tokenUserID)
-	if tokenUserID == "" {
-		return "", nil, false
-	}
-	return `UserID = (
-		SELECT u.UserID
+func ownerUserSelect() string {
+	return `SELECT u.UserID
 		FROM "User" AS u
 		INNER JOIN plat_users AS p
 			ON p.email IS NOT NULL
 			AND u.Email IS NOT NULL
 			AND LOWER(TRIM(p.email)) = LOWER(TRIM(u.Email))
 		WHERE p.id = ? AND u.Deactivated = 0
-		LIMIT 1)`, []any{tokenUserID}, true
+		LIMIT 1`
+}
+
+// ownerClause is the only owner check in this package. Every user_note_todo
+// read ANDs it into the WHERE clause. tokenUserID is the verified JWT subject
+// (plat_users.id), bound as p.id, so the statement cannot return another
+// user's rows.
+func ownerClause(tokenUserID string) (string, []any, bool) {
+	tokenUserID = strings.TrimSpace(tokenUserID)
+	if tokenUserID == "" {
+		return "", nil, false
+	}
+	return `UserID = (` + ownerUserSelect() + `)`, []any{tokenUserID}, true
 }
 
 func listQuery(tokenUserID, itemType, status string, limit int) (string, []any, bool) {

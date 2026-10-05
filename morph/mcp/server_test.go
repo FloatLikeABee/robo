@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -24,10 +25,11 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	server, err := mcp.NewServer(id, nil, nil, nil)
+	server, cleanup, err := mcp.NewServer(id, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cleanup)
 	session := connectInMemory(t, server, "2025-06-18")
 
 	init := session.InitializeResult()
@@ -57,7 +59,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 3 || !toolNamed(listed.Tools, "whoami") {
+	if len(listed.Tools) != 4 || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	who := toolByName(t, listed.Tools, "whoami")
@@ -98,10 +100,11 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := mcp.NewServer(id, nil, nil, nil)
+	server, cleanup, err := mcp.NewServer(id, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cleanup)
 	session := connectInMemory(t, server, "2026-07-28")
 	init := session.InitializeResult()
 	if init == nil || init.ProtocolVersion != "2026-07-28" {
@@ -114,7 +117,7 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 3 || !toolNamed(listed.Tools, "whoami") {
+	if len(listed.Tools) != 4 || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -146,10 +149,11 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := mcp.NewServer(id, nil, nil, nil)
+	server, cleanup, err := mcp.NewServer(id, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cleanup)
 	session := connectInMemory(t, server, "2025-06-18")
 	listed, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -157,17 +161,24 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 	}
 	got := map[string]bool{}
 	for _, tool := range listed.Tools {
-		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+		if tool.Annotations == nil {
+			t.Fatalf("%s annotations = nil", tool.Name)
+		}
+		if tool.Name == "create_note" {
+			if tool.Annotations.ReadOnlyHint {
+				t.Fatal("create_note is marked read-only")
+			}
+		} else if !tool.Annotations.ReadOnlyHint {
 			t.Fatalf("%s annotations = %+v", tool.Name, tool.Annotations)
 		}
 		got[tool.Name] = true
 	}
-	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note"} {
 		if !got[name] {
 			t.Fatalf("missing %s in %+v", name, listed.Tools)
 		}
 	}
-	if len(listed.Tools) != 3 {
+	if len(listed.Tools) != 4 {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -185,10 +196,11 @@ func TestExpiredTokenIsAToolError(t *testing.T) {
 	recheck := func() error {
 		return mcp.RecheckToken(os.Getenv(mcp.TokenEnv), auth.LoadTokenConfig())
 	}
-	server, err := mcp.NewServer(id, nil, recheck, nil)
+	server, cleanup, err := mcp.NewServer(id, nil, recheck, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cleanup)
 	session := connectInMemory(t, server, "2025-06-18")
 	ctx := context.Background()
 	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{Name: "whoami"})
@@ -214,8 +226,164 @@ func TestExpiredTokenIsAToolError(t *testing.T) {
 	}
 }
 
+func TestCreateNoteToolRoundTripAndFailClosed(t *testing.T) {
+	path, writer := seedTwoUsers(t)
+	ctx := context.Background()
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	tok := signToken(t, cfg, "ada-id", "ada@example.com", "ada", nil)
+	t.Setenv("JWT_SECRET", secret)
+	t.Setenv(mcp.TokenEnv, tok)
+	id, err := mcp.ResolveIdentity(tok, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recheck := func() error {
+		return mcp.RecheckToken(os.Getenv(mcp.TokenEnv), auth.LoadTokenConfig())
+	}
+	ro, err := mcp.OpenReadOnly(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ro.Close() })
+	server, cleanup, err := mcp.NewServer(id, ro, recheck, nil, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cleanup)
+	session := connectInMemory(t, server, "2025-06-18")
+
+	listed, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Tools) != 4 {
+		t.Fatalf("tools = %+v", listed.Tools)
+	}
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {
+		tool := toolByName(t, listed.Tools, name)
+		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+			t.Fatalf("%s annotations = %+v", name, tool.Annotations)
+		}
+	}
+	create := toolByName(t, listed.Tools, "create_note")
+	if create.Annotations == nil || create.Annotations.ReadOnlyHint {
+		t.Fatalf("create_note annotations = %+v", create.Annotations)
+	}
+
+	before := noteCount(t, writer)
+	res, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "create_note",
+		Arguments: map[string]any{"title": "Shift report", "body": "dock 4 is clear"},
+	})
+	if err != nil || res.IsError {
+		t.Fatalf("create err=%v res=%+v", err, res)
+	}
+	if strings.Contains(toolText(t, res), tok) {
+		t.Fatal("create leaked the token")
+	}
+	created := structuredMap(t, res.StructuredContent)
+	idNum, _ := created["id"].(float64)
+	if idNum <= 0 || !strings.Contains(fmt.Sprint(created["title"]), "Shift report") || !strings.Contains(fmt.Sprint(created["body"]), "dock 4 is clear") {
+		t.Fatalf("create = %#v", created)
+	}
+	got, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": idNum},
+	})
+	if err != nil || got.IsError {
+		t.Fatalf("get err=%v res=%+v", err, got)
+	}
+	gotMap := structuredMap(t, got.StructuredContent)
+	if gotMap["title"] != created["title"] || gotMap["body"] != created["body"] {
+		t.Fatalf("get = %#v", gotMap)
+	}
+	listedNotes, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "list_my_tasks",
+		Arguments: map[string]any{"type": "note", "limit": 10},
+	})
+	if err != nil || listedNotes.IsError {
+		t.Fatalf("list err=%v res=%+v", err, listedNotes)
+	}
+	if !strings.Contains(toolText(t, listedNotes), "Shift report") || strings.Contains(toolText(t, listedNotes), "Bea private") {
+		t.Fatalf("list = %s", toolText(t, listedNotes))
+	}
+
+	empty, err := session.CallTool(ctx, &sdkmcp.CallToolParams{Name: "create_note", Arguments: map[string]any{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !empty.IsError {
+		t.Fatal("empty create succeeded")
+	}
+	if noteCount(t, writer) != before+1 {
+		t.Fatalf("empty create changed rows: %d", noteCount(t, writer))
+	}
+
+	t.Setenv(mcp.TokenEnv, "")
+	missing, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "create_note",
+		Arguments: map[string]any{"title": "Nope", "body": "secret"},
+	})
+	if err != nil {
+		t.Fatalf("missing token protocol error: %v", err)
+	}
+	if !missing.IsError {
+		t.Fatal("missing token create succeeded")
+	}
+	if strings.Contains(toolText(t, missing), "Nope") {
+		t.Fatal("missing token error included the title")
+	}
+	bogus := "not-a-jwt"
+	t.Setenv(mcp.TokenEnv, bogus)
+	bad, err := session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "create_note",
+		Arguments: map[string]any{"title": "Nope", "body": "secret"},
+	})
+	if err != nil {
+		t.Fatalf("invalid token protocol error: %v", err)
+	}
+	if !bad.IsError {
+		t.Fatal("invalid token create succeeded")
+	}
+	badText := toolText(t, bad)
+	if strings.Contains(badText, bogus) || strings.Contains(badText, "Nope") || strings.Contains(badText, "Bea private") {
+		t.Fatalf("invalid token error = %q", badText)
+	}
+	if noteCount(t, writer) != before+1 {
+		t.Fatalf("rejected create changed rows: %d", noteCount(t, writer))
+	}
+
+	beaTok := signToken(t, cfg, "bea-id", "bea@example.com", "bea", nil)
+	t.Setenv(mcp.TokenEnv, beaTok)
+	beaID, err := mcp.ResolveIdentity(beaTok, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaServer, beaCleanup, err := mcp.NewServer(beaID, ro, recheck, nil, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(beaCleanup)
+	beaSession := connectInMemory(t, beaServer, "2025-06-18")
+	foreign, err := beaSession.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": idNum},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !foreign.IsError {
+		t.Fatalf("bea get succeeded: %+v", foreign)
+	}
+	foreignText := toolText(t, foreign)
+	if strings.Contains(foreignText, "Shift report") || strings.Contains(foreignText, "dock 4") || strings.Contains(foreignText, "forbidden") {
+		t.Fatalf("bea get = %q", foreignText)
+	}
+}
+
 func TestNewServerRequiresUser(t *testing.T) {
-	_, err := mcp.NewServer(mcp.Identity{}, nil, nil, nil)
+	_, _, err := mcp.NewServer(mcp.Identity{}, nil, nil, nil, "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -232,10 +400,11 @@ func TestProtocolBytesStayOffTheLog(t *testing.T) {
 	var protocol lockedBuf
 	var logs lockedBuf
 	logger := slog.New(slog.NewTextHandler(&logs, nil))
-	server, err := mcp.NewServer(id, nil, nil, logger)
+	server, cleanup, err := mcp.NewServer(id, nil, nil, logger, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cleanup)
 
 	clientReader, serverWriter := io.Pipe()
 	serverReader, clientWriter := io.Pipe()

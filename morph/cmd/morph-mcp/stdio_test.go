@@ -445,6 +445,252 @@ func TestStdioRejectsDeletedUser(t *testing.T) {
 	}
 }
 
+func TestSDKClientCreateListGetAndFailClosed(t *testing.T) {
+	secret := "stdio-test-secret"
+	cfg := auth.TokenConfig{Secret: []byte(secret), ExpiryHours: 24}
+	adaTok, err := auth.EncodeToken(cfg, "sdk-stdio", "ada@example.com", "ada", []string{"employee"}, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaTok, err := auth.EncodeToken(cfg, "other-stdio", "other@example.com", "other", []string{"employee"}, "ch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbPath := seedStdioDB(t, "sdk-stdio", "ada@example.com", "Ada sdk task", "Bea sdk secret")
+	before := countNotes(t, dbPath)
+
+	bin := filepath.Join(t.TempDir(), "morph-mcp")
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	missOut, missErr, missExit := runBuilt(t, bin, secret, dbPath, "")
+	if missExit == nil {
+		t.Fatal("missing token exited 0")
+	}
+	if missOut != "" {
+		t.Fatalf("missing token stdout = %q", missOut)
+	}
+	if !strings.Contains(missErr, "MORPH_MCP_TOKEN") || !strings.Contains(missErr, "required") {
+		t.Fatalf("missing token stderr = %q", missErr)
+	}
+	bogus := "not-a-jwt"
+	badOut, badErr, badExit := runBuilt(t, bin, secret, dbPath, bogus)
+	if badExit == nil {
+		t.Fatal("invalid token exited 0")
+	}
+	if badOut != "" || strings.Contains(badErr, bogus) {
+		t.Fatalf("invalid token stdout=%q stderr=%q", badOut, badErr)
+	}
+	if countNotes(t, dbPath) != before {
+		t.Fatalf("auth failure wrote a note: %d", countNotes(t, dbPath))
+	}
+
+	ada, adaErr := startSDK(t, bin, childEnv(
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+adaTok,
+		"TRAN_SQLITE_PATH="+dbPath,
+	))
+	defer ada.stop(t)
+	ctx := context.Background()
+	listed, err := ada.session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	var createReadOnly any = "missing"
+	for _, tool := range listed.Tools {
+		names = append(names, tool.Name)
+		if tool.Name == "create_note" && tool.Annotations != nil {
+			createReadOnly = tool.Annotations.ReadOnlyHint
+		}
+	}
+	if createReadOnly != false {
+		t.Fatalf("create_note readOnlyHint = %#v", createReadOnly)
+	}
+	createdRes, err := ada.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "create_note",
+		Arguments: map[string]any{"title": "Shift report", "body": "dock 4 is clear"},
+	})
+	if err != nil || createdRes.IsError {
+		t.Fatalf("create err=%v res=%+v stderr=%s", err, createdRes, ada.stderr.String())
+	}
+	createText := redactToken(toolTextSDK(t, createdRes), adaTok)
+	var created struct {
+		ID    int    `json:"id"`
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+	raw, _ := json.Marshal(createdRes.StructuredContent)
+	if err := json.Unmarshal(raw, &created); err != nil || created.ID <= 0 {
+		t.Fatalf("created %s: %v", raw, err)
+	}
+	if !strings.Contains(created.Title, "Shift report") || !strings.HasPrefix(created.Title, "[morph-mcp]") {
+		t.Fatalf("title = %q", created.Title)
+	}
+	if !strings.Contains(created.Body, "dock 4 is clear") || !strings.HasPrefix(created.Body, "source: morph-mcp") {
+		t.Fatalf("body = %q", created.Body)
+	}
+	listRes, err := ada.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "list_my_tasks",
+		Arguments: map[string]any{"type": "note", "limit": 10},
+	})
+	if err != nil || listRes.IsError {
+		t.Fatalf("list err=%v res=%+v", err, listRes)
+	}
+	listText := redactToken(toolTextSDK(t, listRes), adaTok)
+	if !strings.Contains(listText, "Shift report") || strings.Contains(listText, "Bea sdk secret") {
+		t.Fatalf("list = %s", listText)
+	}
+	getRes, err := ada.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": created.ID},
+	})
+	if err != nil || getRes.IsError {
+		t.Fatalf("get err=%v res=%+v", err, getRes)
+	}
+	getText := redactToken(toolTextSDK(t, getRes), adaTok)
+	if !strings.Contains(getText, "dock 4 is clear") {
+		t.Fatalf("get = %s", getText)
+	}
+	ada.stop(t)
+
+	if countNotes(t, dbPath) != before+1 {
+		t.Fatalf("count = %d, before %d", countNotes(t, dbPath), before)
+	}
+	owner := noteOwner(t, dbPath, created.ID)
+	if owner != 1 {
+		t.Fatalf("owner = %d", owner)
+	}
+
+	bea, beaErr := startSDK(t, bin, childEnv(
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+beaTok,
+		"TRAN_SQLITE_PATH="+dbPath,
+	))
+	defer bea.stop(t)
+	foreign, err := bea.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"id": created.ID},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !foreign.IsError {
+		t.Fatalf("bea get succeeded: %+v", foreign)
+	}
+	foreignText := redactToken(toolTextSDK(t, foreign), beaTok)
+	if strings.Contains(foreignText, "Shift report") || strings.Contains(foreignText, "dock 4") || strings.Contains(foreignText, "forbidden") {
+		t.Fatalf("bea get = %s", foreignText)
+	}
+	if strings.Contains(bea.stderr.String(), beaTok) || strings.Contains(adaErr.String(), adaTok) || strings.Contains(beaErr.String(), beaTok) {
+		t.Fatal("stderr included a token")
+	}
+
+	namesJSON, _ := json.Marshal(names)
+	t.Logf("MCP go-sdk stdio transcript (tokens redacted)\nmissing token stderr: %s\ninvalid token stderr: %s\ntools/list: %s\ncreate_note readOnlyHint: %v\ntools/call create_note: %s\ntools/call list_my_tasks type=note: %s\ntools/call get_task: %s\ntools/call get_task as other user: %s",
+		strings.TrimSpace(missErr), strings.TrimSpace(badErr), namesJSON, createReadOnly, createText, listText, getText, foreignText)
+}
+
+func runBuilt(t *testing.T, bin, secret, dbPath, token string) (stdout, stderr string, exitErr error) {
+	t.Helper()
+	cmd := exec.Command(bin)
+	cmd.Dir = t.TempDir()
+	cmd.Env = childEnv(
+		"JWT_SECRET="+secret,
+		"MORPH_MCP_TOKEN="+token,
+		"TRAN_SQLITE_PATH="+dbPath,
+	)
+	var out, errBuf bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errBuf
+	exitErr = cmd.Run()
+	return out.String(), errBuf.String(), exitErr
+}
+
+type sdkProc struct {
+	cmd     *exec.Cmd
+	stderr  *bytes.Buffer
+	session *sdkmcp.ClientSession
+	cancel  context.CancelFunc
+	stopped bool
+}
+
+func startSDK(t *testing.T, bin string, env []string) (*sdkProc, *bytes.Buffer) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, bin)
+	cmd.Env = env
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "morph-mcp-e2e", Version: "0"}, nil)
+	session, err := client.Connect(ctx, &sdkmcp.IOTransport{Reader: stdout, Writer: stdin}, nil)
+	if err != nil {
+		cancel()
+		_ = cmd.Wait()
+		t.Fatalf("connect: %v\nstderr: %s", err, stderr.String())
+	}
+	proc := &sdkProc{cmd: cmd, stderr: &stderr, session: session, cancel: cancel}
+	t.Cleanup(func() { proc.stop(t) })
+	return proc, &stderr
+}
+
+func (p *sdkProc) stop(t *testing.T) {
+	t.Helper()
+	if p == nil || p.stopped {
+		return
+	}
+	p.stopped = true
+	if p.session != nil {
+		_ = p.session.Close()
+	}
+	p.cancel()
+	if p.cmd != nil && p.cmd.Process != nil {
+		_ = p.cmd.Wait()
+	}
+}
+
+func countNotes(t *testing.T, path string) int {
+	t.Helper()
+	store, err := morphdb.NewTranSQL(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	var n int
+	if err := store.DB.QueryRow(`SELECT COUNT(*) FROM user_note_todo`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func noteOwner(t *testing.T, path string, id int) int {
+	t.Helper()
+	store, err := morphdb.NewTranSQL(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	var owner int
+	if err := store.DB.QueryRow(`SELECT UserID FROM user_note_todo WHERE ID = ?`, id).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	return owner
+}
+
 func seedStdioDB(t *testing.T, subject, email, ownTitle, otherTitle string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "tran.sqlite")

@@ -308,6 +308,166 @@ func seedTwoUsers(t *testing.T) (string, *sql.DB) {
 	return path, db
 }
 
+func TestCreateMyNoteIsOwnedAttributedAndFailClosed(t *testing.T) {
+	path, writer := seedTwoUsers(t)
+	ctx := context.Background()
+	before := noteCount(t, writer)
+
+	ro, err := mcp.OpenReadOnly(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ro.Close() })
+
+	notes, err := mcp.OpenReadWrite(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = notes.Close() })
+
+	missing := filepath.Join(t.TempDir(), "missing.sqlite")
+	if _, err := mcp.OpenReadWrite(missing); err == nil {
+		t.Fatal("mode=rw opened a missing file")
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Fatalf("missing file stat = %v", err)
+	}
+
+	created, err := mcp.CreateMyNote(ctx, notes, "ada-id", "Shift report", "dock 4 is clear")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.ID <= 0 || created.ItemType != "note" || created.Status != "open" {
+		t.Fatalf("created = %+v", created)
+	}
+	if !strings.HasPrefix(created.Title, "[morph-mcp]") || !strings.Contains(created.Title, "Shift report") {
+		t.Fatalf("title = %q", created.Title)
+	}
+	if !strings.HasPrefix(created.Body, "source: morph-mcp") || !strings.Contains(created.Body, "dock 4 is clear") {
+		t.Fatalf("body = %q", created.Body)
+	}
+	if created.DeadlineAt != "" {
+		t.Fatalf("deadline = %q", created.DeadlineAt)
+	}
+
+	again, err := mcp.CreateMyNote(ctx, notes, "ada-id", "Shift report", "dock 4 is clear")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ID != created.ID {
+		t.Fatalf("duplicate id = %d, want %d", again.ID, created.ID)
+	}
+	if noteCount(t, writer) != before+1 {
+		t.Fatalf("count = %d, before %d", noteCount(t, writer), before)
+	}
+
+	var mode string
+	if err := writer.QueryRow(`PRAGMA journal_mode`).Scan(&mode); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(mode, "wal") {
+		t.Fatalf("journal_mode = %q", mode)
+	}
+
+	got, err := mcp.GetMyTask(ctx, ro, "ada-id", created.ID)
+	if err != nil {
+		t.Fatalf("read-only get: %v", err)
+	}
+	if got.Title != created.Title || got.Body != created.Body {
+		t.Fatalf("ro get = %+v", got)
+	}
+	listed, err := mcp.ListMyTasks(ctx, ro, "ada-id", mcp.TaskFilter{Type: "note", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(taskBlob(listed.Tasks), "Shift report") || strings.Contains(taskBlob(listed.Tasks), "Bea private") {
+		t.Fatalf("list = %s", taskBlob(listed.Tasks))
+	}
+	if _, err := mcp.GetMyTask(ctx, ro, "bea-id", created.ID); !errors.Is(err, mcp.ErrNotFound) {
+		t.Fatalf("bea get = %v", err)
+	}
+	if _, err := ro.Exec(`INSERT INTO user_note_todo (UserID, ItemType, Title) VALUES (1, 'note', 'nope')`); err == nil {
+		t.Fatal("read-only connection accepted a write")
+	}
+
+	var owner int
+	if err := writer.QueryRow(`SELECT UserID FROM user_note_todo WHERE ID = ?`, created.ID).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	if owner != 1 {
+		t.Fatalf("owner = %d", owner)
+	}
+
+	if _, err := notes.Exec(`INSERT INTO plat_users (
+		id, email, username, is_verified, roles, permissions, default_channel_id, created_at, updated_at
+	) VALUES ('ghost-id', 'ghost@example.com', 'ghost', 1, '[]', '[]', 'ch', '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z')`); err != nil {
+		t.Fatal(err)
+	}
+	user1 := notesForUser(t, writer, 1)
+	if _, err := mcp.CreateMyNote(ctx, notes, "ghost-id", "Orphan", "should not land"); err == nil {
+		t.Fatal("ghost create succeeded")
+	}
+	if notesForUser(t, writer, 1) != user1 {
+		t.Fatal("ghost create wrote user 1")
+	}
+	if strings.Contains(noteTitles(t, writer), "Orphan") {
+		t.Fatal("orphan title was stored")
+	}
+
+	if _, err := mcp.CreateMyNote(ctx, notes, "ada-id", "  ", " "); err == nil {
+		t.Fatal("empty note stored")
+	}
+	if _, err := mcp.CreateMyNote(ctx, notes, "ada-id", strings.Repeat("a", 201), "ok"); err == nil {
+		t.Fatal("long title stored")
+	}
+	if _, err := mcp.CreateMyNote(ctx, notes, "ada-id", "ok", strings.Repeat("b", 32001)); err == nil {
+		t.Fatal("long body stored")
+	}
+	if noteCount(t, writer) != before+1 {
+		t.Fatalf("rejects changed the table: %d", noteCount(t, writer))
+	}
+}
+
+func noteCount(t *testing.T, db *sql.DB) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM user_note_todo`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func notesForUser(t *testing.T, db *sql.DB, userID int) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM user_note_todo WHERE UserID = ?`, userID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func noteTitles(t *testing.T, db *sql.DB) string {
+	t.Helper()
+	rows, err := db.Query(`SELECT IFNULL(Title, '') FROM user_note_todo`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var b strings.Builder
+	for rows.Next() {
+		var title string
+		if err := rows.Scan(&title); err != nil {
+			t.Fatal(err)
+		}
+		b.WriteString(title)
+		b.WriteByte('\n')
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}
+
 func taskBlob(tasks []mcp.Task) string {
 	var b strings.Builder
 	for _, task := range tasks {

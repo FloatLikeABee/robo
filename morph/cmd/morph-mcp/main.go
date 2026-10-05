@@ -2,7 +2,8 @@
 //
 // Stdout is reserved for MCP JSON-RPC messages. Logs go to stderr.
 // The process does not listen on a port and does not open Badger.
-// It opens TRAN_SQLITE_PATH read-only.
+// It opens TRAN_SQLITE_PATH read-only for list and get. create_note opens a
+// separate mode=rw connection on that same file.
 package main
 
 import (
@@ -38,10 +39,11 @@ func run() error {
 	}
 	defer tasks.Close()
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	server, err := mcp.NewServer(id, tasks, mcp.RecheckFromEnv, logger)
+	server, closeNotes, err := mcp.NewServer(id, tasks, mcp.RecheckFromEnv, logger, mcp.SQLitePath())
 	if err != nil {
 		return err
 	}
+	defer closeNotes()
 	err = server.Run(context.Background(), &sdkmcp.StdioTransport{})
 	if err == nil || clientDisconnected(err) {
 		return nil
