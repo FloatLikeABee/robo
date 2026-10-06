@@ -28,6 +28,7 @@ func RegisterAPIRoutes(r *gin.Engine, h *Handlers) {
 	r.PATCH("/api/agent-lessons/:id", h.PatchAgentLesson)
 	r.DELETE("/api/agent-lessons/:id", h.DeleteAgentLesson)
 	r.GET("/api/ai-agents", h.ListMorphAIAgentsHandler)
+	r.GET("/api/rag-collections", h.ListRAGCollectionsHandler)
 	r.GET("/api/data-collector/entities", h.ListDataCollectorEntities)
 	r.GET("/api/data-collector/templates/:entity", h.GetDataCollectorTemplate)
 	r.POST("/api/data-collector/validate", h.ValidateDataCollectorUpload)

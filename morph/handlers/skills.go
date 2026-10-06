@@ -374,10 +374,62 @@ func (h *Handlers) appendAlwaysOnAgentSkills(b *strings.Builder) {
 	}
 }
 
+type skillPromptRow struct {
+	ID           string
+	Name         string
+	Description  string
+	Instructions string
+}
+
+// selectedSkillInstructions writes picker skills even when they are absent from the enabled catalog.
+func selectedSkillInstructions(selected []string, rows []skillPromptRow) string {
+	if len(selected) == 0 {
+		return ""
+	}
+	byID := make(map[string]skillPromptRow, len(rows))
+	for _, row := range rows {
+		id := strings.TrimSpace(row.ID)
+		if id != "" {
+			byID[id] = row
+		}
+	}
+	var b strings.Builder
+	b.WriteString("\n--- Selected skill instructions ---\n")
+	b.WriteString("Follow these selected skills for this reply.\n")
+	wrote := false
+	for _, raw := range selected {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			continue
+		}
+		row, ok := byID[id]
+		if !ok {
+			row = skillPromptRow{ID: id, Name: id}
+		}
+		name := strings.TrimSpace(row.Name)
+		if name == "" {
+			name = id
+		}
+		b.WriteString("### " + name + "\n")
+		if instr := strings.TrimSpace(row.Instructions); instr != "" {
+			b.WriteString(instr)
+		} else if desc := strings.TrimSpace(row.Description); desc != "" {
+			b.WriteString(desc)
+		}
+		b.WriteString("\n\n")
+		wrote = true
+	}
+	if !wrote {
+		return ""
+	}
+	return b.String()
+}
+
 // buildEnabledSkillsContext appends enabled skill names/descriptions for the assistant system prompt.
 // Research and Design instruction bodies are always included. Picker skill_ids add extra bodies.
 func (h *Handlers) buildEnabledSkillsContext(skillIDs []string) string {
 	var b strings.Builder
+	var all []db.AISkill
 	if h != nil && h.TranMySQL != nil {
 		ctx := context.Background()
 		list, err := h.TranMySQL.ListAISkills(ctx, true)
@@ -387,30 +439,47 @@ func (h *Handlers) buildEnabledSkillsContext(skillIDs []string) string {
 			for _, s := range list {
 				b.WriteString(fmt.Sprintf("- [%s] %s: %s\n", s.ID, s.Name, s.Description))
 			}
-			if len(skillIDs) > 0 && h.db != nil {
-				want := map[string]struct{}{}
-				for _, id := range skillIDs {
-					id = strings.TrimSpace(id)
-					if id != "" {
-						want[id] = struct{}{}
-					}
-				}
-				b.WriteString("\n--- Selected skill instructions ---\n")
-				for _, s := range list {
-					if _, ok := want[s.ID]; !ok {
-						continue
-					}
-					body, err := h.db.GetAISkillBody(s.ID)
-					if err != nil || strings.TrimSpace(body.Instructions) == "" {
-						continue
-					}
-					b.WriteString(fmt.Sprintf("### %s\n%s\n\n", s.Name, strings.TrimSpace(body.Instructions)))
-				}
-			}
 		}
+		if every, err := h.TranMySQL.ListAISkills(ctx, false); err == nil {
+			all = every
+		}
+	}
+	if block := selectedSkillInstructions(skillIDs, h.skillPromptRows(skillIDs, all)); block != "" {
+		b.WriteString(block)
 	}
 	h.appendAlwaysOnAgentSkills(&b)
 	return strings.TrimSpace(b.String())
+}
+
+func (h *Handlers) skillPromptRows(skillIDs []string, all []db.AISkill) []skillPromptRow {
+	byID := make(map[string]db.AISkill, len(all))
+	for _, s := range all {
+		byID[s.ID] = s
+	}
+	rows := make([]skillPromptRow, 0, len(skillIDs))
+	for _, raw := range skillIDs {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			continue
+		}
+		row := skillPromptRow{ID: id, Name: id}
+		if s, ok := byID[id]; ok {
+			row.Name = s.Name
+			row.Description = s.Description
+		} else if h != nil && h.TranMySQL != nil {
+			if s, err := h.TranMySQL.GetAISkill(context.Background(), id); err == nil && s != nil {
+				row.Name = s.Name
+				row.Description = s.Description
+			}
+		}
+		if h != nil && h.db != nil {
+			if body, err := h.db.GetAISkillBody(id); err == nil {
+				row.Instructions = body.Instructions
+			}
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func (h *Handlers) agentSkillsAndLessonsContext(c *gin.Context, skillIDs []string) string {

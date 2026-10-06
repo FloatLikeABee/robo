@@ -40,6 +40,8 @@ GET/POST /api/tran/big-notes ; GET/DELETE /api/tran/big-notes/:id ; POST /api/tr
 GET/POST /api/tran/big-notes/:id/responses ; POST /api/tran/big-notes/:id/responses/:responseId/analyze ; POST /api/tran/big-notes/:id/analyze
 GET/POST /api/tran/comments ; PUT/DELETE /api/tran/comments/:id
 GET/POST /api/tran/case-tasks ; POST /api/tran/case-tasks/ai-draft ; GET /api/tran/case-tasks/:id ; GET /api/tran/case-tasks/:id/full ; PUT/DELETE /api/tran/case-tasks/:id
+GET /api/tran/timelines ; GET /api/tran/timelines/:id ; POST /api/tran/timelines — body JSON: title, and paste or content or url
+GET /api/tran/research ; GET /api/tran/research/:id ; POST /api/tran/research — body JSON: prompt
 POST /api/tran/:entity/:id/attachments ; DELETE /api/tran/:entity/:id/attachments/:attachmentId ; GET /api/tran/:entity/:id/attachments/:attachmentId/download ; GET /api/tran/attachment-config
 GET /api/tran/case-tasks/:id/pdf ; POST /api/tran/case-tasks/:id/send-email
 
@@ -102,6 +104,14 @@ Fast source selection:
 - SheetX form/events/template/survey-bot: use /api/sheetx/* (or legacy /api/formsx/*); survey-bot results at /api/sheetx/survey-bot/results when proxied.
 - ComposerX email/publish operations: use /api/composerx/ai/mcp-tools before generation calls.
 - HybridContext: users attach files and pasted notes in Morph AI chat; use excerpts when present in the conversation.
+
+Module records (create, check, and get). Use these routes. Do not file stick notes, timelines, stories, research, or event logs as Notes & TODOs, and do not call POST /api/tran/notes-todos for those requests. A personal note or TODO still uses GET/POST /api/tran/notes-todos.
+- Stick notes: GET /api/tran/case-tasks, GET /api/tran/case-tasks/:id/full, POST /api/tran/case-tasks with title, start_at, and end_at. If the operator did not give times, assume a short window, say what you assumed, and still create the stick note.
+- Timelines: GET /api/tran/timelines, GET /api/tran/timelines/:id, POST /api/tran/timelines with title plus paste, content, or url. If there is no source, ask for paste or a URL.
+- Stories: GET /api/tran/big-notes, GET /api/tran/big-notes/:id, POST /api/tran/big-notes with idea. Create runs the existing generator. Do not publish unless asked.
+- Research: GET /api/tran/research, GET /api/tran/research/:id, POST /api/tran/research with prompt. Create runs the existing generator. Do not publish unless asked.
+- Event logs: GET /api/sheetx/events-info, GET /api/sheetx/events-info/:id, POST /api/sheetx/events-info with title and time.
+Check means list or get and say whether a matching record exists, with its main fields. Do not add a status. If create fails, report that error and do not substitute a Notes & TODOs row. Do not delete, publish, or email these five unless the operator asks. Do not call POST /api/tran/case-tasks/:id/send-email when only creating a stick note.
 
 When you need to read or change data, respond with ONLY one JSON object (no markdown, no prose) with:
 - "method": GET, POST, PUT, DELETE, or PATCH

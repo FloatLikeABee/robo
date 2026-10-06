@@ -10,6 +10,8 @@ type ChatRequest struct {
 	AgentID string `json:"agent_id,omitempty"`
 	// SkillIDs optionally loads full skill bodies into the assistant system context.
 	SkillIDs         []string          `json:"skill_ids,omitempty"`
+	RAGCollections   []string          `json:"rag_collections,omitempty"`
+	Locale           string            `json:"locale,omitempty"`
 	IncludeFiles     *bool             `json:"include_files,omitempty"`
 	IncludeNotes     *bool             `json:"include_notes,omitempty"`
 	IncludeKnowledge *bool             `json:"include_knowledge,omitempty"`

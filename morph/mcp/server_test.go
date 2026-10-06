@@ -59,7 +59,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 4 || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.ToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	who := toolByName(t, listed.Tools, "whoami")
@@ -209,7 +209,7 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 4 || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.ToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -256,9 +256,9 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 		if tool.Annotations == nil {
 			t.Fatalf("%s annotations = nil", tool.Name)
 		}
-		if tool.Name == "create_note" {
+		if strings.HasPrefix(tool.Name, "create_") {
 			if tool.Annotations.ReadOnlyHint {
-				t.Fatal("create_note is marked read-only")
+				t.Fatalf("%s is marked read-only", tool.Name)
 			}
 		} else if !tool.Annotations.ReadOnlyHint {
 			t.Fatalf("%s annotations = %+v", tool.Name, tool.Annotations)
@@ -270,7 +270,7 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 			t.Fatalf("missing %s in %+v", name, listed.Tools)
 		}
 	}
-	if len(listed.Tools) != 4 {
+	if len(listed.Tools) != mcp.ToolCount {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -349,7 +349,7 @@ func TestCreateNoteToolRoundTripAndFailClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 4 {
+	if len(listed.Tools) != mcp.ToolCount {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {

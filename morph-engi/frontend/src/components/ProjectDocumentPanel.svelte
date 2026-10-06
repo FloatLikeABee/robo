@@ -251,7 +251,7 @@
               <button
                 type="button"
                 class="w-full text-left rounded-lg px-2 py-1.5 text-sm hover:bg-white/5 {selected?.id === p.id
-                  ? 'bg-violet/30'
+                  ? 'chip-on'
                   : ''}"
                 onclick={() => openProject(p)}
               >
@@ -301,12 +301,12 @@
         <div class="flex gap-1">
           <button
             type="button"
-            class="px-3 py-1 rounded-lg text-xs {previewTab === 'md' ? 'bg-violet/30' : 'text-muted'}"
+              class="px-3 py-1 rounded-lg text-xs {previewTab === 'md' ? 'chip-on' : 'text-muted'}"
             onclick={() => (previewTab = 'md')}>Markdown</button
           >
           <button
             type="button"
-            class="px-3 py-1 rounded-lg text-xs {previewTab === 'html' ? 'bg-violet/30' : 'text-muted'}"
+              class="px-3 py-1 rounded-lg text-xs {previewTab === 'html' ? 'chip-on' : 'text-muted'}"
             onclick={() => (previewTab = 'html')}>HTML</button
           >
         </div>
@@ -314,12 +314,12 @@
           <div class="flex gap-1 items-center">
             <button
               type="button"
-              class="px-3 py-1 rounded-lg text-xs {mdView === 'rendered' ? 'bg-violet/30' : 'text-muted'}"
+              class="px-3 py-1 rounded-lg text-xs {mdView === 'rendered' ? 'chip-on' : 'text-muted'}"
               onclick={() => (mdView = 'rendered')}>Rendered</button
             >
             <button
               type="button"
-              class="px-3 py-1 rounded-lg text-xs {mdView === 'raw' ? 'bg-violet/30' : 'text-muted'}"
+              class="px-3 py-1 rounded-lg text-xs {mdView === 'raw' ? 'chip-on' : 'text-muted'}"
               onclick={() => (mdView = 'raw')}>Raw</button
             >
             {#if mdView === 'raw'}
@@ -388,7 +388,7 @@
           {#each files as f, i}
             <li class="flex justify-between gap-2">
               <span class="truncate">{f.name}</span>
-              <button type="button" class="text-rose-300" onclick={() => removeFile(i)} disabled={generating}>Remove</button>
+              <button type="button" class="text-xs text-muted hover:underline" onclick={() => removeFile(i)} disabled={generating}>Remove</button>
             </li>
           {/each}
         </ul>
@@ -430,7 +430,7 @@
     transform: translate(-50%, -50%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-    background: #1a1a22;
+    background: #141c2a;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
   }
 
@@ -443,7 +443,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     position: sticky;
     top: 0;
-    background: #1a1a22;
+    background: #141c2a;
   }
 
   .create-modal-close {

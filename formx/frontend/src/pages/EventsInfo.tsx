@@ -824,7 +824,7 @@ export function EventsInfo() {
         <div className="fixed inset-0 z-50 flex justify-end" aria-modal="true" role="dialog">
           <button
             type="button"
-            className="absolute inset-0 appearance-none border-0 p-0 m-0 cursor-default bg-[rgb(2,8,23)]/45 backdrop-blur-[2px] dark:bg-black/40"
+            className="absolute inset-0 appearance-none border-0 p-0 m-0 cursor-default bg-transparent"
             aria-label="Close drawer"
             onClick={closeDrawer}
           />

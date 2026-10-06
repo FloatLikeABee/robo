@@ -18,6 +18,7 @@ import Timelines from './pages/admin/Timelines';
 import GenericData from './pages/admin/GenericData';
 import BigNotes from './pages/admin/BigNotes';
 import Research from './pages/admin/Research';
+import EmbeddedModule from './pages/admin/EmbeddedModule';
 import DocumentBranding from './DocumentBranding';
 
 function RootLayout() {
@@ -77,6 +78,9 @@ export const appRoutes = [
           { path: 'story-board', element: <Navigate to={`${ADMIN_BASE_PATH}/timelines`} replace /> },
           { path: 'big-notes', element: <BigNotes /> },
           { path: 'research', element: <Research /> },
+          { path: 'event-logs', element: <EmbeddedModule id="event-logs" /> },
+          { path: 'content-maker', element: <EmbeddedModule id="content-maker" /> },
+          { path: 'project', element: <EmbeddedModule id="project" /> },
           { path: 'quick-sheets/*', element: <Navigate to={`${ADMIN_BASE_PATH}/big-notes`} replace /> },
           {
             path: 'configuration',

@@ -29,9 +29,9 @@ func (h *Handlers) ListMorphAIAgentsHandler(c *gin.Context) {
 			}
 			desc := strings.TrimSpace(a.Description)
 			if desc == "" && len(a.RAGCollections) > 0 {
-				desc = "AI tools assistant · RAG: " + strings.Join(a.RAGCollections, ", ")
+				desc = "MorphTools assistant · RAG: " + strings.Join(a.RAGCollections, ", ")
 			} else if desc == "" {
-				desc = "AI tools assistant"
+				desc = "MorphTools assistant"
 			}
 			out = append(out, gin.H{
 				"id":              morphAgentIDForBK(id),
@@ -47,4 +47,15 @@ func (h *Handlers) ListMorphAIAgentsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"agents": out, "total": len(out)})
+}
+
+// ListRAGCollectionsHandler GET /api/rag-collections — AI tools RAG collection names.
+func (h *Handlers) ListRAGCollectionsHandler(c *gin.Context) {
+	names, err := h.listBKRAGCollectionNames(c.Request.Context())
+	if err != nil {
+		log.Printf("[RAG] list collections: %v", err)
+		c.JSON(http.StatusOK, gin.H{"collections": []string{}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"collections": names})
 }

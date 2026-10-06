@@ -6,7 +6,7 @@
   import { api, ensureSession, isBrowserStore, loginWithCredentials, previewLogin, uploadFile } from './lib/api'
   import { morphSignInHref } from './lib/morphSignInHref'
   import type { PageId } from './lib/nav'
-  import { NAV } from './lib/nav'
+  import { getLocale, subscribeLocale, translate } from './lib/locale.js'
   import ProjectDocumentPanel from './components/ProjectDocumentPanel.svelte'
   import ConfirmDialog from './components/ConfirmDialog.svelte'
   import { confirm } from './lib/confirmDialog'
@@ -17,6 +17,8 @@
   )
 
   let authed = $state(false)
+  let locale = $state(getLocale())
+  onMount(() => subscribeLocale(() => { locale = getLocale() }))
   let loading = $state(true)
   let error = $state('')
   let page = $state<PageId>('projects')
@@ -150,8 +152,8 @@
     }
   }
 
-  const pageTitle = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
-  const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
+  const pageTitle = $derived(translate(locale, page === 'files' ? 'files' : 'projects'))
+  const pageHint = $derived(translate(locale, page === 'files' ? 'filesHint' : 'projectsHint'))
 </script>
 
 {#if loading}
@@ -195,7 +197,7 @@
 {:else}
   <div class="h-full min-h-0 max-h-dvh overflow-hidden flex flex-col">
   {#if isBrowserStore()}
-    <p class="shrink-0 text-center text-[11px] px-3 py-1.5 bg-violet/20 text-muted">
+    <p class="shrink-0 text-center text-[11px] px-3 py-1.5 chip-on text-muted">
       Vercel preview — projects and files stay in this browser (localStorage). Sources are concatenated; Morph AI is not connected.
     </p>
   {/if}
@@ -260,7 +262,7 @@
                         <td class="max-w-[18rem] whitespace-pre-wrap text-muted">{d.description || '—'}</td>
                         <td class="text-xs text-muted whitespace-nowrap">{d.created_at || '—'}</td>
                         <td>
-                          <button type="button" class="text-xs text-rose-300 hover:underline" onclick={() => deleteResourceFile(d.id, d.name)}>
+                          <button type="button" class="text-xs text-muted hover:underline" onclick={() => deleteResourceFile(d.id, d.name)}>
                             Delete
                           </button>
                         </td>
@@ -285,8 +287,8 @@
 <style>
   :global(.auth-flow-shell) {
     background:
-      radial-gradient(circle at 22% 18%, rgba(91, 63, 214, 0.18), transparent 48%),
-      radial-gradient(circle at 78% 82%, rgba(45, 212, 191, 0.12), transparent 42%),
-      linear-gradient(165deg, #26262f 0%, #30303c 48%, #2a2a34 100%);
+      radial-gradient(circle at 22% 18%, rgba(37, 99, 235, 0.22), transparent 48%),
+      radial-gradient(circle at 78% 82%, rgba(56, 189, 248, 0.12), transparent 42%),
+      linear-gradient(165deg, #0c1220 0%, #141c2a 48%, #0c1220 100%);
   }
 </style>

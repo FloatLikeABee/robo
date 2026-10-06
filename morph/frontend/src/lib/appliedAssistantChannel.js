@@ -105,5 +105,5 @@ export function postStateToIframe(iframe, assistant) {
 }
 
 export function isUnknownAiToolsAssistantError(text) {
-  return /unknown or unavailable ai tools assistant/i.test(String(text || ''));
+  return /unknown or unavailable (ai tools|morphpools) assistant/i.test(String(text || ''));
 }

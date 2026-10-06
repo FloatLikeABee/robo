@@ -13,10 +13,12 @@ import AppDrawer, { DRAWER_WIDTH } from './components/admin/AppDrawer';
 import MenuIcon from '@mui/icons-material/Menu';
 import { refreshMorphAuthSnapshot } from './auth/morphSession';
 import { releaseStuckOverlays } from './utils/releaseStuckOverlays';
+import { useT } from './lib/localeReact';
 
 function AdminLayoutInner() {
   const location = useLocation();
   const { labels } = usePlatformUi();
+  const t = useT();
   const themeMode = 'dark';
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const theme = useMemo(() => getAdminTheme(themeMode), [themeMode]);
@@ -92,7 +94,7 @@ function AdminLayoutInner() {
             }}
           >
             <IconButton
-              aria-label="Open navigation"
+              aria-label={t('openNav')}
               onClick={() => setMobileNavOpen(true)}
               sx={{
                 color: 'text.primary',
@@ -113,7 +115,7 @@ function AdminLayoutInner() {
                 pl: 0.5,
               }}
             >
-              {labels.product_name || 'MorphNotes'}
+              {labels.product_name || t('morphNotes')}
             </Typography>
           </Box>
 
@@ -131,26 +133,7 @@ function AdminLayoutInner() {
           >
             <Outlet />
           </Box>
-
-          <Box
-            sx={{
-              display: { xs: 'none', sm: 'flex' },
-              minHeight: 40,
-              px: 2,
-              pb: 'env(safe-area-inset-bottom)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'background.paper',
-              borderTop: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(0,0,0,0.12)',
-              flexShrink: 0,
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              © {new Date().getFullYear()} {labels.product_name}
-            </Typography>
-          </Box>
-          {/* Phone: reserve home-indicator space without a tall footer strip.
-              Display breakpoint so the spacer is in the first paint. */}
+          {/* Phone: reserve home-indicator space without a footer strip. */}
           <Box
             sx={{ display: { xs: 'block', sm: 'none' }, height: 'env(safe-area-inset-bottom)', flexShrink: 0 }}
             aria-hidden

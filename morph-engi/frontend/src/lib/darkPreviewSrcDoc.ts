@@ -27,7 +27,7 @@ const LEGACY_THEME_OVERRIDE = `<style id="morph-dark-theme-override">
   --accent-purple: #818cf8;
 }
 body {
-  background: radial-gradient(1200px 600px at 10% -10%, #1e1b4b 0%, #0b1220 55%) !important;
+  background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f 0%, #0b1220 55%) !important;
   color: #e8eef7 !important;
 }
 a, .prose a { color: #38bdf8 !important; }

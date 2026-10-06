@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { getLocale, subscribeLocale, translate } from '../lib/locale';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
 type Theme = 'light' | 'dark';
@@ -25,6 +26,9 @@ const tabClass = (isDark: boolean) => ({ isActive }: { isActive: boolean }) =>
 
 export function Layout() {
   const theme: Theme = readTheme();
+  const [locale, setLocaleState] = useState(getLocale);
+  useEffect(() => subscribeLocale(() => setLocaleState(getLocale())), []);
+  const t = (key: string) => translate(locale, key);
 
   useEffect(() => {
     window.localStorage.setItem('sheetx-theme', theme);
@@ -56,7 +60,7 @@ export function Layout() {
             <span className={isDark ? 'text-2xl text-violet-300' : 'text-2xl text-violet-600'}>📄</span>
             <div className="min-w-0">
               <span className={isDark ? 'font-semibold text-white text-lg' : 'font-semibold text-slate-900 text-lg'}>
-                Event Logs
+                {t('eventLogs')}
               </span>
             </div>
           </Link>
@@ -64,11 +68,11 @@ export function Layout() {
 
         <nav
           className="flex items-center gap-1 px-3 md:px-4 pb-3 overflow-x-auto"
-          aria-label="Sections"
+          aria-label={t('sections')}
         >
           <NavLink to="/events-info" className={tc}>
             <span aria-hidden className="text-base leading-none">📌</span>
-            <span>Events &amp; Info</span>
+            <span>{t('eventsInfo')}</span>
           </NavLink>
         </nav>
       </header>

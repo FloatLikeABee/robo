@@ -1,8 +1,8 @@
-# 06 — AI tools (`bk/`)
+# 06 — MorphTools (`bk/`)
 
 ## Overview
 
-User-facing product: **AI tools**. Folder stays `bk/`. Morph AI can open this workspace (Assistants, RAG, Documents, System). It is not a separate “Ground Control” product. It does not run a Model Context Protocol server. The platform MCP program is [`morph/cmd/morph-mcp`](14-morph-mcp.md).
+User-facing product: **MorphTools**. Folder stays `bk/`. Morph AI can open this workspace (Assistants, RAG, Documents, System). It is not a separate “Ground Control” product. It does not run a Model Context Protocol server. The platform MCP program is [`morph/cmd/morph-mcp`](14-morph-mcp.md).
 
 | | |
 |--|--|
@@ -34,6 +34,6 @@ UI: http://localhost:3000
 
 Python 3.11+ (see root README). Config is the **repo-root** `.env` (nested `bk/.env` is ignored).
 
-Morph AI is the system chat; AI tools is the RAG/assistants workbench linked from Morph AI.
+Morph AI is the system chat; MorphTools is the RAG/assistants workbench linked from Morph AI.
 
 See [`bk/README.md`](../../bk/README.md).

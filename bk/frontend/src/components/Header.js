@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -22,6 +22,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import api from '../services/api';
+import { getLocale, subscribeLocale, translate } from '../lib/locale';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -29,6 +30,9 @@ const Header = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = useState(null);
+  const [locale, setLocaleState] = useState(getLocale);
+  useEffect(() => subscribeLocale(() => setLocaleState(getLocale())), []);
+  const t = (key) => translate(locale, key);
 
   useQuery('status', api.getStatus, {
     refetchInterval: 30000,
@@ -36,10 +40,10 @@ const Header = () => {
   });
 
   const navItems = [
-    { path: '/assistants', label: 'Assistants', icon: <AssistantIcon /> },
-    { path: '/rag', label: 'RAG', icon: <RagIcon /> },
-    { path: '/documents', label: 'Documents', icon: <DocumentsIcon /> },
-    { path: '/status', label: 'System', icon: <StatusIcon /> },
+    { path: '/assistants', label: t('assistants'), icon: <AssistantIcon /> },
+    { path: '/rag', label: t('rag'), icon: <RagIcon /> },
+    { path: '/documents', label: t('documents'), icon: <DocumentsIcon /> },
+    { path: '/status', label: t('system'), icon: <StatusIcon /> },
   ];
 
   const isSelected = (path) => location.pathname === path;
@@ -77,7 +81,7 @@ const Header = () => {
             textShadow: (t) => `0 0 30px ${alpha(t.palette.primary.main, 0.5)}`,
           }}
         >
-          AI tools
+          {t('morphTools')}
         </Typography>
 
         {isMobile ? (

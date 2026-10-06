@@ -37,6 +37,8 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		req.SessionID = c.PostForm("session_id")
 		req.AgentID = c.PostForm("agent_id")
 		req.SkillIDs = c.PostFormArray("skill_ids")
+		req.RAGCollections = c.PostFormArray("rag_collections")
+		req.Locale = c.PostForm("locale")
 		req.IncludeFiles = parseOptionalBoolForm(c, "include_files")
 		req.IncludeNotes = parseOptionalBoolForm(c, "include_notes")
 		req.IncludeKnowledge = parseOptionalBoolForm(c, "include_knowledge")
@@ -197,13 +199,23 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 	}
 
 	if bkAssistantID != "" {
-		_, instructions, bkErr := h.buildBKAssistantInstructions(c.Request.Context(), bkAssistantID, req.Message)
+		_, instructions, bkErr := h.buildBKAssistantInstructions(c.Request.Context(), bkAssistantID, req.Message, req.RAGCollections)
 		if bkErr != nil {
 			log.Printf("[CHAT HANDLER] BK assistant %s: %v", bkAssistantID, bkErr)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown or unavailable AI tools assistant"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown or unavailable MorphTools assistant"})
 			return
 		}
 		agentInstructions = instructions
+	} else if len(req.RAGCollections) > 0 {
+		agentInstructions = h.ragContextBlock(c.Request.Context(), collectionsForChatRAG(nil, req.RAGCollections), req.Message)
+	}
+
+	if line := replyLanguageLine(req.Locale); line != "" {
+		if agentInstructions != "" {
+			agentInstructions += "\n\n" + line
+		} else {
+			agentInstructions = line
+		}
 	}
 
 	userVisible := req.Message

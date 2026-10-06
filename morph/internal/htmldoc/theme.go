@@ -25,7 +25,24 @@ func DarkProseCSS() string {
 .prose strong{font-weight:700}
 .prose table{border-collapse:collapse;width:100%;font-size:.95em}
 .prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
-.prose th{background:var(--card)}`
+.prose th{background:var(--card)}
+` + VisualBlockCSS()
+}
+
+// VisualBlockCSS styles section cards, milestone rails, callouts, stats, and bar charts.
+func VisualBlockCSS() string {
+	return `.doc-card{margin:1.1rem 0;padding:1rem 1.15rem 1.15rem;border:1px solid var(--line);border-radius:16px;background:rgba(17,24,39,.78);box-shadow:0 0 0 1px rgba(56,189,248,.12)}
+.doc-card>h2{margin:.1rem 0 .45rem;font-size:1.2rem}
+.rail{list-style:none;margin:.4rem 0 0;padding:0}
+.rail>li{position:relative;margin:0;padding:.4rem 0 .4rem 1.35rem;border-left:2px solid rgba(56,189,248,.5)}
+.rail>li:before{content:"";position:absolute;left:-5px;top:.65rem;width:8px;height:8px;border-radius:50%;background:#38bdf8}
+.callout{margin:1rem 0;padding:.8rem 1rem;border-radius:12px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.4);color:#e2e8f0}
+.stat-row{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0}
+.stat{min-width:6.5rem;padding:.65rem .8rem;border-radius:12px;background:#0f172a;border:1px solid var(--line)}
+.stat b{display:block;font:700 1.3rem/1.1 system-ui,sans-serif;color:#f8fafc}
+.stat span{font:11px/1.3 system-ui,sans-serif;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.chart{margin:.35rem 0 .2rem}
+.chart svg{width:100%;height:auto;display:block}`
 }
 
 // DarkDocumentCSS returns root, layout, and prose rules for a standard document page.
@@ -84,5 +101,6 @@ h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2
 .opts{display:grid;gap:.4rem;font-family:system-ui,sans-serif}
 .opts label{font-weight:500;display:flex;gap:.5rem;align-items:flex-start;color:#cbd5e1}
 button.primary{margin-top:1.25rem;padding:.7rem 1.1rem;border:0;border-radius:999px;background:var(--accent);color:#0b1220;font:600 14px system-ui,sans-serif;cursor:pointer}
-.theme{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
+.theme{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}
+` + VisualBlockCSS()
 }

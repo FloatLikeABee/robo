@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-10-06 — Product UI stays English
+
+- Trigger: locale switch, browser language detection, Chinese/English chrome, `morph-locale`
+- Rule: Keep the product UI in English. Do not show a language control and do not follow the browser language. A saved locale must not change the interface.
+- Source: [Hide locale switch](979da257-11ee-420e-83b3-650b2d163537)
+
 ## 2026-09-24 — Event Logs identity headers are not a session
 
 - Trigger: formx/composerx `X-User-Role` / `X-User-Permissions`, or a client-supplied auth base URL

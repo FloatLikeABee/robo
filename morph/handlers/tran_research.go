@@ -355,7 +355,9 @@ func researchSourcePack(prompt string, pieces []researchPiece) string {
 
 func (h *Handlers) synthesizeResearchConclusion(ctx context.Context, prompt string, pieces []researchPiece) string {
 	pack := researchSourcePack(prompt, pieces)
-	composePrompt := researchComposePrefix + ` Write one professional document in the manner of a doctoral thesis or expert essay. Structure by argument, not by research-round order. Absorb the best-supported essence of every round; do not concatenate round write-ups; do not use Round 1…Round N as headings. Qualify uncertain or unverified claims. Markdown only.
+	composePrompt := researchComposePrefix + ` Write one professional document in the manner of a doctoral thesis or expert essay. Structure by argument, not by research-round order. Absorb the best-supported essence of every round; do not concatenate round write-ups; do not use Round 1…Round N as headings. Qualify uncertain or unverified claims. Markdown only. Do not invent numbers and do not return raw HTML.
+` + documentShapePrompt + `
+
 
 ` + morphai.VisualFirstInstructions + `
 

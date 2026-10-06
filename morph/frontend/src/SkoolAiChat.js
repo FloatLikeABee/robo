@@ -11,14 +11,12 @@ import { tranApi } from './api/tranClient';
 import { runAiProgress } from './lib/aiProgress';
 import { contextFingerprint, inferSubAgents } from './lib/agentContext';
 import AgentWorkspace, {
-  initialWorkspaceOpen,
   readLastSessionId,
-  readStoredWorkspaceChoice,
   readWorkspaceTab,
   resolveRestoredSessionId,
   writeLastSessionId,
-  writeWorkspaceOpen,
 } from './components/chat/AgentWorkspace';
+import AssistantReply from './components/chat/AssistantReply';
 import {
   APPLIED_ASSISTANT_MSG,
   isAllowedBkOrigin,
@@ -32,11 +30,14 @@ import {
   subscribeAppliedAssistantChannel,
   writeStoredAppliedAssistant,
 } from './lib/appliedAssistantChannel';
-import { getMorphToken, clearMorphSession } from './auth/morphSession';
-import { HEADER_APP_ICONS, morphUtilsBaseURL } from './lib/headerAppLinks';
+import { clearMorphSession } from './auth/morphSession';
+import MorphNotesModal from './components/chat/MorphNotesModal';
+import { HEADER_APP_ICONS } from './lib/headerAppLinks';
 import { onSheetKeyDown } from './lib/phoneSheet';
 import { bindKeyboardInset } from './lib/keyboardInset';
 import HeaderMoreMenu from './components/chat/HeaderMoreMenu';
+import { getLocale } from './lib/locale';
+import { useT } from './lib/localeReact';
 import { useConfirm } from './components/ConfirmDialog';
 import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
 import './App.css';
@@ -53,9 +54,6 @@ const SESSION_SWATCH_COLORS = [
   '#e879f9',
   '#fb7185',
 ];
-const APP_URLS = {
-  morphData: process.env.REACT_APP_MORPHDATA_URL || '/morphdata',
-};
 
 function hashSessionId(id) {
   const s = String(id || '');
@@ -75,18 +73,6 @@ function sessionSwatchColor(id, usedIndexes) {
     }
   }
   return SESSION_SWATCH_COLORS[start];
-}
-
-function appHrefWithSession(baseUrl) {
-  const token = getMorphToken();
-  if (!token) return baseUrl;
-  try {
-    const url = new URL(baseUrl, window.location.origin);
-    url.searchParams.set('userspanel_token', token);
-    return url.toString();
-  } catch {
-    return baseUrl;
-  }
 }
 
 function loadPromptHistory() {
@@ -128,6 +114,7 @@ function pickRestoredSession(list, lastId) {
  */
 export default function SkoolAiChat({ variant = 'page', enableFileUpload = true, singleSession = false }) {
   const { confirm } = useConfirm();
+  const t = useT();
   const embedded = variant === 'embedded';
   const isAgentShell = !singleSession;
   const [messages, setMessages] = useState([]);
@@ -145,14 +132,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const sessionsSheetRef = useRef(null);
   const sessionsCloseRef = useRef(null);
   const sessionsToggleRef = useRef(null);
-  const [workspaceOpen, setWorkspaceOpen] = useState(() => (
-    isAgentShell
-      ? initialWorkspaceOpen({
-          stored: readStoredWorkspaceChoice(),
-          phone: typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches,
-        })
-      : true
-  ));
   const [workspaceTab, setWorkspaceTab] = useState('knowledge');
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeKnowledge, setIncludeKnowledge] = useState(true);
@@ -160,6 +139,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const [hybridAttachment, setHybridAttachment] = useState({ attached: false, title: '', sources: [] });
   const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
   const [aiToolsOpen, setAiToolsOpen] = useState(false);
+  const [morphNotesOpen, setMorphNotesOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [agentNotesOpen, setAgentNotesOpen] = useState(() => searchParams.get('agent-notes') === '1');
@@ -167,13 +147,20 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const closeAgentNotes = useCallback(() => setAgentNotesOpen(false), []);
   const [skills, setSkills] = useState([]);
   const [skillsPickerOpen, setSkillsPickerOpen] = useState(false);
+  const [assistantPickerOpen, setAssistantPickerOpen] = useState(false);
+  const [ragPickerOpen, setRagPickerOpen] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [ragCollections, setRagCollections] = useState([]);
+  const [selectedRAG, setSelectedRAG] = useState([]);
   const [appliedAssistant, setAppliedAssistant] = useState(readStoredAppliedAssistant);
   const sessionId = singleSession ? 'default' : currentSessionId || 'default';
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const skillsPickerRef = useRef(null);
+  const assistantPickerRef = useRef(null);
+  const ragPickerRef = useRef(null);
   const aiToolsFrameRef = useRef(null);
   const appliedAssistantRef = useRef(appliedAssistant);
   const promptHistoryRef = useRef(loadPromptHistory());
@@ -224,16 +211,44 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     };
   }, []);
 
+  const loadAgents = useCallback(async () => {
+    try {
+      const res = await tranApi.get('/api/ai-agents', { headers: { 'Cache-Control': 'no-cache' } });
+      const list = Array.isArray(res.data?.agents) ? res.data.agents : [];
+      setAgents(list.filter((agent) => agent && (agent.id || agent.name)));
+    } catch {
+      setAgents([]);
+    }
+  }, []);
+
+  const loadRAG = useCallback(async () => {
+    try {
+      const res = await tranApi.get('/api/rag-collections', { headers: { 'Cache-Control': 'no-cache' } });
+      const raw = res.data?.collections ?? res.data;
+      const list = Array.isArray(raw)
+        ? raw.map((item) => (typeof item === 'string' ? item : item?.name)).filter(Boolean)
+        : [];
+      setRagCollections(list);
+    } catch {
+      setRagCollections([]);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!skillsPickerOpen) return undefined;
+    loadAgents();
+    loadRAG();
+  }, [loadAgents, loadRAG]);
+
+  useEffect(() => {
+    if (!skillsPickerOpen && !assistantPickerOpen && !ragPickerOpen) return undefined;
     const onDocMouseDown = (e) => {
-      if (skillsPickerRef.current && !skillsPickerRef.current.contains(e.target)) {
-        setSkillsPickerOpen(false);
-      }
+      if (skillsPickerRef.current && !skillsPickerRef.current.contains(e.target)) setSkillsPickerOpen(false);
+      if (assistantPickerRef.current && !assistantPickerRef.current.contains(e.target)) setAssistantPickerOpen(false);
+      if (ragPickerRef.current && !ragPickerRef.current.contains(e.target)) setRagPickerOpen(false);
     };
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, [skillsPickerOpen]);
+  }, [skillsPickerOpen, assistantPickerOpen, ragPickerOpen]);
 
   useEffect(() => {
     appliedAssistantRef.current = appliedAssistant;
@@ -391,28 +406,17 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (!singleSession) loadSessions();
   }, [singleSession, loadSessions]);
 
-  const headerAppLinks = useMemo(() => {
-    const links = [
-      {
-        id: 'morphdata',
-        label: 'MorphNotes',
-        href: APP_URLS.morphData,
-        color: '#3b82f6',
-        icon: HEADER_APP_ICONS.morphdata,
-      },
-    ];
-    const utils = morphUtilsBaseURL(process.env.NODE_ENV, process.env.REACT_APP_MORPH_UTILS_URL);
-    if (utils) {
-      links.push({
-        id: 'morphutils',
-        label: 'MorphUtils',
-        href: appHrefWithSession(utils),
-        color: '#2563eb',
-        icon: HEADER_APP_ICONS.morphutils,
-      });
-    }
-    return links;
-  }, []);
+  const headerAppLinks = useMemo(() => ([
+    {
+      id: 'morphdata',
+      label: t('morphNotes'),
+      color: '#3b82f6',
+      icon: HEADER_APP_ICONS.morphdata,
+      hasPopup: 'dialog',
+      expanded: morphNotesOpen,
+      onClick: () => setMorphNotesOpen(true),
+    },
+  ]), [morphNotesOpen, t]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -422,14 +426,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (savedTab) setWorkspaceTab(savedTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load on session id change only
   }, [sessionId]);
-
-  const toggleWorkspace = useCallback(() => {
-    setWorkspaceOpen((v) => {
-      const next = !v;
-      writeWorkspaceOpen(next);
-      return next;
-    });
-  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -517,6 +513,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
         }
         if (agentId) formData.append('agent_id', agentId);
         skillIds.forEach((id) => formData.append('skill_ids', id));
+        selectedRAG.forEach((name) => formData.append('rag_collections', name));
+        formData.append('locale', getLocale());
         if (isAgentShell) {
           formData.append('include_files', agentFields.include_files ? 'true' : 'false');
           formData.append('include_notes', agentFields.include_notes ? 'true' : 'false');
@@ -535,6 +533,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             session_id: sessionId,
             ...(agentId ? { agent_id: agentId } : {}),
             ...(skillIds.length > 0 ? { skill_ids: skillIds } : {}),
+            ...(selectedRAG.length > 0 ? { rag_collections: selectedRAG } : {}),
+            locale: getLocale(),
             ...agentFields,
           },
           { signal }
@@ -767,7 +767,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   }, [sessions]);
 
   const chatInner = (
-    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent app--sessions-collapsed' : ''}${isAgentShell && !workspaceOpen ? ' app--workspace-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
+    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent app--sessions-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
       {!singleSession && sidebarNavOpen && (
         <button
           type="button"
@@ -797,8 +797,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             <button
               type="button"
               className="sidebar-new-chat"
-              title="New chat"
-              aria-label="New chat"
+              title={t('newChat')}
+              aria-label={t('newChat')}
               onClick={() => {
                 handleNewChat();
                 setSidebarNavOpen(false);
@@ -867,7 +867,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               type="button"
               ref={sessionsToggleRef}
               className="chat-nav-toggle"
-              aria-label={sidebarNavOpen ? 'Close sessions menu' : 'Open sessions menu'}
+              aria-label={sidebarNavOpen ? t('closeSessions') : t('openSessions')}
               aria-expanded={sidebarNavOpen}
               onClick={toggleSessionsNav}
             >
@@ -883,32 +883,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             ) : null}
           </div>
           <div className="header-actions">
-            {isAgentShell ? (
-              <button
-                type="button"
-                className="chat-icon-button chat-workspace-toggle"
-                onClick={toggleWorkspace}
-                aria-expanded={workspaceOpen}
-                aria-label={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
-                title={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M15 3v18" />
-                </svg>
-              </button>
-            ) : null}
             <HeaderMoreMenu
               items={[
                 {
@@ -926,7 +900,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 },
                 {
                   id: 'skills',
-                  label: 'Skills',
+                  label: t('skills'),
                   color: '#38bdf8',
                   hasPopup: 'dialog',
                   expanded: skillsOpen,
@@ -934,7 +908,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 },
                 {
                   id: 'bk',
-                  label: 'AI tools',
+                  label: t('morphTools'),
                   color: '#059669',
                   icon: HEADER_APP_ICONS.bk,
                   hasPopup: 'dialog',
@@ -949,8 +923,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               type="button"
               className="chat-icon-button header-action-clear"
               onClick={handleClearConversation}
-              title="Clear messages in this chat"
-              aria-label="Clear chat"
+              title={t('clearMessages')}
+              aria-label={t('clearChat')}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -975,8 +949,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 type="button"
                 className="chat-icon-button"
                 onClick={handleSignOut}
-                title="Sign out"
-                aria-label="Sign out"
+                title={t('signOut')}
+                aria-label={t('signOut')}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1056,7 +1030,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                   </div>
                 )}
                 {msg.type === 'assistant' && (
-                  <div className="message-bubble assistant-bubble">
+                  <AssistantReply text={msg.content} modal={<ChatMarkdown text={msg.content} />}>
                     <ChatMarkdown text={msg.content} />
                     {Array.isArray(msg.images) && msg.images.length > 0 && (
                       <div className="chat-generated-images">
@@ -1210,7 +1184,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                         </pre>
                       </div>
                     )}
-                  </div>
+                  </AssistantReply>
                 )}
                 {msg.type === 'error' && (
                   <div className="message-bubble error-bubble">
@@ -1259,6 +1233,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           iframeRef={aiToolsFrameRef}
           onFrameReady={() => postStateToIframe(aiToolsFrameRef.current, appliedAssistantRef.current)}
         />
+        <MorphNotesModal open={morphNotesOpen} onClose={() => setMorphNotesOpen(false)} />
         <SkillsModal open={skillsOpen} onClose={() => setSkillsOpen(false)} />
         {agentNotesOpen ? (
           <AgentNotesModal
@@ -1266,31 +1241,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             restoreFocusRef={agentNotesRestoreRef}
             fallbackFocusRef={inputRef}
           />
-        ) : null}
-
-        {isAgentShell ? (
-          <div className="agent-include-bar" role="group" aria-label="Context included on next send">
-            <button
-              type="button"
-              className={`agent-include-chip${includeNotes ? ' is-on' : ''}`}
-              onClick={() => {
-                setIncludeNotes((v) => !v);
-                lastContextFpRef.current = '';
-              }}
-            >
-              Notes
-            </button>
-            <button
-              type="button"
-              className={`agent-include-chip${includeKnowledge ? ' is-on' : ''}`}
-              onClick={() => {
-                setIncludeKnowledge((v) => !v);
-                lastContextFpRef.current = '';
-              }}
-            >
-              Knowledge
-            </button>
-          </div>
         ) : null}
 
         <form className="input-container" onSubmit={handleSend} onClick={(e) => e.stopPropagation()}>
@@ -1334,13 +1284,62 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           {enableFileUpload && attachedFile && (
             <div className="attached-file-tag">
               <span>📎 {attachedFile.name}</span>
-              <button type="button" className="attached-file-remove" onClick={() => setAttachedFile(null)} aria-label="Remove file">
+              <button
+                type="button"
+                className="attached-file-remove"
+                onClick={handleAnalyzeAttachment}
+                disabled={loading}
+                aria-label={t('analyzeFile')}
+              >
+                {t('analyze')}
+              </button>
+              <button type="button" className="attached-file-remove" onClick={() => setAttachedFile(null)} aria-label={t('removeFile')}>
                 ×
               </button>
             </div>
           )}
           <div className="chat-input-gradient-frame">
             <div className="input-wrapper chat-input-inner">
+            <div className={`composer-tools${isAgentShell ? ' composer-tools--six' : ''}`}>
+            {isAgentShell ? (
+              <>
+                <button
+                  type="button"
+                  className={`chat-icon-button chat-icon-button--attach${includeNotes ? ' chat-icon-button--active' : ''}`}
+                  onClick={() => {
+                    setIncludeNotes((v) => !v);
+                    lastContextFpRef.current = '';
+                  }}
+                  title={t('notes')}
+                  aria-label={t('notes')}
+                  aria-pressed={includeNotes}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 3v5h5" />
+                    <path d="M8 13h8" />
+                    <path d="M8 17h5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={`chat-icon-button chat-icon-button--attach${includeKnowledge ? ' chat-icon-button--active' : ''}`}
+                  onClick={() => {
+                    setIncludeKnowledge((v) => !v);
+                    lastContextFpRef.current = '';
+                  }}
+                  title={t('knowledge')}
+                  aria-label={t('knowledge')}
+                  aria-pressed={includeKnowledge}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="m12 3 9 5-9 5-9-5 9-5z" />
+                    <path d="m3 12 9 5 9-5" />
+                    <path d="m3 17 9 5 9-5" />
+                  </svg>
+                </button>
+              </>
+            ) : null}
             {enableFileUpload && (
               <>
                 <input
@@ -1360,8 +1359,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                   className="chat-icon-button chat-icon-button--attach"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  title="Upload image or PDF"
-                  aria-label="Upload image or PDF"
+                  title={t('upload')}
+                  aria-label={t('upload')}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1378,18 +1377,6 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                     <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                   </svg>
                 </button>
-                {attachedFile && (
-                  <button
-                    type="button"
-                    className="chat-icon-button chat-icon-button--attach"
-                    onClick={handleAnalyzeAttachment}
-                    disabled={loading}
-                    title="Analyze uploaded file"
-                    aria-label="Analyze uploaded file"
-                  >
-                    Analyze
-                  </button>
-                )}
               </>
             )}
             <div className="skills-picker-wrap" ref={skillsPickerRef}>
@@ -1398,10 +1385,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 className={`chat-icon-button chat-icon-button--attach chat-icon-button--skills${
                   skillsPickerOpen || selectedSkillIds.length > 0 ? ' chat-icon-button--active' : ''
                 }`}
-                onClick={() => setSkillsPickerOpen((v) => !v)}
+                onClick={() => {
+                  setSkillsPickerOpen((v) => !v);
+                  setAssistantPickerOpen(false);
+                  setRagPickerOpen(false);
+                }}
                 disabled={loading}
-                title="Choose skills for this chat"
-                aria-label="Choose skills"
+                title={t('chooseSkills')}
+                aria-label={t('chooseSkills')}
                 aria-haspopup="true"
                 aria-expanded={skillsPickerOpen}
               >
@@ -1425,9 +1416,9 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               </button>
               {skillsPickerOpen ? (
                 <div className="skills-picker-pop" role="menu" aria-label="Skills">
-                  <div className="skills-picker-title">Skills for this chat</div>
+                  <div className="skills-picker-title">{t('skillsTitle')}</div>
                   {skills.length === 0 ? (
-                    <div className="skills-picker-empty">No skills available.</div>
+                    <div className="skills-picker-empty">{t('noSkills')}</div>
                   ) : (
                     skills.map((s) => (
                       <label key={s.id} className="skills-picker-item">
@@ -1448,6 +1439,134 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 </div>
               ) : null}
             </div>
+            <div className="skills-picker-wrap" ref={assistantPickerRef}>
+              <button
+                type="button"
+                className={`chat-icon-button chat-icon-button--attach chat-icon-button--skills${
+                  assistantPickerOpen || appliedAssistant ? ' chat-icon-button--active' : ''
+                }`}
+                onClick={() => {
+                  setAssistantPickerOpen((v) => !v);
+                  setSkillsPickerOpen(false);
+                  setRagPickerOpen(false);
+                  loadAgents();
+                }}
+                disabled={loading}
+                title={t('chooseAssistant')}
+                aria-label={t('chooseAssistant')}
+                aria-haspopup="true"
+                aria-expanded={assistantPickerOpen}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="8" r="3" />
+                  <path d="M5 19c1.2-3.2 3.6-4.8 7-4.8s5.8 1.6 7 4.8" />
+                </svg>
+                {appliedAssistant ? <span className="skills-picker-badge">1</span> : null}
+              </button>
+              {assistantPickerOpen ? (
+                <div className="skills-picker-pop" role="menu" aria-label="Assistants">
+                  <div className="skills-picker-title">{t('assistantTitle')}</div>
+                  {agents.length === 0 ? (
+                    <div className="skills-picker-empty">{t('noAssistants')}</div>
+                  ) : (
+                    agents.map((agent) => {
+                      const selected = appliedAssistant && morphAgentId(appliedAssistant) === morphAgentId(agent);
+                      return (
+                        <label key={agent.id} className="skills-picker-item">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(selected)}
+                            onChange={() => {
+                              if (selected) dismissAssistant();
+                              else applyAssistant({ id: agent.id, name: agent.name });
+                            }}
+                          />
+                          <span>
+                            <strong>{agent.name || agent.id}</strong>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              ) : null}
+            </div>
+            <div className="skills-picker-wrap" ref={ragPickerRef}>
+              <button
+                type="button"
+                className={`chat-icon-button chat-icon-button--attach chat-icon-button--skills${
+                  ragPickerOpen || selectedRAG.length > 0 ? ' chat-icon-button--active' : ''
+                }`}
+                onClick={() => {
+                  setRagPickerOpen((v) => !v);
+                  setSkillsPickerOpen(false);
+                  setAssistantPickerOpen(false);
+                  loadRAG();
+                }}
+                disabled={loading}
+                title={t('chooseRAG')}
+                aria-label={t('chooseRAG')}
+                aria-haspopup="true"
+                aria-expanded={ragPickerOpen}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                {selectedRAG.length > 0 ? (
+                  <span className="skills-picker-badge">{selectedRAG.length}</span>
+                ) : null}
+              </button>
+              {ragPickerOpen ? (
+                <div className="skills-picker-pop" role="menu" aria-label="RAG collections">
+                  <div className="skills-picker-title">{t('ragTitle')}</div>
+                  {ragCollections.length === 0 ? (
+                    <div className="skills-picker-empty">{t('noRAG')}</div>
+                  ) : (
+                    ragCollections.map((name) => (
+                      <label key={name} className="skills-picker-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedRAG.includes(name)}
+                          onChange={() => {
+                            setSelectedRAG((prev) => (
+                              prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
+                            ));
+                          }}
+                        />
+                        <span>
+                          <strong>{name}</strong>
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+            </div>
+            <div className="composer-field">
             <textarea
               ref={inputRef}
               value={input}
@@ -1457,12 +1576,12 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               }}
               onKeyDown={handleInputKeyDown}
               placeholder={
-                enableFileUpload ? 'Type a message or upload image/PDF…' : 'Type a message…'
+                enableFileUpload ? t('placeholderFile') : t('placeholder')
               }
               className="message-input"
               disabled={loading}
               autoComplete="off"
-              rows={isAgentShell ? 3 : 1}
+              rows={isAgentShell ? 2 : 1}
             />
             {input.trim() && (
               <button
@@ -1474,8 +1593,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                   inputRef.current?.focus();
                 }}
                 disabled={loading}
-                title="Clear text"
-                aria-label="Clear message text"
+                title={t('clearText')}
+                aria-label={t('clearText')}
               >
                 ✕
               </button>
@@ -1485,8 +1604,8 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               className="chat-icon-button chat-icon-button--input"
               onClick={handleCancelRequest}
               disabled={!loading}
-              title={loading ? 'Cancel request' : 'No request in progress'}
-              aria-label="Cancel request"
+              title={loading ? t('cancelRequest') : t('noRequest')}
+              aria-label={t('cancelRequest')}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1504,15 +1623,16 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none" />
               </svg>
             </button>
+            <button
+              type="submit"
+              className="send-button"
+              disabled={loading || (!input.trim() && !(enableFileUpload && attachedFile))}
+            >
+              {loading ? '⏳' : '➤'}
+            </button>
+            </div>
           </div>
           </div>
-          <button
-            type="submit"
-            className="send-button"
-            disabled={loading || (!input.trim() && !(enableFileUpload && attachedFile))}
-          >
-            {loading ? '⏳' : '➤'}
-          </button>
         </form>
         {responseTimeMs != null && (
           <div className="chat-response-time" aria-live="polite">

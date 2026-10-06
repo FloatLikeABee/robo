@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { tranApi } from './api/tranClient';
+import { useT } from './lib/localeReact';
 
 /**
  * Right-side drawer: session HybridContext (files + notes) and durable Knowledge Library.
@@ -13,6 +14,7 @@ export default function HybridContextDrawer({
   variant = 'drawer',
 }) {
   const isPanel = variant === 'panel';
+  const t = useT();
   const [panel, setPanel] = useState('session'); // session | knowledge
   const [chunkCount, setChunkCount] = useState(0);
   const [sources, setSources] = useState([]);
@@ -193,14 +195,14 @@ export default function HybridContextDrawer({
         <div className="hybrid-drawer-head">
           <div>
             <h2 id="hybrid-drawer-title" className="hybrid-drawer-title">
-              Context &amp; Knowledge
+              {t('contextKnowledge')}
             </h2>
             <p className="hybrid-drawer-sub">
-              Session HybridContext is temporary. Knowledge Library is durable GraphRAG for Morph AI.
+              {t('contextSub')}
             </p>
           </div>
           {isPanel ? null : (
-            <button type="button" className="hybrid-drawer-close" onClick={onClose} aria-label="Close">
+            <button type="button" className="hybrid-drawer-close" onClick={onClose} aria-label={t('close')}>
               ✕
             </button>
           )}
@@ -212,14 +214,14 @@ export default function HybridContextDrawer({
             className={`hybrid-toolbar-btn ${panel === 'session' ? 'hybrid-toolbar-btn-primary' : ''}`}
             onClick={() => setPanel('session')}
           >
-            Session context
+            {t('sessionContext')}
           </button>
           <button
             type="button"
             className={`hybrid-toolbar-btn ${panel === 'knowledge' ? 'hybrid-toolbar-btn-primary' : ''}`}
             onClick={() => setPanel('knowledge')}
           >
-            Knowledge Library
+            {t('knowledgeLibrary')}
           </button>
         </div>
 
@@ -227,15 +229,15 @@ export default function HybridContextDrawer({
           <div className="hybrid-drawer-scroll">
             {knowledgeStatus && <div className="hybrid-drawer-status">{knowledgeStatus}</div>}
             <section className="hybrid-drawer-section">
-              <h3 className="hybrid-h3">Morph Knowledge Library</h3>
-              <p className="hybrid-hint">Durable uploads for GraphRAG: md, json, csv, txt, pdf. Morph-only.</p>
+              <h3 className="hybrid-h3">{t('morphKnowledge')}</h3>
+              <p className="hybrid-hint">{t('knowledgeHint')}</p>
               <label className="hybrid-check">
                 <input
                   type="checkbox"
                   checked={knowledgeIndexGraph}
                   onChange={(e) => setKnowledgeIndexGraph(e.target.checked)}
                 />
-                <span>Also save into Neo4j graph (faster GraphRAG search)</span>
+                <span>{t('saveNeo4jSearch')}</span>
               </label>
               <input
                 ref={knowledgeRef}
@@ -246,11 +248,11 @@ export default function HybridContextDrawer({
                 onChange={onUploadKnowledge}
               />
               <button type="button" className="hybrid-primary-btn" onClick={() => knowledgeRef.current?.click()}>
-                Upload to Knowledge…
+                {t('uploadKnowledge')}
               </button>
               <ul className="hybrid-file-list">
                 {knowledgeFiles.length === 0 ? (
-                  <li className="hybrid-hint">No knowledge files yet.</li>
+                  <li className="hybrid-hint">{t('noKnowledge')}</li>
                 ) : (
                   knowledgeFiles.map((f) => (
                     <li key={f.id} className="hybrid-file-row">
@@ -263,7 +265,7 @@ export default function HybridContextDrawer({
                         </span>
                       </div>
                       <button type="button" className="hybrid-file-remove" onClick={() => onDeleteKnowledge(f.id)}>
-                        Remove
+                        {t('remove')}
                       </button>
                     </li>
                   ))
@@ -280,13 +282,13 @@ export default function HybridContextDrawer({
               className="hybrid-toolbar-btn hybrid-toolbar-btn-primary"
               disabled={bringLoading || chunkCount === 0}
               onClick={onBringClick}
-              title={chunkCount === 0 ? 'Add HybridContext first' : 'Attach sources as chat reference (shown above input)'}
+              title={chunkCount === 0 ? t('addContextFirst') : t('attachSources')}
             >
-              {bringLoading ? '…' : 'Bring to conversation'}
+              {bringLoading ? '…' : t('bring')}
             </button>
           )}
           <button type="button" className="hybrid-toolbar-btn hybrid-toolbar-btn-danger" onClick={onClearAll}>
-            Clear all
+            {t('clearAll')}
           </button>
         </div>
 
@@ -294,19 +296,19 @@ export default function HybridContextDrawer({
           {status && <div className="hybrid-drawer-status">{status}</div>}
 
           <section className="hybrid-drawer-section">
-            <h3 className="hybrid-h3">Data files</h3>
-            <p className="hybrid-hint">CSV, JSON, TXT, Markdown, HTML, Excel (.xlsx), PDF, images — session only</p>
+            <h3 className="hybrid-h3">{t('dataFiles')}</h3>
+            <p className="hybrid-hint">{t('dataFilesHint')}</p>
             <label className="hybrid-check">
               <input
                 type="checkbox"
                 checked={sessionIndexGraph}
                 onChange={(e) => setSessionIndexGraph(e.target.checked)}
               />
-              <span>Also save into Neo4j graph (Knowledge Library + GraphRAG)</span>
+              <span>{t('saveNeo4j')}</span>
             </label>
             <input ref={filesRef} type="file" className="hybrid-hidden" multiple accept=".csv,.json,.txt,.md,.markdown,.html,.htm,.xlsx,.xlsm,.pdf,image/*" onChange={onUploadFiles} />
             <button type="button" className="hybrid-primary-btn" onClick={() => filesRef.current?.click()}>
-              Choose files…
+              {t('chooseFiles')}
             </button>
             {fileSources.length > 0 && (
               <ul className="hybrid-file-list">
@@ -326,7 +328,7 @@ export default function HybridContextDrawer({
                       onClick={() => onRemoveFile(source)}
                       aria-label={`Remove ${source.label}`}
                     >
-                      Remove
+                      {t('remove')}
                     </button>
                   </li>
                 ))}
@@ -335,17 +337,17 @@ export default function HybridContextDrawer({
           </section>
 
           <section className="hybrid-drawer-section">
-            <h3 className="hybrid-h3">Paste notes</h3>
+            <h3 className="hybrid-h3">{t('pasteNotes')}</h3>
             <textarea
               className="hybrid-textarea"
               rows={8}
-              placeholder="Minimum 50 characters. Applied as HybridContext excerpts for this chat session."
+              placeholder={t('pastePlaceholder')}
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
               spellCheck
             />
             <button type="button" className="hybrid-primary-btn" disabled={[...pasteText].length < 50} onClick={onApplyPaste}>
-              Apply to HybridContext
+              {t('applyContext')}
             </button>
           </section>
         </div>

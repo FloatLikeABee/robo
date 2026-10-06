@@ -1,6 +1,11 @@
 <script lang="ts">
   import type { PageId } from '../lib/nav'
   import { NAV } from '../lib/nav'
+  import { getLocale, subscribeLocale, translate } from '../lib/locale.js'
+  import { onMount } from 'svelte'
+
+  let locale = $state(getLocale())
+  onMount(() => subscribeLocale(() => { locale = getLocale() }))
 
   let {
     page = $bindable('projects' as PageId),
@@ -10,31 +15,31 @@
     children?: import('svelte').Snippet
   }>()
 
-  const pageLabel = $derived(NAV.find((n) => n.id === page)?.label ?? 'Project')
-  const pageHint = $derived(NAV.find((n) => n.id === page)?.hint ?? '')
+  const pageLabel = $derived(translate(locale, NAV.find((n) => n.id === page)?.id === 'files' ? 'files' : 'projects'))
+  const pageHint = $derived(translate(locale, page === 'files' ? 'filesHint' : 'projectsHint'))
 </script>
 
 <div class="app-frame flex flex-col h-dvh w-full overflow-hidden bg-bg text-text">
-  <header class="app-header shrink-0 border-b border-white/5 bg-surface/30">
+  <header class="app-header shrink-0 border-b border-white/5">
     <div class="flex items-center justify-between gap-3 px-4 py-3 md:px-6 flex-wrap">
       <div class="flex items-center gap-2.5 min-w-0">
-        <img src="/morph-engi-icon.svg" alt="" width="32" height="32" class="h-8 w-8 shrink-0 rounded-xl shadow-[0_0_20px_rgba(45,212,191,0.25)]" />
+        <img src="/morph-engi-icon.svg" alt="" width="32" height="32" class="h-8 w-8 shrink-0 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.35)]" />
         <div class="min-w-0">
-          <div class="font-semibold leading-tight">Project</div>
+          <div class="font-semibold leading-tight">{translate(locale, 'project')}</div>
         </div>
       </div>
     </div>
 
-    <nav class="app-header-tabs flex gap-1 px-4 pb-3 md:px-6 overflow-x-auto" aria-label="Sections">
+    <nav class="app-header-tabs flex gap-1 px-4 pb-3 md:px-6 overflow-x-auto" aria-label={translate(locale, 'sections')}>
       {#each NAV as item}
         <button
           type="button"
           class="app-header-tab shrink-0 px-3 py-1.5 rounded-xl text-sm transition-colors {page === item.id
-            ? 'bg-violet/30 text-text font-medium'
+            ? 'chip-on'
             : 'text-muted hover:text-text hover:bg-white/5'}"
           onclick={() => (page = item.id)}
         >
-          {item.label}
+          {translate(locale, item.id === 'files' ? 'files' : 'projects')}
         </button>
       {/each}
     </nav>
@@ -50,7 +55,7 @@
     <footer class="app-footer shrink-0 border-t border-white/5 bg-surface/40 hidden md:block">
       <div class="flex items-center justify-between gap-3 px-6 py-2.5 text-xs text-muted">
         <span class="truncate"><span class="text-text font-medium">{pageLabel}</span>{#if pageHint}<span class="mx-2 opacity-40">·</span>{pageHint}{/if}</span>
-        <span class="shrink-0 opacity-60">Project</span>
+        <span class="shrink-0 opacity-60">{translate(locale, 'project')}</span>
       </div>
     </footer>
   </div>

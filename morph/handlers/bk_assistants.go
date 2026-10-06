@@ -125,6 +125,23 @@ func (h *Handlers) listBKAssistants(ctx context.Context) ([]bkAssistantProfile, 
 	return list, nil
 }
 
+func (h *Handlers) listBKRAGCollectionNames(ctx context.Context) ([]string, error) {
+	var list []struct {
+		Name string `json:"name"`
+	}
+	if err := h.bkHTTPGetJSON(ctx, "/rag/collections", &list); err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(list))
+	for _, item := range list {
+		name := strings.TrimSpace(item.Name)
+		if name != "" {
+			out = append(out, name)
+		}
+	}
+	return out, nil
+}
+
 func (h *Handlers) getBKAssistant(ctx context.Context, id string) (*bkAssistantProfile, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -184,54 +201,82 @@ func truncateRunesSoft(s string, max int) string {
 	return string(runes[:max]) + "…"
 }
 
+func collectionsForChatRAG(assistantCols, selected []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(assistantCols)+len(selected))
+	add := func(cols []string, limit int) {
+		n := 0
+		for _, raw := range cols {
+			name := strings.TrimSpace(raw)
+			if name == "" {
+				continue
+			}
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			if limit > 0 && n >= limit {
+				break
+			}
+			seen[name] = struct{}{}
+			out = append(out, name)
+			n++
+		}
+	}
+	add(assistantCols, bkRAGMaxCollections)
+	add(selected, 0)
+	return out
+}
+
+func (h *Handlers) ragContextBlock(ctx context.Context, cols []string, userMessage string) string {
+	if len(cols) == 0 || strings.TrimSpace(userMessage) == "" {
+		return ""
+	}
+	var ragParts []string
+	total := 0
+	for _, col := range cols {
+		snips, qerr := h.queryBKRAGCollection(ctx, col, userMessage, bkRAGResultsPerCol)
+		if qerr != nil {
+			log.Printf("[BK-ASSISTANT] RAG query %q: %v", col, qerr)
+			continue
+		}
+		for i, snip := range snips {
+			snip = truncateRunesSoft(snip, bkRAGSnippetRunes)
+			if snip == "" {
+				continue
+			}
+			block := fmt.Sprintf("[%s #%d]\n%s", col, i+1, snip)
+			if total+utf8.RuneCountInString(block) > bkRAGTotalRunes {
+				break
+			}
+			ragParts = append(ragParts, block)
+			total += utf8.RuneCountInString(block)
+		}
+		if total >= bkRAGTotalRunes {
+			break
+		}
+	}
+	if len(ragParts) == 0 {
+		return ""
+	}
+	return "\n--- Retrieved RAG context (use when relevant; cite collection names lightly) ---\n" + strings.Join(ragParts, "\n\n") + "\n"
+}
+
 // buildBKAssistantInstructions loads a BK assistant and optional RAG snippets for Morph chat.
-func (h *Handlers) buildBKAssistantInstructions(ctx context.Context, bkID, userMessage string) (name, instructions string, err error) {
+func (h *Handlers) buildBKAssistantInstructions(ctx context.Context, bkID, userMessage string, extraRAG []string) (name, instructions string, err error) {
 	profile, err := h.getBKAssistant(ctx, bkID)
 	if err != nil {
 		return "", "", err
 	}
 	var b strings.Builder
-	b.WriteString("You are running as AI tools assistant \"" + strings.TrimSpace(profile.Name) + "\".\n")
+	b.WriteString("You are running as MorphTools assistant \"" + strings.TrimSpace(profile.Name) + "\".\n")
 	prompt := strings.TrimSpace(profile.SystemPrompt)
 	if prompt != "" {
 		b.WriteString("\n--- Assistant system prompt ---\n")
 		b.WriteString(prompt)
 		b.WriteString("\n")
 	}
-	cols := profile.RAGCollections
-	if len(cols) > bkRAGMaxCollections {
-		cols = cols[:bkRAGMaxCollections]
-	}
-	if len(cols) > 0 && strings.TrimSpace(userMessage) != "" {
-		var ragParts []string
-		total := 0
-		for _, col := range cols {
-			snips, qerr := h.queryBKRAGCollection(ctx, col, userMessage, bkRAGResultsPerCol)
-			if qerr != nil {
-				log.Printf("[BK-ASSISTANT] RAG query %q: %v", col, qerr)
-				continue
-			}
-			for i, snip := range snips {
-				snip = truncateRunesSoft(snip, bkRAGSnippetRunes)
-				if snip == "" {
-					continue
-				}
-				block := fmt.Sprintf("[%s #%d]\n%s", col, i+1, snip)
-				if total+utf8.RuneCountInString(block) > bkRAGTotalRunes {
-					break
-				}
-				ragParts = append(ragParts, block)
-				total += utf8.RuneCountInString(block)
-			}
-			if total >= bkRAGTotalRunes {
-				break
-			}
-		}
-		if len(ragParts) > 0 {
-			b.WriteString("\n--- Retrieved RAG context (use when relevant; cite collection names lightly) ---\n")
-			b.WriteString(strings.Join(ragParts, "\n\n"))
-			b.WriteString("\n")
-		}
+	if rag := h.ragContextBlock(ctx, collectionsForChatRAG(profile.RAGCollections, extraRAG), userMessage); rag != "" {
+		b.WriteString(rag)
 	}
 	return strings.TrimSpace(profile.Name), strings.TrimSpace(b.String()), nil
 }

@@ -23,7 +23,7 @@ const AppFooter = () => (
       justifyContent: 'center',
     }}
   >
-    AI tools
+    MorphTools
   </Box>
 );
 

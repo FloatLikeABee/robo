@@ -178,3 +178,24 @@ select,
 textarea {
   font-family: inherit;
 }
+
+.locale-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.locale-switch button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.locale-switch button[aria-pressed='true'] {
+  background: rgba(56, 189, 248, 0.22);
+}

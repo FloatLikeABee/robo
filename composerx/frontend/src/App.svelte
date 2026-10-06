@@ -12,6 +12,7 @@
   import AssistantMarkdown from './components/AssistantMarkdown.svelte'
   import { downloadMarkdownFile, savedContentMarkdown } from './lib/contentMarkdown'
   import { resolveComposerProposedDraft } from './lib/composerDraft'
+  import { getLocale, subscribeLocale, translate } from './lib/locale.js'
 
   const PAGES = {
     EMAIL_COMPOSER: 'email-composer',
@@ -55,6 +56,8 @@
   }
 
   let currentPage = $state(PAGES.COMPOSE_CONTENT)
+  let locale = $state(getLocale())
+  onMount(() => subscribeLocale(() => { locale = getLocale() }))
   /** @type {'light' | 'dark'} */
   let theme = $state('dark')
 
@@ -927,8 +930,8 @@
         <div class="tm-login-brand">
           <span class="tm-login-icon" aria-hidden="true">✉️</span>
           <div>
-            <h1 class="tm-login-title">Content Maker</h1>
-            <p class="tm-login-sub">Sign in with your Morph account. Opening Content Maker from MorphUtils after that skips this form.</p>
+            <h1 class="tm-login-title">{translate(locale, 'contentMaker')}</h1>
+            <p class="tm-login-sub">{translate(locale, 'signInSub')}</p>
           </div>
         </div>
         <form
@@ -999,11 +1002,11 @@
         </div>
       </div>
         <div class="brand-copy">
-        <div class="brand-title">Content Maker</div>
+        <div class="brand-title">{translate(locale, 'contentMaker')}</div>
       </div>
     </div>
 
-    <nav class="shell-tabs" aria-label="Sections">
+    <nav class="shell-tabs" aria-label={translate(locale, 'sections')}>
       {#each navItems as item}
         <button
           type="button"
@@ -1016,7 +1019,7 @@
               <path fill="currentColor" d={navIconPath(item.icon)} />
             </svg>
           </span>
-          <span>{item.label}</span>
+          <span>{item.id === PAGES.COMPOSE_CONTENT ? translate(locale, 'compose') : translate(locale, 'published')}</span>
         </button>
       {/each}
     </nav>
@@ -1108,7 +1111,7 @@
               <div class="composer-editor-shell">
                 <div class="editor">
                   <div class="editor-toolbar">
-                    <span class="pill-label">Content Maker</span>
+                    <span class="pill-label">{translate(locale, 'contentMaker')}</span>
                     <div class="content-detail-tabs composer-editor-tabs" role="tablist" aria-label="Document view">
                       <button
                         type="button"

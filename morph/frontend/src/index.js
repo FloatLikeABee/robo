@@ -6,6 +6,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import './index.css';
 import { appRouter } from './appRouter';
 import { ConfirmProvider } from './components/ConfirmDialog';
+import { installLocaleListener } from './lib/locale';
+
+installLocaleListener();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

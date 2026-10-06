@@ -42,21 +42,25 @@ function mediaBodies(source, header) {
   return bodies;
 }
 
-test('phone collapsed workspace uses one flexible column', () => {
-  const unscoped = ruleBodies(css, '.app.app--agent.app--workspace-collapsed')[0];
-  expect(unscoped).toMatch(/grid-template-columns:\s*var\(--agent-sessions\)/);
-
+test('phone agent shell is one full-width column with the workspace band', () => {
   const phone = mediaBodies(css, '@media (max-width: 768px)').join('\n');
-  const collapsed = ruleBodies(phone, '.app.app--agent.app--workspace-collapsed');
-  const oneColumn = collapsed.find((body) => /grid-template-areas:[\s\S]*'head'\s*'chat'/.test(body));
-  expect(oneColumn).toBeTruthy();
-  expect(oneColumn).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  const open = ruleBodies(phone, '.app.app--agent');
+  const column = open.find((body) => /grid-template-areas:[\s\S]*'workspace'/.test(body));
+  expect(column).toBeTruthy();
+  expect(column).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  expect(column).toMatch(/'head'/);
+  expect(column).toMatch(/'chat'/);
 });
 
-test('phone hides composer Notes and Knowledge chips', () => {
-  const base = ruleBodies(css, '.agent-include-bar')[0];
-  expect(base).toMatch(/display:\s*flex/);
+test('composer tool panel is two rows of square buttons beside the field', () => {
+  const grid = ruleBodies(css, '.composer-tools--six')[0];
+  expect(grid).toMatch(/grid-template-columns:\s*repeat\(3,/);
+  expect(grid).toMatch(/grid-template-rows:\s*repeat\(2,/);
+  const field = ruleBodies(css, '.composer-field')[0];
+  expect(field).toMatch(/flex:\s*1/);
+  const send = ruleBodies(css, '.composer-field .send-button')[0];
+  expect(send).toMatch(/align-self:\s*stretch/);
   const phone = mediaBodies(css, '@media (max-width: 768px)').join('\n');
-  const hidden = ruleBodies(phone, '.agent-include-bar');
-  expect(hidden.some((body) => /display:\s*none/.test(body))).toBe(true);
+  const hiddenTools = ruleBodies(phone, '.composer-tools');
+  expect(hiddenTools.some((body) => /display:\s*none/.test(body))).toBe(false);
 });

@@ -76,7 +76,8 @@ function parseQuestions(raw) {
 export default function BigNotes() {
   const { labels } = usePlatformUi();
   const { confirm } = useConfirm();
-  const title = labels.nav_big_notes || 'Big notes';
+  const rawTitle = labels.nav_big_notes || 'Stories';
+  const title = rawTitle === 'Big notes' ? 'Stories' : rawTitle;
 
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -282,8 +283,8 @@ export default function BigNotes() {
   const onDelete = async () => {
     if (!selectedId || deleting) return;
     const ok = await confirm({
-      title: 'Delete Big note',
-      message: 'Delete this Big note? This cannot be undone.',
+      title: 'Delete story',
+      message: 'Delete this story? This cannot be undone.',
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -583,7 +584,7 @@ export default function BigNotes() {
                     <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', bgcolor: '#0b1220' }}>
                       <Box
                         component="iframe"
-                        title="Big note preview"
+                        title="Story preview"
                         sandbox="allow-same-origin"
                         srcDoc={withDarkPreviewSrcDoc(selected.html_content)}
                         sx={darkPreviewIframeSx}
@@ -806,7 +807,7 @@ export default function BigNotes() {
       </Box>
 
       <Dialog open={createOpen} onClose={() => (!creating ? setCreateOpen(false) : null)} fullWidth maxWidth="sm">
-        <DialogTitle>New Big note</DialogTitle>
+        <DialogTitle>New story</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 0.5 }}>
             <TextField

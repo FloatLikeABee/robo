@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardActionArea,
-  CardContent,
   Chip,
   CircularProgress,
   Drawer,
@@ -34,6 +33,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { buildCaseTaskHTML, buildCaseTaskMarkdown } from './caseTaskViewDocs';
 import { darkPreviewIframeSx, withDarkPreviewSrcDoc } from '../../lib/darkPreviewSrcDoc';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
+import { filterStickNotes, stickerColorMap, stickerTitleColorMap } from '../../lib/stickNotes';
 
 const MAP_CENTER = [39.8283, -98.5795];
 
@@ -100,20 +100,6 @@ function toDateTimeLocal(value) {
   if (Number.isNaN(d.getTime())) return '';
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function dateTimeDisplay(value) {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
 }
 
 function AreaPreviewMap({ raw }) {
@@ -242,6 +228,7 @@ function caseTaskDraftLooksFilled(draft) {
 export default function CaseTasks() {
   const { confirm } = useConfirm();
   const [rows, setRows] = useState([]);
+  const [query, setQuery] = useState('');
   const [members, setMembers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -262,6 +249,9 @@ export default function CaseTasks() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
   const [detailsTab, setDetailsTab] = useState('details');
+  const stickerColors = useMemo(() => stickerColorMap(rows), [rows]);
+  const stickerTitleColors = useMemo(() => stickerTitleColorMap(rows), [rows]);
+  const visibleRows = useMemo(() => filterStickNotes(rows, query), [rows, query]);
 
   const recipientOptions = useMemo(() => {
     const out = [];
@@ -538,7 +528,7 @@ export default function CaseTasks() {
 
   const deleteRow = async (row) => {
     const ok = await confirm({
-      title: 'Delete case task',
+      title: 'Delete stick note',
       message: `Delete "${row.title}"?`,
       confirmLabel: 'Delete',
       danger: true,
@@ -564,65 +554,96 @@ export default function CaseTasks() {
         alignItems={{ xs: 'stretch', sm: 'center' }}
         spacing={1}
       >
-        <Typography variant="h6">Tasks</Typography>
+        <Typography variant="h6">Stick notes</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
-          New case/task
+          New stick note
         </Button>
       </Stack>
 
       {loading ? (
         <CircularProgress sx={{ mt: 2 }} />
       ) : (
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <TextField
+            size="small"
+            fullWidth
+            placeholder="Search stick notes"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            inputProps={{ 'aria-label': 'Search stick notes' }}
+          />
+          {query.trim() && visibleRows.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No stick notes match.</Typography>
+          ) : null}
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, minmax(0, 1fr))',
-                md: 'repeat(3, minmax(0, 1fr))',
-              },
-              gap: 1.5,
-              alignItems: 'start',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '8px',
             }}
           >
-            {rows.map((row) => {
-              const startLabel = dateTimeDisplay(row.start_at);
-              const endLabel = dateTimeDisplay(row.end_at);
-              return (
-              <Card key={row.id} variant="outlined" sx={{ minHeight: 96, height: 'auto', display: 'flex' }}>
-                <CardActionArea sx={{ height: 1, p: 0 }} onClick={() => openEdit(row)}>
-                  <CardContent sx={{ py: 1.1, px: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {visibleRows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                sx={{
+                  aspectRatio: '1',
+                  width: '100%',
+                  minHeight: 0,
+                  alignSelf: 'start',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  bgcolor: stickerColors.get(row.id) || '#fde68a',
+                  color: '#1a1423',
+                  borderColor: 'transparent',
+                }}
+              >
+                <CardActionArea sx={{ height: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', p: 0 }} onClick={() => openEdit(row)}>
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      px: 1.5,
+                      py: 1.25,
+                      bgcolor: stickerTitleColors.get(row.id) || '#d97706',
+                      color: '#fff',
+                    }}
+                  >
                     <Typography
-                      variant="subtitle2"
+                      variant="subtitle1"
                       sx={{
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
+                        fontWeight: 700,
+                        color: 'inherit',
+                        lineHeight: 1.3,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
                       }}
                       title={row.title}
                     >
                       {row.title || 'Untitled'}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap title={row.description || ''}>
+                  </Box>
+                  <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', px: 1.5, py: 1.25 }}>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: 'inherit',
+                        lineHeight: 1.45,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 8,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                      title={row.description || ''}
+                    >
                       {row.description || 'No description'}
                     </Typography>
-                    {startLabel ? (
-                      <Typography variant="caption" color="text.secondary" noWrap title={startLabel}>
-                        Start: {startLabel}
-                      </Typography>
-                    ) : null}
-                    {endLabel ? (
-                      <Typography variant="caption" color="text.secondary" noWrap title={endLabel}>
-                        End: {endLabel}
-                      </Typography>
-                    ) : null}
-                  </CardContent>
+                  </Box>
                 </CardActionArea>
               </Card>
-              );
-            })}
+            ))}
           </Box>
         </Box>
       )}
@@ -656,8 +677,8 @@ export default function CaseTasks() {
             gap: 1,
           }}
         >
-          <Typography variant="h6">{editing ? 'Case/task details' : 'Create case/task'}</Typography>
-          <IconButton aria-label="Close case/task" onClick={onCloseDialog} sx={{ width: 44, height: 44, flexShrink: 0 }}>
+          <Typography variant="h6">{editing ? 'Stick note' : 'New stick note'}</Typography>
+          <IconButton aria-label="Close stick note" onClick={onCloseDialog} sx={{ width: 44, height: 44, flexShrink: 0 }}>
             <CloseIcon />
           </IconButton>
         </Box>

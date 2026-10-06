@@ -27,8 +27,8 @@ function click(el) {
 
 const items = [
   { id: 'skills', label: 'Skills', onClick: jest.fn() },
-  { id: 'bk', label: 'AI tools', onClick: jest.fn() },
-  { id: 'morphdata', label: 'MorphNotes', href: '/morphdata' },
+  { id: 'bk', label: 'MorphTools', onClick: jest.fn() },
+  { id: 'morphdata', label: 'MorphNotes', onClick: jest.fn(), hasPopup: 'dialog' },
 ];
 
 function menuItems() {
@@ -39,7 +39,8 @@ test('more menu lists labeled app chips and clear, and omits MorphUtils when it 
   items[0].onClick.mockClear();
   const view = renderMenu({ items, onClear: jest.fn() });
   click(document.querySelector('[aria-label="More apps"]'));
-  expect(menuItems()).toEqual(['Skills', 'AI tools', 'MorphNotes', 'Clear chat']);
+  expect(menuItems()).toEqual(['Skills', 'MorphTools', 'MorphNotes', 'Clear chat']);
+  expect(menuItems()).not.toContain('MorphUtils');
   click(document.querySelector('[role="menuitem"]'));
   expect(items[0].onClick).toHaveBeenCalledTimes(1);
   expect(document.querySelector('[role="menu"]')).toBeNull();

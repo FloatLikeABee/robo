@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { setAuthToken } from './lib/api'
+import { installLocaleListener } from './lib/locale'
 
 /** MorphUtils / Morph AI handoff: ?userspanel_token=… → shared session cookie. */
 function consumePlatformTokenFromUrl() {
@@ -20,6 +21,7 @@ function consumePlatformTokenFromUrl() {
   }
 }
 
+installLocaleListener()
 consumePlatformTokenFromUrl()
 
 createRoot(document.getElementById('root')!).render(

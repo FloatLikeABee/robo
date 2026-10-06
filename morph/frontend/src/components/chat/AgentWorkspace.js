@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import NotesTodosContent from '../notesTodos/NotesTodosContent';
 import HybridContextDrawer from '../../HybridContextDrawer';
+import { useT } from '../../lib/localeReact';
 
-const TABS = [
-  { id: 'notes', label: 'Notes & TODOs' },
-  { id: 'knowledge', label: 'Context & Knowledge' },
+export const TABS = [
+  { id: 'knowledge', labelKey: 'contextKnowledge' },
+  { id: 'notes', labelKey: 'notesTodos' },
 ];
 
 const VALID_TABS = new Set(TABS.map((t) => t.id));
@@ -60,10 +61,8 @@ export function readStoredWorkspaceChoice() {
   return null;
 }
 
-export function initialWorkspaceOpen({ stored = null, phone = false } = {}) {
-  if (stored === '0' || stored === false) return false;
-  if (stored === '1' || stored === true) return true;
-  return !phone;
+export function initialWorkspaceOpen() {
+  return true;
 }
 
 export function writeWorkspaceOpen(open) {
@@ -111,25 +110,26 @@ export default function AgentWorkspace({
   onBringToConversation,
   onAttachmentChange,
 }) {
-  const tab = TABS.some((t) => t.id === activeTab) ? activeTab : 'knowledge';
+  const t = useT();
+  const tab = TABS.some((item) => item.id === activeTab) ? activeTab : 'knowledge';
 
   useEffect(() => {
     writeWorkspaceTab(sessionId, tab);
   }, [sessionId, tab]);
 
   return (
-    <aside className="agent-workspace" aria-label="Agent workspace">
+    <aside className="agent-workspace" aria-label={t('workspace')}>
       <div className="agent-workspace-tabs" role="tablist">
-        {TABS.map((t) => (
+        {TABS.map((item) => (
           <button
-            key={t.id}
+            key={item.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            className={`agent-workspace-tab${tab === t.id ? ' is-active' : ''}`}
-            onClick={() => onTabChange?.(t.id)}
+            aria-selected={tab === item.id}
+            className={`agent-workspace-tab${tab === item.id ? ' is-active' : ''}`}
+            onClick={() => onTabChange?.(item.id)}
           >
-            {t.label}
+            {t(item.labelKey)}
           </button>
         ))}
       </div>

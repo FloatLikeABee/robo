@@ -29,10 +29,11 @@ const (
 	ServerVersion = "0.3.0"
 )
 
-const instructions = "Morph MCP stdio server. whoami, list_my_tasks, and get_task are read-only. They return the Morph user from the verified session token and that user's own Notes and TODOs, not the shared MorphNotes Tasks board. create_note stores a note for that user and marks it [morph-mcp]. An MCP Apps host renders the notes panel from ui://morph/notes. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
+const instructions = "Morph MCP stdio server. whoami, list_my_tasks, and get_task are read-only Notes and TODOs tools. create_note stores a note and marks it [morph-mcp]. create, list, and get tools also cover stick notes, timelines, stories, research, and event logs for the same session. Event log tools call the Morph events API and do not open Badger. An MCP Apps host renders the notes panel from ui://morph/notes. HTTP JSON catalogs such as /ai/mcp-tools are not the Model Context Protocol."
 
-// NewServer builds an MCP server that advertises whoami, list_my_tasks,
-// get_task, and create_note, plus the ui://morph/notes app resource.
+// NewServer builds an MCP server that advertises whoami, the Notes and TODOs
+// tools, and create, list, and get for stick notes, timelines, stories,
+// research, and event logs, plus the ui://morph/notes app resource.
 // tasks is the read-only SQLite pool; nil makes the read tools return an
 // error. sqlitePath is opened mode=rw on the first create_note. recheck runs
 // on every tool call; nil skips that check. logger receives server diagnostics.
@@ -110,6 +111,7 @@ func NewServer(id Identity, tasks *sql.DB, recheck func() error, logger *slog.Lo
 			OpenWorldHint:   &closedWorld,
 		},
 	}, createNote(id, notes, recheck))
+	registerModuleTools(server, id, tasks, notes, recheck, readOnly)
 	server.AddResource(notesAppResource(), readNotesApp)
 	return server, notes.close, nil
 }

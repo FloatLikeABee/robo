@@ -6,6 +6,7 @@ import { loginMorph, setMorphToken, setMorphAuthSnapshot } from '../auth/morphSe
 import { safeReturnPath } from '../auth/returnTo';
 import { releaseStuckOverlays } from '../utils/releaseStuckOverlays';
 import './LoginPage.css';
+import { useT } from '../lib/localeReact';
 
 function returnTarget(location) {
   const fromQuery = new URLSearchParams(location.search).get('returnTo') || '';
@@ -35,6 +36,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     const shell = document.querySelector('.login-shell');
@@ -110,7 +112,7 @@ export default function LoginPage() {
       releaseStuckOverlays();
       navigate(from === '/login' ? '/' : from, { replace: true });
     } catch (err) {
-      setError(err?.message || 'Login failed');
+      setError(err?.message || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -124,13 +126,13 @@ export default function LoginPage() {
             🤖
           </span>
           <div>
-            <h1>Morph AI</h1>
-            <p>Sign in once — MorphNotes and MorphUtils use this session</p>
+            <h1>{t('morphAI')}</h1>
+            <p>{t('signInOnce')}</p>
           </div>
         </div>
         <form className="login-form" onSubmit={onSubmit}>
           <label className="login-field" htmlFor="username">
-            Username or email
+            {t('username')}
             <input
               id="username"
               name="username"
@@ -143,7 +145,7 @@ export default function LoginPage() {
             />
           </label>
           <label className="login-field" htmlFor="current-password">
-            Password
+            {t('password')}
             <input
               id="current-password"
               name="password"
@@ -161,7 +163,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="login-error-dismiss"
-                aria-label="Dismiss error"
+                aria-label={t('dismissError')}
                 onClick={() => setError('')}
               >
                 ×
@@ -169,7 +171,7 @@ export default function LoginPage() {
             </div>
           ) : null}
           <button className="login-submit" type="submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? t('signingIn') : t('signIn')}
           </button>
         </form>
       </div>

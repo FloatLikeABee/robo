@@ -25,8 +25,9 @@
 # wait until /health succeeds. Service names match exactly (not as a regex).
 # Port checks use lsof and warn if it is missing.
 #
-# Aliases (API + UI): morph, morph-utils (shell + Data Access), bk, formx, composerx,
-#   morph-engi, sharpreport — or `all` for every service below.
+# Aliases (API + UI): morph, bk, formx, composerx, morph-engi — or `all` for the
+#   default stack below. morph-utils and sharpreport stay startable by name and
+#   are not part of `all`.
 # Neo4j: full-stack start/restart ensures bolt port 7687 is up when `neo4j` CLI exists.
 # Auth: hosted by Morph (the standalone UsersPanel project has been removed).
 #
@@ -46,15 +47,12 @@ ALL_SERVICES=(
   composerx-api
   morph-engi-api
   bk-api
-  sharpreport-api
   morph-ui
-  morph-utils-ui
   invite-signup-ui
   bk-ui
   formx-ui
   composerx-ui
   morph-engi-ui
-  sharpreport-ui
 )
 
 RED='\033[0;31m'
@@ -102,7 +100,7 @@ ensure_morph_binary() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     log "Building morph-api (macOS — avoids BadgerDB LC_UUID issue)..."
     ensure_run_dirs
-    (cd "${ROOT}/morph" && go build -o "${RUN_DIR}/morph-server" main.go)
+    (cd "${ROOT}/morph" && go build -o "${RUN_DIR}/morph-server" .)
   fi
 }
 
@@ -816,23 +814,24 @@ Services (use with start | stop | restart | logs):
 
   morph-api            Morph / MorphData backend
   morph-ui             Morph React frontend
-  morph-utils-ui       MorphUtils shell (Event Logs, Content Maker, Data Access, Project)
+  morph-utils-ui       leftover shell, not started by `all`
   invite-signup-ui     Invite Signup (admin codes + user redeem)
-  bk-api               AI tools API
-  bk-ui                AI tools UI
+  bk-api               MorphTools API
+  bk-ui                MorphTools UI
   formx-api            Event Logs backend
   formx-ui             Event Logs frontend
   composerx-api        Content Maker backend
   composerx-ui         Content Maker frontend
   morph-engi-api       Project API (Rust)
   morph-engi-ui        Project frontend (Svelte)
-  sharpreport-api      Data Access backend
-  sharpreport-ui       Data Access frontend
+  sharpreport-api      Data Access backend (not started by `all`)
+  sharpreport-ui       Data Access frontend (not started by `all`)
 
 Aliases (API + UI together):
 
-  morph, morph-utils (shell + Data Access API/UI), bk, formx, composerx, morph-engi, sharpreport
-  all                  every service above (same as start/stop/restart with no args)
+  morph, bk, formx, composerx, morph-engi
+  morph-utils, sharpreport   leftover; not part of `all`
+  all                  default stack (Morph, Event Logs, Content Maker, Project, MorphTools)
 
 Examples:
 

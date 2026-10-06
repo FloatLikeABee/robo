@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useT } from '../../lib/localeReact';
 
 function Chip({ item, inMenu, onDone }) {
   const style = item.color ? { '--header-app-color': item.color } : undefined;
@@ -45,6 +46,7 @@ function Chip({ item, inMenu, onDone }) {
 }
 
 export default function HeaderMoreMenu({ items = [], onClear }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function HeaderMoreMenu({ items = [], onClear }) {
         <button
           type="button"
           className="chat-icon-button header-more-button"
-          aria-label="More apps"
+          aria-label={t('moreApps')}
           aria-expanded={open}
           aria-haspopup="menu"
           onClick={() => setOpen((value) => !value)}
@@ -79,7 +81,7 @@ export default function HeaderMoreMenu({ items = [], onClear }) {
             <button
               type="button"
               className="header-more-backdrop"
-              aria-label="Close more apps"
+              aria-label={t('closeMoreApps')}
               onClick={() => setOpen(false)}
             />
             <div className="header-more-panel" role="menu">
@@ -96,7 +98,7 @@ export default function HeaderMoreMenu({ items = [], onClear }) {
                     onClear();
                   }}
                 >
-                  Clear chat
+                  {t('clearChat')}
                 </button>
               ) : null}
             </div>

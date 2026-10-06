@@ -5,7 +5,7 @@
   --color-bg: #0c1220;
   --color-surface: #141c2a;
   --color-card: #1a2332;
-  --color-violet: #818cf8;
+  --color-violet: #3b82f6;
   --color-accent: #38bdf8;
   --color-accent-soft: #60a5fa;
   --color-yellow: #f5c542;
@@ -57,6 +57,16 @@ body {
   min-height: 0;
 }
 
+.app-header {
+  background: #0c1220;
+}
+
+.chip-on {
+  background: rgba(59, 130, 246, 0.28);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
 .app-footer {
   backdrop-filter: blur(12px);
 }
@@ -78,7 +88,7 @@ body {
   width: 100%;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(21, 21, 26, 0.9);
+  background: rgba(12, 18, 32, 0.9);
   padding: 0.55rem 0.75rem;
   font-size: 0.875rem;
   color: var(--color-text);
@@ -128,7 +138,7 @@ table.data-table {
 table.data-table th {
   position: sticky;
   top: 0;
-  background: rgba(30, 30, 36, 0.95);
+  background: rgba(20, 28, 42, 0.95);
   text-align: left;
   padding: 0.65rem 0.85rem;
   color: var(--color-muted);
@@ -251,6 +261,27 @@ table.data-table tr:hover td {
   --scrollbar-track: #0b1220;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.locale-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.locale-switch button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.locale-switch button[aria-pressed='true'] {
+  background: rgba(56, 189, 248, 0.22);
 }
 
 @supports not (scrollbar-color: auto) {

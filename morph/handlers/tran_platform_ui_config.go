@@ -19,7 +19,7 @@ func platformUILabelDefaults() map[string]string {
 		"nav_assets":                 "Assets",
 		"nav_activities":             "Activities",
 		"nav_generic_data":           "Generic data",
-		"nav_big_notes":              "Big notes",
+		"nav_big_notes":              "Stories",
 		"nav_user_settings":          "User settings",
 		"nav_display_labels":         "Display names",
 		"term_facility":              "Place",

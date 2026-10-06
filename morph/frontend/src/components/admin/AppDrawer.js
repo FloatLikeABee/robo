@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminBasePath } from '../../adminPaths';
 import { usePlatformUi } from '../../PlatformUiContext';
+import { useT } from '../../lib/localeReact';
 import {
   Drawer,
   List,
@@ -22,6 +23,9 @@ import {
   NotesOutlined as BigNotesIcon,
   DatasetOutlined as GenericDataIcon,
   TravelExplore as ResearchIcon,
+  EventNoteOutlined as EventLogsIcon,
+  EditNoteOutlined as ContentMakerIcon,
+  AccountTreeOutlined as ProjectIcon,
 } from '@mui/icons-material';
 
 /** Fixed desktop width — sized for longest labels (Generic data / Settings). */
@@ -35,6 +39,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
   const navigate = useNavigate();
   const base = useAdminBasePath();
   const { labels: L } = usePlatformUi();
+  const t = useT();
   const [, setAuthTick] = useState(0);
   useEffect(() => {
     const onAuth = () => setAuthTick((n) => n + 1);
@@ -113,7 +118,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
         {isMobile && (
           <IconButton
             onClick={() => typeof onMobileClose === 'function' && onMobileClose()}
-            aria-label="Close navigation"
+            aria-label={t('closeNav')}
             sx={{ color: 'text.secondary', flexShrink: 0, width: 44, height: 44 }}
           >
             <ChevronLeftIcon />
@@ -136,7 +141,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemIcon sx={iconSx}>
             <CaseTaskIcon color="primary" fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Tasks" sx={textPrimarySx} />
+          <ListItemText primary={t('stickNotes')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
           selected={isSelected(base + '/timelines') || isSelected(base + '/stories') || isSelected(base + '/story-board')}
@@ -146,7 +151,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemIcon sx={iconSx}>
             <TimelinesIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
           </ListItemIcon>
-          <ListItemText primary="Timelines" sx={textPrimarySx} />
+          <ListItemText primary={t('timelines')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
           selected={isSelected(base + '/big-notes')}
@@ -156,7 +161,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemIcon sx={iconSx}>
             <BigNotesIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
           </ListItemIcon>
-          <ListItemText primary="Big notes" sx={textPrimarySx} />
+          <ListItemText primary={t('stories')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
           selected={isSelected(base + '/research')}
@@ -166,7 +171,7 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemIcon sx={iconSx}>
             <ResearchIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
           </ListItemIcon>
-          <ListItemText primary="Research" sx={textPrimarySx} />
+          <ListItemText primary={t('research')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
           selected={isSelected(base + '/generic-data')}
@@ -176,7 +181,37 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemIcon sx={iconSx}>
             <GenericDataIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
           </ListItemIcon>
-          <ListItemText primary="Generic data" sx={textPrimarySx} />
+          <ListItemText primary={t('genericData')} sx={textPrimarySx} />
+        </ListItemButton>
+        <ListItemButton
+          selected={isSelected(base + '/event-logs')}
+          onClick={() => go(`${base}/event-logs`)}
+          sx={navButtonSx}
+        >
+          <ListItemIcon sx={iconSx}>
+            <EventLogsIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText primary={t('eventLogs')} sx={textPrimarySx} />
+        </ListItemButton>
+        <ListItemButton
+          selected={isSelected(base + '/content-maker')}
+          onClick={() => go(`${base}/content-maker`)}
+          sx={navButtonSx}
+        >
+          <ListItemIcon sx={iconSx}>
+            <ContentMakerIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText primary={t('contentMaker')} sx={textPrimarySx} />
+        </ListItemButton>
+        <ListItemButton
+          selected={isSelected(base + '/project')}
+          onClick={() => go(`${base}/project`)}
+          sx={navButtonSx}
+        >
+          <ListItemIcon sx={iconSx}>
+            <ProjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText primary={t('project')} sx={textPrimarySx} />
         </ListItemButton>
       </List>
     </>

@@ -17,6 +17,10 @@ func mountFrontend(r *gin.Engine, buildDir string) {
 	r.Static("/static", filepath.Join(buildDir, "static"))
 	r.StaticFile("/", filepath.Join(buildDir, "index.html"))
 	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
 		if serveBuildFile(c, buildDir) {
 			return
 		}

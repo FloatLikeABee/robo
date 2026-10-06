@@ -170,7 +170,7 @@ build_morph() {
   log "Building Morph frontend…"
   (cd "${ROOT}/morph/frontend" && npm ci && npm run build)
   log "Building Morph API…"
-  (cd "${ROOT}/morph" && go build -o "${DIST_DIR}/bin/morph-server" main.go)
+  (cd "${ROOT}/morph" && go build -o "${DIST_DIR}/bin/morph-server" .)
   ok "morph"
 }
 

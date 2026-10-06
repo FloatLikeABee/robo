@@ -169,23 +169,21 @@ Do not put a JWT, password, or API key in git. Fill those prompts in the dashboa
 
 Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. The Blueprint already lists that key with `sync: false` and no value. Fill the dashboard prompt. Do not put a value in `render.yaml`. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not commit the URL.
 
-### 5. Env matrix for the MorphUtils embeds
+### 5. Env matrix for the MorphNotes modal embeds
 
-Set these `VITE_*` keys on `morph-utils`. Story #114 wires them. The Blueprint lists each as a dashboard prompt with no value in git. They are read when the MorphUtils container starts, so a later change does not require a MorphUtils image rebuild. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
+Morph AI opens MorphNotes in a modal. That UI embeds Event Logs, Content Maker, and Project. Data Access is not a product embed. Set these keys for the Morph frontend build. They are read when that UI is built. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
 
 | Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
 |-----|---------|-------------|--------------------------------------------------|-----------------|
-| `REACT_APP_MORPH_UTILS_URL` (on `morph`; Morph image rebuild is required) | MorphUtils | `https://<morph-utils public host>` | `https://morph-utils.onrender.com` | |
-| `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
-| `VITE_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
-| `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
-| `VITE_PROJECTS_URL` (alias `VITE_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
+| `REACT_APP_SHEETX_URL` (alias `REACT_APP_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
+| `REACT_APP_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
+| `REACT_APP_PROJECTS_URL` (alias `REACT_APP_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
 
 ### Shared Morph session
 
-The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. MorphUtils passes the Morph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.
+The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. The MorphNotes modal passes the Morph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.
 
-Failure modes: the bearer can appear in the log of that first request before the page strips the query; signing out on one host does not clear the cookie on the others; opening an embed origin directly does not see the Morph host cookie. An unsigned MorphUtils page links to the Morph origin (`VITE_MORPH_AI_URL`, or `VITE_MORPH_API_URL` when that is blank) and does not mount the embeds. After sign-in, open MorphUtils from Morph so the Apps link adds the bearer. A custom parent domain you control would be a later cookie `Domain`. It is not used here.
+Failure modes: the bearer can appear in the log of that first request before the page strips the query; signing out on one host does not clear the cookie on the others; opening an embed origin directly does not see the Morph host cookie. A custom parent domain you control would be a later cookie `Domain`. It is not used here.
 
 The sections below keep the per-service port, disk, and secret tables. Those sections still do not put a value for `REACT_APP_MORPH_UTILS_URL` in the Blueprint. The `morph` service lists the key as a dashboard prompt.
 

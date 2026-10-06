@@ -36,7 +36,7 @@
         <button
           type="button"
           class="module-tab px-3 py-1.5 rounded-xl text-sm transition-colors {activeTab === tab.id
-            ? 'bg-violet/30 text-text font-medium'
+            ? 'chip-on'
             : 'text-muted hover:text-text hover:bg-white/5'}"
           onclick={() => (activeTab = tab.id)}
         >

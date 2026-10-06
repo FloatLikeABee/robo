@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import App from './App';
+import { installLocaleListener } from './lib/locale';
+
+installLocaleListener();
 
 const queryClient = new QueryClient();
 

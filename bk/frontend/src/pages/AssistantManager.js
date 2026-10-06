@@ -33,11 +33,9 @@ import ModuleShell from '../components/ModuleShell';
 import api from '../services/api';
 import {
   APPLIED_ASSISTANT_MSG,
-  isFramedInParent,
   parseAppliedAssistantMessage,
   postToMorph,
   subscribeAppliedAssistantChannel,
-  waitForAppliedState,
 } from '../lib/appliedAssistantChannel';
 import { useConfirm } from '../components/ConfirmDialog';
 
@@ -161,34 +159,10 @@ const AssistantManager = () => {
     }
   };
 
-  const handleApply = async (a) => {
-    const assistant = { id: a.id, name: a.name };
-    postToMorph({ type: APPLIED_ASSISTANT_MSG.APPLY, assistant });
-    const got = await waitForAppliedState((next) => next && next.id === String(a.id).trim());
-    if (got === undefined) {
-      setAppliedAssistant(null);
-      setToast('Open Morph AI to apply this assistant to chat.');
-      return;
-    }
-    setAppliedAssistant(got);
-  };
-
-  const handleDismiss = async () => {
-    postToMorph({ type: APPLIED_ASSISTANT_MSG.DISMISS });
-    const got = await waitForAppliedState((next) => next == null);
-    if (got === undefined) {
-      if (!isFramedInParent()) {
-        setToast('Open Morph AI to dismiss this assistant from chat.');
-      }
-      return;
-    }
-    setAppliedAssistant(null);
-  };
-
   return (
     <ModuleShell
       title="Assistants"
-      helpText="Each assistant has a system prompt and can use one or more RAG collections. Apply an assistant to Morph chat; dismiss it to return to default chat. Collect RAG data under RAG (file upload or API request)."
+      helpText="Each assistant has a system prompt and can use one or more RAG collections. Choose an assistant from the Morph AI composer. Collect RAG data under RAG (file upload or API request)."
     >
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>
@@ -401,20 +375,6 @@ const AssistantManager = () => {
                         borderTop: '1px solid rgba(148, 163, 184, 0.12)',
                       }}
                     >
-                      {isApplied ? (
-                        <Button size="small" color="inherit" onClick={handleDismiss} aria-label={`Dismiss ${a.name}`}>
-                          Dismiss
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={() => handleApply(a)}
-                          aria-label={`Apply ${a.name}`}
-                        >
-                          Apply
-                        </Button>
-                      )}
                       <Tooltip title="Edit">
                         <IconButton size="small" onClick={() => handleEdit(a)} aria-label={`Edit ${a.name}`}>
                           <EditIcon fontSize="small" />

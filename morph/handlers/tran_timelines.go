@@ -383,6 +383,7 @@ Markdown rules:
 - Prefer chronological order; note uncertain dates explicitly.
 - Keep it readable and faithful to the source; do not invent major facts.
 - Aim under ~1200 words.
+` + documentShapePrompt + `
 `)
 	if preferredTitle != "" {
 		b.WriteString("\nPreferred title (use unless clearly wrong): ")
