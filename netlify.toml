@@ -1,0 +1,15 @@
+# Morph Engi (Project) static preview — same build as root `npm run vercel-build`.
+# See morph-engi/README.md and README.md.
+
+[build]
+  command = "npm run vercel-build"
+  publish = "morph-engi/frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  VITE_STORAGE = "local"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
