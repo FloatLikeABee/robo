@@ -1,15 +1,10 @@
-# Morph Engi (Project) static preview — same build as root `npm run vercel-build`.
-# See morph-engi/README.md and README.md.
+# MorphUtils shell + embedded module UIs (Event Logs, Content Maker, Project, Morph AI).
+# Backends are not on Netlify — set MORPH_API_ORIGIN (and optional module API URLs) in the Netlify UI, then redeploy.
+# Full stack with APIs: render.yaml + deploy/README.md.
 
 [build]
-  command = "npm run vercel-build"
-  publish = "morph-engi/frontend/dist"
+  command = "npm run netlify-build"
+  publish = "netlify-dist"
 
 [build.environment]
   NODE_VERSION = "20"
-  VITE_STORAGE = "local"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

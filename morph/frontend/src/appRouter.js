@@ -131,4 +131,6 @@ export const appRoutes = [
   },
 ];
 
-export const appRouter = createBrowserRouter(appRoutes);
+const routerBasename = (process.env.PUBLIC_URL || '').replace(/\/$/, '') || undefined;
+
+export const appRouter = createBrowserRouter(appRoutes, { basename: routerBasename });
