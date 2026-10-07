@@ -15,6 +15,7 @@ import {
 } from './config';
 import { embedStartCommand, probeEmbedOrigin, PROBED_EMBED_IDS } from './embedProbe';
 import { usesLocalStartHint } from './publicUrl';
+import { tryNetlifyDemoLogin } from './demoAuth';
 import UserProfileModal from './UserProfileModal';
 import './App.css';
 
@@ -126,6 +127,7 @@ export default function App() {
 
   const refreshAuth = useCallback(async () => {
     consumeUrlSessionToken();
+    if (!getSharedToken()) await tryNetlifyDemoLogin();
     const session = await ensureSharedSession();
     setAuthed(session.ok);
   }, []);

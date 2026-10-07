@@ -1,6 +1,9 @@
-# MorphUtils shell + embedded module UIs (Event Logs, Content Maker, Project, Morph AI).
-# Backends are not on Netlify — set MORPH_API_ORIGIN (and optional module API URLs) in the Netlify UI, then redeploy.
-# Full stack with APIs: render.yaml + deploy/README.md.
+# MorphUtils shell + embedded module UIs. Auth and AI run on the Morph API (not on Netlify).
+#
+# Netlify UI: auto sign-in uses morphadmin / admin123 (same as local .env.example).
+# Morph API: host with deploy/.env.netlify-demo.example (MORPH_ENV=development, qwen3-max).
+#   Set MORPH_AI_API_KEY on the API host. Set MORPH_API_ORIGIN here to that public URL.
+# Module APIs (optional): FORMX_API_URL, COMPOSERX_API_URL, VITE_DATAX_URL.
 
 [build]
   command = "npm run netlify-build"
@@ -8,3 +11,6 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  VITE_STORAGE = "local"
+  NETLIFY_DEMO_ADMIN_USERNAME = "morphadmin"
+  NETLIFY_DEMO_ADMIN_PASSWORD = "admin123"

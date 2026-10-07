@@ -38,7 +38,11 @@ export function isBrowserStore(): boolean {
   if (import.meta.env.VITE_STORAGE === 'local') return true
   if (typeof window === 'undefined') return false
   const host = window.location.hostname
-  return host.endsWith('.vercel.app') || host.endsWith('.vercel.sh')
+  return (
+    host.endsWith('.vercel.app') ||
+    host.endsWith('.vercel.sh') ||
+    host.endsWith('.netlify.app')
+  )
 }
 
 function now() {

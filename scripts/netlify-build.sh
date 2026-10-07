@@ -12,6 +12,12 @@ mkdir -p "$DIST"
 SITE="${DEPLOY_PRIME_URL:-${URL:-http://127.0.0.1:8888}}"
 SITE="${SITE%/}"
 
+DEMO_USER="${NETLIFY_DEMO_ADMIN_USERNAME:-morphadmin}"
+DEMO_PASS="${NETLIFY_DEMO_ADMIN_PASSWORD:-admin123}"
+export VITE_NETLIFY_LOCAL_DEMO="${VITE_NETLIFY_LOCAL_DEMO:-1}"
+export VITE_DEMO_ADMIN_USERNAME="$DEMO_USER"
+export VITE_DEMO_ADMIN_PASSWORD="$DEMO_PASS"
+
 EMBED_SHEETX="$SITE/embed/sheetx"
 EMBED_COMPOSERX="$SITE/embed/composerx"
 EMBED_PROJECTS="$SITE/embed/projects"
@@ -61,6 +67,9 @@ cp -R "$ROOT/composerx/frontend/dist/." "$DIST/embed/composerx/"
   cd "$ROOT/morph/frontend"
   npm ci
   # CRA treats CI=true as "fail on lint warnings"; Netlify sets CI globally.
+  REACT_APP_NETLIFY_LOCAL_DEMO=true \
+  REACT_APP_DEMO_ADMIN_USERNAME="$DEMO_USER" \
+  REACT_APP_DEMO_ADMIN_PASSWORD="$DEMO_PASS" \
   PUBLIC_URL=/embed/morph CI=false npm run build
 )
 mkdir -p "$DIST/embed/morph"

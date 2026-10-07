@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../apiBase';
 import { authKeyboardOverlap, scrollDelta } from '../auth/authKeyboard';
@@ -7,6 +7,10 @@ import { safeReturnPath } from '../auth/returnTo';
 import { releaseStuckOverlays } from '../utils/releaseStuckOverlays';
 import './LoginPage.css';
 import { useT } from '../lib/localeReact';
+
+const NETLIFY_DEMO = process.env.REACT_APP_NETLIFY_LOCAL_DEMO === 'true';
+const DEMO_USERNAME = (process.env.REACT_APP_DEMO_ADMIN_USERNAME || 'morphadmin').trim();
+const DEMO_PASSWORD = process.env.REACT_APP_DEMO_ADMIN_PASSWORD || 'admin123';
 
 function returnTarget(location) {
   const fromQuery = new URLSearchParams(location.search).get('returnTo') || '';
@@ -32,11 +36,37 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = returnTarget(location);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(NETLIFY_DEMO ? DEMO_USERNAME : '');
+  const [password, setPassword] = useState(NETLIFY_DEMO ? DEMO_PASSWORD : '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const t = useT();
+  const demoLoginAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!NETLIFY_DEMO || demoLoginAttempted.current) return undefined;
+    demoLoginAttempted.current = true;
+    let cancelled = false;
+    (async () => {
+      setError('');
+      setLoading(true);
+      try {
+        const data = await loginMorph(API_BASE_URL, { email: DEMO_USERNAME, password: DEMO_PASSWORD });
+        if (cancelled) return;
+        setMorphToken(data.token);
+        setMorphAuthSnapshot({ user: data.user, permissions: data.permissions });
+        releaseStuckOverlays();
+        navigate(from === '/login' ? '/' : from, { replace: true });
+      } catch (err) {
+        if (!cancelled) setError(err?.message || t('loginFailed'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [NETLIFY_DEMO, from, navigate, t]);
 
   useEffect(() => {
     const shell = document.querySelector('.login-shell');
