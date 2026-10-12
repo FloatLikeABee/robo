@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` and `note_grill` (neither is read-only), and create, list, and get tools for stick notes, timelines, stories, research, and event logs. `resources/list` returns `ui://morph/notes` and `ui://morph/grill`. There are no prompts or `morph://` resources. `resources.listChanged` is not advertised.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` and `note_grill` (neither is read-only), and create, list, and get tools for stick notes, timelines, stories, research, and event logs. `resources/list` returns `ui://morph/notes`, `ui://morph/grill`, and `morph://guide` (the agent playbook). `suggest_note_kind` and `morph_guide` are read-only. There are no prompts. `resources.listChanged` is not advertised.
 
 ## Build
 
@@ -61,7 +61,7 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 
 `note_grill` takes `action` (`start`, `answer`, `skip`, or `finish`). `start` needs `kind` (`note` or `todo`) and `title`. Later steps need the `id` from `start`. The question count depends on the title, with a cap of four. Skip moves on. Finish, or an answer that is only a stop phrase such as "enough" or "write it now", drafts the body. The draft is the tool result. Another user's id is not found, and the error does not include the draft. Saving still requires `create_note` after the draft is shown. The Morph Notes & TODOs AI assist button uses the same interview through `POST /api/tran/grill` and inserts the draft into the editor only when the person confirms. It does not save by itself.
 
-An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). The human still reviews them at `http://localhost:3031/`. The agent calls the tools in this chapter.
+An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). Any external agent using Morph as a note platform follows [16 — Morph for agents](16-morph-for-agents.md), also served as `morph://guide` and `morph_guide`. The human still reviews notes at `http://localhost:3031/`. The agent calls the tools in this chapter.
 
 ## Local Morph
 

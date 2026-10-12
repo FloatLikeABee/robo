@@ -12,17 +12,28 @@ import (
 func TestAgentPack(t *testing.T) {
 	root := repoRoot(t)
 	names := toolNames(t, filepath.Join(root, "morph", "mcp", "server.go"))
-	for _, want := range []string{"create_note", "list_my_tasks", "get_task"} {
+	for extra := range toolNames(t, filepath.Join(root, "morph", "mcp", "agent_runtime.go")) {
+		names[extra] = true
+	}
+	for _, want := range []string{"create_note", "list_my_tasks", "get_task", "suggest_note_kind", "morph_guide"} {
 		if !names[want] {
-			t.Fatalf("server.go tools %v missing %s", names, want)
+			t.Fatalf("mcp tools %v missing %s", names, want)
 		}
 	}
 
 	skill := readPack(t, filepath.Join(root, ".cursor", "skills", "morph-notes", "SKILL.md"))
 	doc := readPack(t, filepath.Join(root, "docs", "agents", "15-morph-notes-self-use.md"))
+	guide := readPack(t, filepath.Join(root, "docs", "agents", "16-morph-for-agents.md"))
 	createCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-note.md"))
 	listCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-notes.md"))
 	getCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-note-get.md"))
+	todoCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-todo.md"))
+	logCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-log-session.md"))
+	reviewCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-review.md"))
+	shareCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-share.md"))
+	poolCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-pool-find.md"))
+	claude := readPack(t, filepath.Join(root, "agent-pack", "morph", "CLAUDE.md"))
+	rule := readPack(t, filepath.Join(root, "agent-pack", "morph", "cursor-rule.mdc"))
 
 	shared := []string{
 		"create_note", "list_my_tasks", "get_task",
@@ -34,19 +45,35 @@ func TestAgentPack(t *testing.T) {
 	}
 	mustContain(t, "skill", skill, shared...)
 	mustContain(t, "instruction", doc, shared...)
+	mustContain(t, "skill", skill, "suggest_note_kind", "morph_guide", "16-morph-for-agents.md", "Never share without explicit human consent")
+	mustContain(t, "guide", guide, "preview_share", "share_note", "unshare_note", "list_my_shares", "pool_topics", "pool_search", "pool_get", "pool_save_copy", "pool_report", "coming in phase 1B", "not_found", "invalid_input", "rate_limited", "forbidden_scope", "consent_required", "CC BY 4.0", "untrusted")
 	mustContain(t, "morph-note", createCmd, "create_note")
 	mustContain(t, "morph-notes", listCmd, "list_my_tasks")
 	mustContain(t, "morph-note-get", getCmd, "get_task")
+	mustContain(t, "morph-todo", todoCmd, "suggest_note_kind", "16-morph-for-agents.md")
+	mustContain(t, "morph-log-session", logCmd, "create_note", "16-morph-for-agents.md")
+	mustContain(t, "morph-review", reviewCmd, "list_my_tasks", "16-morph-for-agents.md")
+	mustContain(t, "morph-share", shareCmd, "Never share without explicit human consent", "preview_share", "yes")
+	mustContain(t, "morph-pool-find", poolCmd, "pool_search", "untrusted", "16-morph-for-agents.md")
+	mustContain(t, "claude", claude, "suggest_note_kind", "16-morph-for-agents.md")
+	mustContain(t, "rule", rule, "suggest_note_kind", "16-morph-for-agents.md")
 
 	for name, body := range map[string]string{
 		"skill": skill, "instruction": doc,
 		"morph-note": createCmd, "morph-notes": listCmd, "morph-note-get": getCmd,
+		"morph-todo": todoCmd, "morph-log-session": logCmd, "morph-review": reviewCmd,
+		"morph-share": shareCmd, "morph-pool-find": poolCmd,
+		"claude": claude, "rule": rule, "guide": guide,
 	} {
 		mustContain(t, name, body,
 			"Do not POST /api/tran/notes-todos",
-			"Do not click Notes & TODOs",
-			"morph-mcp is not connected",
 		)
+		if name != "guide" && name != "claude" && name != "rule" {
+			mustContain(t, name, body,
+				"Do not click Notes & TODOs",
+				"morph-mcp is not connected",
+			)
+		}
 		if strings.Contains(body, "eyJ") {
 			t.Errorf("%s contains a JWT prefix", name)
 		}
@@ -81,6 +108,7 @@ func toolNames(t *testing.T, path string) map[string]bool {
 	out := map[string]bool{}
 	for _, re := range []*regexp.Regexp{
 		regexp.MustCompile(`readOnly\(\s*"([^"]+)"`),
+		regexp.MustCompile(`readOnlyTool\(\s*"([^"]+)"`),
 		regexp.MustCompile(`Name:\s*"([^"]+)"`),
 	} {
 		for _, m := range re.FindAllStringSubmatch(string(b), -1) {

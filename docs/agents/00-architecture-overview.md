@@ -94,3 +94,4 @@ Neo4j and `morphgraph-worker` are optional. The rest of the stack starts without
 - Run: `12-build-deploy.md`
 - Local MCP (stdio): `14-morph-mcp.md`
 - Agent notes (self-use): `15-morph-notes-self-use.md`
+- Morph for agents (external playbook): `16-morph-for-agents.md`

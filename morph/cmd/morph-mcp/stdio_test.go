@@ -131,7 +131,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 			t.Fatalf("missing %s in %#v", name, tools)
 		}
 	}
-	if len(tools) != mcp.ToolCount {
+	if len(tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
 		t.Fatalf("tools = %#v", tools)
 	}
 
@@ -455,7 +455,7 @@ func TestStdioNotesApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources.Resources) != 2 || !stdioResource(resources.Resources, "ui://morph/notes") || !stdioResource(resources.Resources, "ui://morph/grill") {
+	if len(resources.Resources) != 3 || !stdioResource(resources.Resources, "ui://morph/notes") || !stdioResource(resources.Resources, "ui://morph/grill") || !stdioGuide(resources.Resources) {
 		t.Fatalf("resources = %+v", resources.Resources)
 	}
 	read, err := proc.session.ReadResource(ctx, &sdkmcp.ReadResourceParams{URI: "ui://morph/notes"})
@@ -500,6 +500,15 @@ func TestStdioNotesApp(t *testing.T) {
 func stdioResource(resources []*sdkmcp.Resource, uri string) bool {
 	for _, resource := range resources {
 		if resource != nil && resource.URI == uri && resource.MIMEType == "text/html;profile=mcp-app" {
+			return true
+		}
+	}
+	return false
+}
+
+func stdioGuide(resources []*sdkmcp.Resource) bool {
+	for _, resource := range resources {
+		if resource != nil && resource.URI == "morph://guide" && resource.MIMEType == "text/markdown" {
 			return true
 		}
 	}
