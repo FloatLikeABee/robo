@@ -101,8 +101,10 @@ export const tranEndpoints = {
   researchItem: (id) => `/api/tran/research/${id}`,
   researchPublish: (id) => `/api/tran/research/${id}/publish`,
   researchCancel: (id) => `/api/tran/research/${id}/cancel`,
-  /** Short AI text helpers (notes, todos, task chain steps) */
+  /** Short AI text helpers (task chain steps). Notes and TODOs use the grill. */
   textAssist: '/api/tran/text-assist',
+  grill: '/api/tran/grill',
+  grillUI: '/api/tran/grill/ui',
   composerxEmails: '/api/composerx/emails',
   composerxEmail: (id) => `/api/composerx/emails/${id}`,
   genericData: '/api/tran/generic-data',

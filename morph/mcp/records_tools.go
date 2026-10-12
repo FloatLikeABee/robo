@@ -7,8 +7,8 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// ToolCount is whoami, the notes tools, and create, list, and get for five modules.
-const ToolCount = 19
+// ToolCount is whoami, the notes tools, note_grill, and create, list, and get for five modules.
+const ToolCount = 20
 
 type limitInput struct {
 	Limit int `json:"limit,omitempty" jsonschema:"Maximum rows. Default 50, capped at 100."`

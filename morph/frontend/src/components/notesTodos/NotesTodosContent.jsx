@@ -26,14 +26,12 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
-import { runTextAssistProgress } from '../../lib/aiProgress';
-import AiProgressStatus from '../common/AiProgressStatus';
 import { useConfirm } from '../ConfirmDialog';
 import MarkdownEditor from '../admin/MarkdownEditor';
+import GrillModal from './GrillModal';
 
 export const MORPH_NOTES_TODOS_CHANGED = 'morph-notes-todos-changed';
 
-const AI_BODY_MIN_FOR_IMPROVE = 20;
 const SCHEDULE_TAB = 'todo-schedules';
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -93,8 +91,7 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
   const [saving, setSaving] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerType, setComposerType] = useState('notes');
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiProgressStatus, setAiProgressStatus] = useState('');
+  const [grillOpen, setGrillOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => dayjs().startOf('month'));
   const [selectedScheduleDay, setSelectedScheduleDay] = useState(() => toDayKeyLocal(new Date()));
   const [successToast, setSuccessToast] = useState({ open: false, message: '' });
@@ -184,51 +181,10 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
     return tab === 'notes' ? 'note' : 'todo';
   };
 
-  const runAiAssist = async () => {
-    const title = draftTitle.trim();
-    if (!title) return;
-
-    const kind = currentItemKind();
-    const bodyTrim = draftBody.trim();
-    const bodyChars = [...bodyTrim].length;
-    const useImprove = bodyChars >= AI_BODY_MIN_FOR_IMPROVE;
-
-    setAiBusy(true);
+  const runAiAssist = () => {
+    if (!draftTitle.trim()) return;
     setError(null);
-    setAiProgressStatus('Reading your draft…');
-    const assistMode = useImprove ? 'improve' : kind === 'todo' ? 'generate_todo' : 'generate_note';
-    const stopProgress = runTextAssistProgress(
-      { mode: assistMode, kind },
-      setAiProgressStatus
-    );
-    try {
-      if (useImprove) {
-        const { data } = await tranApi.post(tranEndpoints.textAssist, {
-          mode: 'improve',
-          kind,
-          seed: title,
-          text: bodyTrim,
-        });
-        const t = typeof data?.text === 'string' ? data.text : '';
-        if (t) setDraftBody(t);
-      } else {
-        const mode = kind === 'todo' ? 'generate_todo' : 'generate_note';
-        const { data } = await tranApi.post(tranEndpoints.textAssist, {
-          mode,
-          kind,
-          seed: title,
-          text: '',
-        });
-        const t = typeof data?.text === 'string' ? data.text : '';
-        if (t) setDraftBody(t);
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'AI assist failed');
-    } finally {
-      stopProgress();
-      setAiBusy(false);
-      setAiProgressStatus('');
-    }
+    setGrillOpen(true);
   };
 
   const AiToolbar = (
@@ -237,21 +193,14 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
         <Button
           size="small"
           variant="outlined"
-          startIcon={aiBusy ? <CircularProgress size={14} /> : <AutoAwesomeOutlinedIcon />}
-          disabled={aiBusy || !draftTitle.trim()}
+          startIcon={<AutoAwesomeOutlinedIcon />}
+          disabled={grillOpen || !draftTitle.trim()}
           onClick={runAiAssist}
-          title={
-            draftTitle.trim()
-              ? [...draftBody.trim()].length >= AI_BODY_MIN_FOR_IMPROVE
-                ? 'Polish existing content (20+ characters)'
-                : 'Draft content from the title'
-              : 'Add a title first'
-          }
+          title={draftTitle.trim() ? 'Ask a few questions, then draft the body' : 'Add a title first'}
         >
           AI assist
         </Button>
       </Box>
-      {aiBusy && aiProgressStatus ? <AiProgressStatus status={aiProgressStatus} /> : null}
     </Box>
   );
 
@@ -776,6 +725,18 @@ export default function NotesTodosContent({ variant = 'admin', open = true }) {
           </Box>
         </Box>
       )}
+      {grillOpen ? (
+        <GrillModal
+          kind={currentItemKind()}
+          title={draftTitle.trim()}
+          description={draftBody}
+          onClose={() => setGrillOpen(false)}
+          onApply={(text) => {
+            setDraftBody(text);
+            setGrillOpen(false);
+          }}
+        />
+      ) : null}
       <Snackbar
         open={successToast.open}
         autoHideDuration={SUCCESS_TOAST_MS}

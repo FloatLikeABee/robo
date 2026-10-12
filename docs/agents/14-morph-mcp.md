@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). This build has four tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note`, which is not read-only. `resources/list` returns one resource, `ui://morph/notes`. There are no prompts or `morph://` resources. `resources.listChanged` is not advertised.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` and `note_grill` (neither is read-only), and create, list, and get tools for stick notes, timelines, stories, research, and event logs. `resources/list` returns `ui://morph/notes` and `ui://morph/grill`. There are no prompts or `morph://` resources. `resources.listChanged` is not advertised.
 
 ## Build
 
@@ -31,7 +31,7 @@ There is no separate API token yet. Do not commit the JWT. Pass it in the client
 
 On startup, after the token verifies, the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again, including the production lifetime cap. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
 
-MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). It returns true for any verified user on any record, so it is not an owner check. `list_my_tasks`, `get_task`, and `create_note` do not call it. They run only after the token verifies and the subject exists in `plat_users`, and `ownerClause` limits every read and the insert to that user's own Notes & TODOs. A missing or invalid token fails `create_note` before any insert. An expired token is a tool error and writes nothing.
+MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). It returns true for any verified user on any record, so it is not an owner check. `list_my_tasks`, `get_task`, `create_note`, and `note_grill` do not call it. The notes tools run only after the token verifies and the subject exists in `plat_users`, and `ownerClause` limits every read and the insert to that user's own Notes & TODOs. A missing or invalid token fails `create_note` before any insert. An expired token is a tool error and writes nothing. `note_grill` keeps its interview in memory for that token subject and does not insert a row.
 
 On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config. How to obtain the token for local Morph at `http://localhost:3031/` is in [Local Morph](#local-morph).
 
@@ -53,10 +53,13 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 | `list_my_tasks` | The signed-in user's own Notes & TODOs (`user_note_todo`). Optional `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), and `limit` (default 50, capped at 100). Read-only. |
 | `get_task` | One of those rows by integer `id`. Read-only. |
 | `create_note` | Insert one note (`item_type` `note`) for that user. Not read-only. |
+| `note_grill` | Interview that user about a note or TODO title, then return a draft body. Not read-only. Does not insert a row. |
 
 `list_my_tasks` and `get_task` are not the shared MorphNotes Tasks board (`CaseTask`). That board has no per-user owner. These tools scope every query by the token subject (`plat_users.id`), joined to that user's active Tran `User`, and return only that user's notes and todos. The text body is the SQLite column. Another user's id is not found. The tools do not say the row is forbidden, and they do not create a user row.
 
 `create_note` takes `title` and `body`. At least one is required. The title limit is 200 characters and the body limit is 32000 characters. The stored title starts with `[morph-mcp]` and the stored body starts with `source: morph-mcp`, so the owning human can see the note came from an agent. Agent notes, opened from the chat header, lists those rows for the signed-in user. Notes & TODOs still shows the same rows among the user's other notes. A second call with the same title and body returns the existing id. The result includes the id and the stored content. `get_task` with that id, and `list_my_tasks` when the note fits on the page, return the same content. Empty input, an over-long field, a missing Tran user, or a bad token inserts nothing.
+
+`note_grill` takes `action` (`start`, `answer`, `skip`, or `finish`). `start` needs `kind` (`note` or `todo`) and `title`. Later steps need the `id` from `start`. The question count depends on the title, with a cap of four. Skip moves on. Finish, or an answer that is only a stop phrase such as "enough" or "write it now", drafts the body. The draft is the tool result. Another user's id is not found, and the error does not include the draft. Saving still requires `create_note` after the draft is shown. The Morph Notes & TODOs AI assist button uses the same interview through `POST /api/tran/grill` and inserts the draft into the editor only when the person confirms. It does not save by itself.
 
 An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). The human still reviews them at `http://localhost:3031/`. The agent calls the tools in this chapter.
 
@@ -82,7 +85,7 @@ Use the JSON `token` value as `MORPH_MCP_TOKEN`. Do not commit it.
 
 ## MCP Apps
 
-`list_my_tasks`, `get_task`, and `create_note` set `_meta.ui.resourceUri` to `ui://morph/notes`. The same URI is also on the older flat key `_meta["ui/resourceUri"]`. `whoami` does not declare a UI. A host that supports [MCP Apps](https://modelcontextprotocol.org/extensions/apps/overview) (SEP-1865) reads that resource and renders the HTML in a sandboxed iframe. The page lists notes (`list_my_tasks` with type `note`), opens one (`get_task`), and creates one (`create_note`). Those calls go through the host to this process, so the page never sees `MORPH_MCP_TOKEN`. Owner checks stay on the server. The HTML has no external URL.
+`list_my_tasks`, `get_task`, and `create_note` set `_meta.ui.resourceUri` to `ui://morph/notes`. `note_grill` sets the same keys to `ui://morph/grill`. The URI is also on the older flat key `_meta["ui/resourceUri"]`. `whoami` does not declare a UI. A host that supports [MCP Apps](https://modelcontextprotocol.org/extensions/apps/overview) (SEP-1865) reads that resource and renders the HTML in a sandboxed iframe. The notes page lists notes (`list_my_tasks` with type `note`), opens one (`get_task`), and creates one (`create_note`). The grill page asks the questions, shows the draft, and calls `create_note` only from its save button after that draft. Those calls go through the host to this process, so the page never sees `MORPH_MCP_TOKEN`. Owner checks stay on the server. Both pages are dark, use Arial, and have no external URL. Notes & TODOs at `http://localhost:3031/` embeds the same grill HTML.
 
 The MCP Apps overview names these renderers: Claude, Claude Desktop, VS Code GitHub Copilot, Microsoft 365 Copilot, Goose, Postman, MCPJam, and Archestra.AI. They launch this same stdio binary. The steps below are for Claude Desktop against local Morph at `http://localhost:3031/`.
 
@@ -109,7 +112,7 @@ Restart Claude Desktop after saving the file. Ask it to open Morph notes. The pa
 
 ### Plain tools
 
-A client that does not render MCP Apps, including Cursor, uses the same binary and the same three environment variables. It ignores the UI metadata and receives the tool results for `whoami`, `list_my_tasks`, `get_task`, and `create_note`. The Cursor snippet is in [Cursor](#cursor).
+A client that does not render MCP Apps, including Cursor, uses the same binary and the same three environment variables. It ignores the UI metadata and receives the tool results for `whoami`, `list_my_tasks`, `get_task`, `create_note`, and `note_grill`. `note_grill` still returns the interview JSON and still does not insert a note. The Cursor snippet is in [Cursor](#cursor).
 
 ## Cursor
 

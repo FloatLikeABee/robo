@@ -195,6 +195,8 @@ func RegisterAPIRoutes(r *gin.Engine, h *Handlers) {
 	r.POST("/api/tran/big-notes/:id/responses/:responseId/analyze", h.AnalyzeBigNoteResponse)
 	r.POST("/api/tran/big-notes/:id/analyze", h.AnalyzeBigNoteAllResponses)
 	r.POST("/api/tran/text-assist", h.TranTextAssist)
+	r.POST("/api/tran/grill", h.TranGrill)
+	r.GET("/api/tran/grill/ui", h.TranGrillUI)
 	r.POST("/api/tran/extract-json", h.ExtractJSONFromText)
 	r.GET("/api/tran/comments", h.ListComments)
 	r.POST("/api/tran/comments", h.CreateComment)

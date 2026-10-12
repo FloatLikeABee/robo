@@ -90,7 +90,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://morph/notes" {
+	if len(resources.Resources) != 2 || !resourceURI(resources.Resources, "ui://morph/notes") || !resourceURI(resources.Resources, "ui://morph/grill") {
 		t.Fatalf("resources = %+v", resources.Resources)
 	}
 	if resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
@@ -153,7 +153,7 @@ func TestNotesAppSurface(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listedRes.Resources) != 1 {
+	if len(listedRes.Resources) != 2 || !resourceURI(listedRes.Resources, "ui://morph/notes") || !resourceURI(listedRes.Resources, "ui://morph/grill") {
 		t.Fatalf("resources = %+v", listedRes.Resources)
 	}
 	assertNoExternalCSP(t, listedRes.Resources[0].Meta)
@@ -256,7 +256,7 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 		if tool.Annotations == nil {
 			t.Fatalf("%s annotations = nil", tool.Name)
 		}
-		if strings.HasPrefix(tool.Name, "create_") {
+		if strings.HasPrefix(tool.Name, "create_") || tool.Name == "note_grill" {
 			if tool.Annotations.ReadOnlyHint {
 				t.Fatalf("%s is marked read-only", tool.Name)
 			}
@@ -265,7 +265,7 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 		}
 		got[tool.Name] = true
 	}
-	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note"} {
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note", "note_grill"} {
 		if !got[name] {
 			t.Fatalf("missing %s in %+v", name, listed.Tools)
 		}
