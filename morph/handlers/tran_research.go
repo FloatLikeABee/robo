@@ -359,14 +359,14 @@ func (h *Handlers) synthesizeResearchConclusion(ctx context.Context, prompt stri
 ` + documentShapePrompt + `
 
 
-` + morphai.VisualFirstInstructions + `
+` + morphai.ReplyShapeInstructions + `
 
 ` + pack
 	draft, err := h.researchLLM(ctx, composePrompt)
 	draft = strings.TrimSpace(draft)
 	criticPrompt := researchCriticPrefix + ` Improve the draft using the source pack. Fix structure, redundancy, holes, and voice so it reads as one finished piece. Do not reintroduce Round N as the outline. Markdown only.
 
-` + morphai.VisualFirstInstructions + `
+` + morphai.ReplyShapeInstructions + `
 
 Source pack:
 ` + pack + `
@@ -434,7 +434,7 @@ Uploaded file excerpts:
 %s
 Write 2-6 short paragraphs with headings. Do not invent citations.
 
-%s`, round, target, prompt, query, notes, ragBlock, morphai.VisualFirstInstructions)
+%s`, round, target, prompt, query, notes, ragBlock, morphai.ReplyShapeInstructions)
 		piece, wErr := h.researchLLM(ctx, writePrompt)
 		status := "ok"
 		if wErr != nil {

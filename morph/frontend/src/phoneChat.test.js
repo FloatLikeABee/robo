@@ -35,6 +35,13 @@ test('phone composer clears side safe areas and uses 44px controls', () => {
   expect(phone).toMatch(/\.send-button[\s\S]*?min-height:\s*44px/);
 });
 
+test('closed phone workspace does not keep a bottom band', () => {
+  const css = read('src/App.css');
+  const phone = css.slice(css.lastIndexOf('@media (max-width: 768px)'));
+  expect(phone).toMatch(/\.app\.app--agent\.app--workspace-collapsed\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\)/);
+  expect(css).toMatch(/\.app\.app--agent\.app--workspace-collapsed \.agent-workspace\s*\{[^}]*display:\s*none/);
+});
+
 test('phone shell subtracts the keyboard inset and hides the workspace while it is open', () => {
   const phone = phoneBlock();
   expect(phone).toMatch(/height:\s*calc\(100dvh - var\(--keyboard-inset, 0px\)\)/);

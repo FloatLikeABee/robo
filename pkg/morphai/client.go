@@ -75,6 +75,16 @@ func (c *Client) VisionModel() string {
 	return c.cfg.VisionModelOrDefault()
 }
 
+// ModelIdentity reports the resolved provider and model.
+// A missing API key still returns those names when resolution filled them in.
+func (c *Client) ModelIdentity() (provider, model string) {
+	if c == nil {
+		return "", ""
+	}
+	rc, _ := resolve(c.cfg)
+	return strings.TrimSpace(string(rc.Provider)), strings.TrimSpace(rc.Model)
+}
+
 // ResolvedConfig returns the provider settings a call with this client would use.
 func (c *Client) ResolvedConfig() (ResolvedConfig, error) {
 	if c == nil {

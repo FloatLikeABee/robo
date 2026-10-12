@@ -121,12 +121,13 @@ pub(crate) fn build_project_html(title: &str, markdown: &str) -> String {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>{title}</title>
 <style>
-:root {{ --ink:#e8eef7; --muted:#94a3b8; --line:#1e293b; --bg:#0b1220; --card:#111827; --accent:#38bdf8; --accent-purple:#818cf8; }}
-*{{box-sizing:border-box}} body{{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e3a5f 0%,var(--bg) 55%);line-height:1.55}}
+:root {{ color-scheme:dark; --ink:#e8eef7; --muted:#94a3b8; --line:#1e293b; --bg:#070b14; --card:#111827; --accent:#38bdf8; --accent-2:#a78bfa; --accent-3:#34d399; --accent-4:#fbbf24; --accent-purple:#a78bfa; }}
+*{{box-sizing:border-box}} body{{margin:0;font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;color:var(--ink);background:radial-gradient(900px 480px at 8% -12%, rgba(167,139,250,.55) 0%, transparent 58%), radial-gradient(720px 420px at 100% 0%, rgba(56,189,248,.35) 0%, transparent 52%), var(--bg);line-height:1.55}}
 .wrap{{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}}
 .meta{{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}}
 h1.page-title{{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}}
-.prose{{font-size:1.05rem}}.prose h1,.prose h2,.prose h3{{color:#f8fafc;line-height:1.25;margin:1.35em 0 .55em}}
+.prose{{font-size:1.05rem}}.prose h1,.prose h2,.prose h3{{line-height:1.25;margin:1.35em 0 .55em}}
+.prose h1{{color:#f8fafc}}.prose h2{{color:var(--accent-2)}}.prose h3{{color:var(--accent-3)}}
 .prose p,.prose ul,.prose ol{{margin:.85em 0}}.prose ul,.prose ol{{padding-left:1.4em}}
 .prose a{{color:var(--accent)}}.prose code{{font-family:ui-monospace,monospace;background:var(--card);padding:.1em .35em;border-radius:4px;border:1px solid var(--line)}}
 .prose pre{{overflow:auto;padding:1em;border-radius:10px;background:var(--card);border:1px solid var(--line)}}

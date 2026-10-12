@@ -11,10 +11,13 @@ import { tranApi } from './api/tranClient';
 import { runAiProgress } from './lib/aiProgress';
 import { contextFingerprint, inferSubAgents } from './lib/agentContext';
 import AgentWorkspace, {
+  initialWorkspaceOpen,
   readLastSessionId,
+  readStoredWorkspaceChoice,
   readWorkspaceTab,
   resolveRestoredSessionId,
   writeLastSessionId,
+  writeWorkspaceOpen,
 } from './components/chat/AgentWorkspace';
 import AssistantReply from './components/chat/AssistantReply';
 import {
@@ -132,6 +135,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const sessionsSheetRef = useRef(null);
   const sessionsCloseRef = useRef(null);
   const sessionsToggleRef = useRef(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => (
+    isAgentShell
+      ? initialWorkspaceOpen({
+          stored: readStoredWorkspaceChoice(),
+          phone: typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches,
+        })
+      : true
+  ));
   const [workspaceTab, setWorkspaceTab] = useState('knowledge');
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeKnowledge, setIncludeKnowledge] = useState(true);
@@ -417,6 +428,14 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
       onClick: () => setMorphNotesOpen(true),
     },
   ]), [morphNotesOpen, t]);
+
+  const toggleWorkspace = useCallback(() => {
+    setWorkspaceOpen((v) => {
+      const next = !v;
+      writeWorkspaceOpen(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -767,7 +786,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   }, [sessions]);
 
   const chatInner = (
-    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent app--sessions-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
+    <div className={`app${embedded ? ' app--embedded' : ''}${singleSession ? ' app--single-session' : ''}${isAgentShell ? ' app--agent app--sessions-collapsed' : ''}${isAgentShell && !workspaceOpen ? ' app--workspace-collapsed' : ''}${sidebarNavOpen ? ' app--sidebar-open' : ''}`}>
       {!singleSession && sidebarNavOpen && (
         <button
           type="button"
@@ -883,6 +902,32 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
             ) : null}
           </div>
           <div className="header-actions">
+            {isAgentShell ? (
+              <button
+                type="button"
+                className="chat-icon-button chat-workspace-toggle"
+                onClick={toggleWorkspace}
+                aria-expanded={workspaceOpen}
+                aria-label={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
+                title={workspaceOpen ? 'Hide workspace' : 'Show workspace'}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M15 3v18" />
+                </svg>
+              </button>
+            ) : null}
             <HeaderMoreMenu
               items={[
                 {

@@ -228,13 +228,13 @@ func caseTaskAIDraftPrompt(source string) string {
 	return `You create a MorphNotes case/task draft from source material.
 Respond with ONLY one JSON object (no markdown fences around the JSON, no commentary) with keys:
 - "title": short task title (required, max ~80 characters)
-- "markdown": the task document in markdown. Include a mermaid diagram or chart when the source is structure, process, comparison, or quantities. Use "" if there is nothing to write.
+- "markdown": the task document in markdown. Use a mermaid diagram only when the source is structure, process, comparison, or quantities and a diagram is clearer than prose. Use "" if there is nothing to write.
 - "start_at": ISO-8601 datetime if the source implies a start time, else ""
 - "end_at": ISO-8601 datetime if the source implies an end time, else ""
 
 Do not invent facts that are not in the source. Do not include location or JSON detail objects.
 
-` + morphai.VisualFirstInstructions + `
+` + morphai.ReplyShapeInstructions + `
 
 Source material:
 ` + source

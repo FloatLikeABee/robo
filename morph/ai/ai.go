@@ -227,6 +227,15 @@ func (a *AIService) GenerateFormHTMLPage(formJSON string) (string, error) {
 	return html, nil
 }
 
+// ModelIdentityLine is the configured provider and model, or an unknown line.
+func (a *AIService) ModelIdentityLine() string {
+	if a == nil || a.llm == nil {
+		return morphai.ModelIdentityInstructions("", "")
+	}
+	provider, model := a.llm.ModelIdentity()
+	return morphai.ModelIdentityInstructions(provider, model)
+}
+
 // GenerateChatResponse generates a plain chat response for general prompts
 func (a *AIService) GenerateChatResponse(userPrompt string) (string, error) {
 	return a.GenerateChatResponseWithAgent(userPrompt, "")
@@ -245,11 +254,11 @@ func (a *AIService) GenerateChatResponseWithAgent(userPrompt, agentInstructions 
 	}
 
 	ctx := context.Background()
-	persona := "You are a helpful assistant."
+	persona := morphai.ReplyShapeInstructions + "\n" + a.ModelIdentityLine()
 	if agentInstructions != "" {
-		persona += " " + agentInstructions
+		persona += "\n" + agentInstructions
 	}
-	prompt := fmt.Sprintf("%s Please respond to the following user message in a helpful and informative way:\n\n%s", persona, userPrompt)
+	prompt := fmt.Sprintf("%s\n\nUser message:\n%s", persona, userPrompt)
 
 	messages := []DashScopeMessage{
 		{

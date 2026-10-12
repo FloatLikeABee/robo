@@ -5,12 +5,14 @@ import (
 	"testing"
 )
 
-func TestDarkDocumentCSSUsesPurpleGradient(t *testing.T) {
+func TestDarkDocumentCSSUsesSansMultiAccentDarkTheme(t *testing.T) {
 	css := DarkDocumentCSS()
-	if strings.Contains(css, "#134e4a") || strings.Contains(css, "#2dd4bf") {
-		t.Fatal("dark document CSS must not use teal/green palette")
+	if strings.Contains(css, "Georgia") || strings.Contains(css, "#fafaf9") || strings.Contains(css, "#134e4a") {
+		t.Fatal("dark document CSS must not use a serif face, a light page, or the old teal palette")
 	}
-	if !strings.Contains(css, "#1e1b4b") || !strings.Contains(css, "#38bdf8") {
-		t.Fatal("dark document CSS must use blue/purple palette")
+	for _, needle := range []string{"Arial", "color-scheme:dark", "#38bdf8", "#a78bfa", "#34d399", "#070b14"} {
+		if !strings.Contains(css, needle) {
+			t.Fatalf("missing %q", needle)
+		}
 	}
 }

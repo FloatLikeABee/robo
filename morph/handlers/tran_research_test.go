@@ -337,7 +337,10 @@ func TestResearchComposePromptIncludesVisualFirst(t *testing.T) {
 	}
 	h := &Handlers{}
 	_ = h.synthesizeResearchConclusion(context.Background(), "graphene batteries", nil)
-	if !strings.Contains(got, "Visual-first") {
-		t.Fatalf("compose prompt missing Visual-first:\n%s", got)
+	if !strings.Contains(got, "ordinary question") {
+		t.Fatalf("compose prompt missing reply shape:\n%s", got)
+	}
+	if strings.Contains(got, "Visual-first") || strings.Contains(got, "short caption") {
+		t.Fatalf("diagram-first leaked:\n%s", got)
 	}
 }

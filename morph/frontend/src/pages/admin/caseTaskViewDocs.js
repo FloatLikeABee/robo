@@ -315,8 +315,8 @@ export function buildCaseTaskHTML({ title = '', markdown = '', detail } = {}) {
   const detailFrag = detailJSONToHTMLFragment(detail);
   const proseCSS = `.prose{font-size:1.05rem;color:var(--ink)}
 .prose>:first-child{margin-top:0}
-.prose h1,.prose h2,.prose h3,.prose h4{line-height:1.25;margin:1.35em 0 .55em;font-weight:700;color:#f8fafc}
-.prose h1{font-size:1.55rem}.prose h2{font-size:1.3rem}.prose h3{font-size:1.12rem}
+.prose h1,.prose h2,.prose h3,.prose h4{line-height:1.25;margin:1.35em 0 .55em;font-weight:700}
+.prose h1{font-size:1.55rem;color:#f8fafc}.prose h2{font-size:1.3rem;color:var(--accent-2)}.prose h3{font-size:1.12rem;color:var(--accent-3)}
 .prose p,.prose ul,.prose ol,.prose blockquote,.prose pre,.prose table{margin:.85em 0}
 .prose ul,.prose ol{padding-left:1.4em}
 .prose li{margin:.35em 0}
@@ -329,9 +329,9 @@ export function buildCaseTaskHTML({ title = '', markdown = '', detail } = {}) {
 .prose table{border-collapse:collapse;width:100%;font-size:.95em}
 .prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
 .prose th{background:var(--card)}`;
-  const css = `:root{color-scheme:dark;--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#0b1220;--card:#111827;--accent:#38bdf8;--accent-purple:#818cf8;--scrollbar-thumb:#64748b;--scrollbar-track:#0b1220;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track)}
+  const css = `:root{color-scheme:dark;--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#070b14;--card:#111827;--accent:#38bdf8;--accent-2:#a78bfa;--accent-3:#34d399;--accent-4:#fbbf24;--accent-purple:#a78bfa;--scrollbar-thumb:#64748b;--scrollbar-track:#0b1220;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track)}
 html,body{height:100%;margin:0}
-*{box-sizing:border-box}body{font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0%,var(--bg) 55%);line-height:1.55}
+*{box-sizing:border-box}body{font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;color:var(--ink);background:radial-gradient(900px 480px at 8% -12%, rgba(167,139,250,.55) 0%, transparent 58%), radial-gradient(720px 420px at 100% 0%, rgba(56,189,248,.35) 0%, transparent 52%), var(--bg);line-height:1.55}
 .wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}

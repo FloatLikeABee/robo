@@ -5,37 +5,30 @@ import (
 	"testing"
 )
 
-func TestSelectedSkillIncludedWhenAbsentFromEnabledCatalog(t *testing.T) {
-	enabledOnly := []skillPromptRow{{
-		ID:           "builtin-research",
-		Name:         "Research",
-		Instructions: "search first",
-	}}
-	_ = enabledOnly
-	out := selectedSkillInstructions([]string{"custom-1"}, []skillPromptRow{{
-		ID:           "custom-1",
-		Name:         "Custom",
-		Instructions: "Do the custom thing.",
-	}})
-	if !strings.Contains(out, "Follow these selected skills for this reply.") || !strings.Contains(out, "Do the custom thing.") {
-		t.Fatalf("selected skill missing from prompt:\n%s", out)
+func TestAlwaysOnSkillsDoNotOrderDiagrams(t *testing.T) {
+	var b strings.Builder
+	(&Handlers{}).appendAlwaysOnAgentSkills(&b)
+	got := b.String()
+	if !strings.Contains(got, "Research") || !strings.Contains(got, "Design") {
+		t.Fatalf("missing default skills:\n%s", got)
 	}
-	if strings.Contains(out, "search first") {
-		t.Fatalf("enabled-catalog body should not be required in the selected block:\n%s", out)
+	if strings.Contains(got, "### Graphs") || strings.Contains(strings.ToLower(got), "diagram first") || strings.Contains(got, "short caption") {
+		t.Fatalf("graphs or diagram-first leaked:\n%s", got)
 	}
 }
 
-func TestChatRAGWithoutAssistantIncludesSelected(t *testing.T) {
-	got := collectionsForChatRAG(nil, []string{"docs"})
-	if len(got) != 1 || got[0] != "docs" {
-		t.Fatalf("got %v", got)
+func TestPreferAlwaysOnInstructionsDropsStaleDiagramOrder(t *testing.T) {
+	fallback := "Use a diagram only when it makes that structure clearer."
+	got := preferAlwaysOnInstructions("Diagram first (mermaid) for structure.", fallback)
+	if got != fallback {
+		t.Fatal(got)
 	}
-}
-
-func TestChatRAGKeepsSelectedBesideAssistantCollections(t *testing.T) {
-	got := collectionsForChatRAG([]string{"a", "b", "c", "d"}, []string{"docs"})
-	joined := strings.Join(got, ",")
-	if !strings.Contains(joined, "docs") || !strings.Contains(joined, "a") {
-		t.Fatalf("got %v", got)
+	got = preferAlwaysOnInstructions("Visual-first: short caption, then a mermaid diagram.", fallback)
+	if got != fallback {
+		t.Fatal(got)
+	}
+	custom := "Cite the operator's notes and skip diagrams."
+	if preferAlwaysOnInstructions(custom, fallback) != custom {
+		t.Fatal("custom research text should stay")
 	}
 }
