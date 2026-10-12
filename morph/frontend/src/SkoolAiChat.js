@@ -33,9 +33,9 @@ import {
   subscribeAppliedAssistantChannel,
   writeStoredAppliedAssistant,
 } from './lib/appliedAssistantChannel';
-import { clearMorphSession } from './auth/morphSession';
+import { clearMorphSession, getMorphToken } from './auth/morphSession';
 import MorphNotesModal from './components/chat/MorphNotesModal';
-import { HEADER_APP_ICONS } from './lib/headerAppLinks';
+import { HEADER_APP_ICONS, morphUtilsBaseURL } from './lib/headerAppLinks';
 import { onSheetKeyDown } from './lib/phoneSheet';
 import { bindKeyboardInset } from './lib/keyboardInset';
 import HeaderMoreMenu from './components/chat/HeaderMoreMenu';
@@ -76,6 +76,18 @@ function sessionSwatchColor(id, usedIndexes) {
     }
   }
   return SESSION_SWATCH_COLORS[start];
+}
+
+function appHrefWithSession(baseUrl) {
+  const token = getMorphToken();
+  if (!token) return baseUrl;
+  try {
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('userspanel_token', token);
+    return url.toString();
+  } catch {
+    return baseUrl;
+  }
 }
 
 function loadPromptHistory() {
@@ -417,17 +429,30 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     if (!singleSession) loadSessions();
   }, [singleSession, loadSessions]);
 
-  const headerAppLinks = useMemo(() => ([
-    {
-      id: 'morphdata',
-      label: t('morphNotes'),
-      color: '#3b82f6',
-      icon: HEADER_APP_ICONS.morphdata,
-      hasPopup: 'dialog',
-      expanded: morphNotesOpen,
-      onClick: () => setMorphNotesOpen(true),
-    },
-  ]), [morphNotesOpen, t]);
+  const headerAppLinks = useMemo(() => {
+    const links = [
+      {
+        id: 'morphdata',
+        label: t('morphNotes'),
+        color: '#3b82f6',
+        icon: HEADER_APP_ICONS.morphdata,
+        hasPopup: 'dialog',
+        expanded: morphNotesOpen,
+        onClick: () => setMorphNotesOpen(true),
+      },
+    ];
+    const utils = morphUtilsBaseURL(process.env.NODE_ENV, process.env.REACT_APP_MORPH_UTILS_URL);
+    if (utils) {
+      links.push({
+        id: 'morphutils',
+        label: 'MorphUtils',
+        href: appHrefWithSession(utils),
+        color: '#2563eb',
+        icon: HEADER_APP_ICONS.morphutils,
+      });
+    }
+    return links;
+  }, [morphNotesOpen, t]);
 
   const toggleWorkspace = useCallback(() => {
     setWorkspaceOpen((v) => {
