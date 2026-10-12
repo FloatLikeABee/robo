@@ -54,3 +54,5 @@ Call `get_task` with an integer `id`. `id` of 0 or less is `invalid id`. An id t
 - Do not click Notes & TODOs.
 - Do not POST /api/tran/notes-todos.
 - Do not write `MORPH_MCP_TOKEN` or `JWT_SECRET` into the note.
+
+The external-agent playbook (kinds, grill, sharing, pool) is [16 — Morph for agents](16-morph-for-agents.md).

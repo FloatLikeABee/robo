@@ -1,15 +1,17 @@
 ---
 name: morph-notes
-description: Create, list, and get the signed-in user's Morph Notes and TODOs with the morph-mcp tools create_note, list_my_tasks, and get_task. Use when an agent should post a note, fetch notes, or leave text for a human to review on local Morph.
+description: Create, list, and get the signed-in user's Morph Notes and TODOs with the morph-mcp tools create_note, list_my_tasks, and get_task. Use suggest_note_kind and morph_guide when picking a kind or sharing. Use when an agent should post a note, fetch notes, or leave text for a human to review on local Morph.
 ---
 
 # Morph notes
 
-Drive Morph notes yourself. The human reviews them at http://localhost:3031/ Notes & TODOs. You call morph-mcp. The list tool is `list_my_tasks`, not `list_notes`. The get tool is `get_task`, not `get_note`. Do not click Notes & TODOs to create the note. Do not POST /api/tran/notes-todos.
+Drive Morph notes yourself. The human reviews them at http://localhost:3031/ Notes & TODOs. You call morph-mcp. The list tool is `list_my_tasks`, not `list_notes`. The get tool is `get_task`, not `get_note`. Do not click Notes & TODOs to create the note. Do not POST /api/tran/notes-todos. Never share without explicit human consent in this conversation.
 
-If `create_note`, `list_my_tasks`, or `get_task` is not available, stop and report that morph-mcp is not connected. The local `mcp.json` shape is in `docs/agents/14-morph-mcp.md`. Do not invent `MORPH_MCP_TOKEN`, do not read `.env`, do not run a login curl, and do not write `MORPH_MCP_TOKEN` or `JWT_SECRET` into a note, a commit, or the chat. Do not change Render or a deploy config.
+If `create_note`, `list_my_tasks`, or `get_task` is not available, stop and report that morph-mcp is not connected. The local `mcp.json` shape is in `docs/agents/14-morph-mcp.md`. The full playbook is `docs/agents/16-morph-for-agents.md` (`morph://guide` / `morph_guide`). Do not invent `MORPH_MCP_TOKEN`, do not read `.env`, do not run a login curl, and do not write `MORPH_MCP_TOKEN` or `JWT_SECRET` into a note, a commit, or the chat. Do not change Render or a deploy config.
 
 `whoami` is optional. Call it when it is available and you do not know which user the server is. Do not refuse a create solely because you skipped `whoami`. These tools take no user-id argument. They act as the verified session user.
+
+When the kind is unclear, call `suggest_note_kind` with the ask as `intent`. If `use_grill` is true, run `note_grill` and show the draft before `create_note`. Check for a duplicate before creating.
 
 ## When
 
@@ -17,7 +19,7 @@ If `create_note`, `list_my_tasks`, or `get_task` is not available, stop and repo
 - List before you claim which notes exist. Call `list_my_tasks`.
 - Get when you have an id, from create or from the list. Call `get_task`. A note missing from that page is not proof the id does not exist.
 
-Cursor commands `/morph-note`, `/morph-notes`, and `/morph-note-get` are prompts for the same three calls.
+Cursor commands `/morph-note`, `/morph-notes`, `/morph-note-get`, `/morph-todo`, `/morph-log-session`, `/morph-review`, `/morph-share`, and `/morph-pool-find` are prompts for these flows.
 
 ## create_note
 
