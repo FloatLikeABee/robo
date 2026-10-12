@@ -19,7 +19,7 @@ export default function GrillModal({
   const [html, setHtml] = useState('');
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
-  const [frameHeight, setFrameHeight] = useState(420);
+  const [frameHeight, setFrameHeight] = useState(280);
 
   useEffect(() => {
     let dead = false;

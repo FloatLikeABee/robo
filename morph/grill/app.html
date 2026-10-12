@@ -28,6 +28,7 @@
     line-height: 1.45;
   }
   header, main, form, button, input, textarea, pre { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
   header { padding: 14px 16px 0; }
   h1 { font-size: 18px; margin: 0 0 4px; color: var(--accent-2); }
   main { padding: 8px 16px 16px; display: grid; gap: 10px; }
@@ -170,6 +171,7 @@
       hideStart();
       renderQuestion(data);
     }
+    reportSize();
   }
 
   function sendRequest(method, params) {
@@ -224,16 +226,17 @@
     });
   }
 
+  function contentHeight() {
+    var header = document.querySelector("header");
+    var main = document.querySelector("main");
+    var height = 8;
+    if (header) height += header.offsetHeight;
+    if (main) height += main.offsetHeight;
+    return Math.ceil(height);
+  }
+
   function reportSize() {
-    if (typeof ResizeObserver !== "function") return;
-    var lastH = 0;
-    var observer = new ResizeObserver(function () {
-      var height = Math.ceil(document.documentElement.scrollHeight);
-      if (height === lastH) return;
-      lastH = height;
-      sendNotification("ui/notifications/size-changed", { height: height });
-    });
-    observer.observe(document.documentElement);
+    sendNotification("ui/notifications/size-changed", { height: contentHeight() });
   }
 
   function boot() {
@@ -255,6 +258,7 @@
       });
     });
     reportSize();
+    window.addEventListener("resize", reportSize);
     sendRequest("ui/initialize", {
       protocolVersion: "2026-01-26",
       appInfo: { name: "Morph grill", version: "0.3.0" },

@@ -149,6 +149,9 @@ func assertClosedGrillHTML(t *testing.T, html, token, secret string) {
 	if !strings.Contains(html, "Arial") || !strings.Contains(lower, "#070b14") {
 		t.Fatal("html is not the dark Arial page")
 	}
+	if !strings.Contains(html, "[hidden] { display: none !important; }") {
+		t.Fatal("author display rules can unhide the start form")
+	}
 	if !strings.Contains(html, "textContent") || !strings.Contains(html, "Content-Security-Policy") {
 		t.Fatal("html missing text rendering or CSP")
 	}
