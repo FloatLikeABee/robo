@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -105,5 +106,17 @@ func TestPersistBigNoteMarkdownRegeneratesHTML(t *testing.T) {
 	}
 	if md != "## Hello **world**" || html != n.HTMLContent {
 		t.Fatalf("db mismatch md=%q", md)
+	}
+}
+
+func TestBigNoteHTMLStaysDarkSansEvenWhenThemeSaysLight(t *testing.T) {
+	html := buildBigNoteHTML("Agent", "A short note.", "story", nil, "light")
+	for _, needle := range []string{"Arial", "#38bdf8", "#a78bfa", "#34d399", "color-scheme:dark"} {
+		if !strings.Contains(html, needle) {
+			t.Fatalf("missing %q", needle)
+		}
+	}
+	if strings.Contains(html, "Georgia") || strings.Contains(html, "#fafaf9") {
+		t.Fatal(html)
 	}
 }

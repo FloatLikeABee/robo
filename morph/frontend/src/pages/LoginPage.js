@@ -66,7 +66,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [NETLIFY_DEMO, from, navigate, t]);
+  }, [from, navigate, t]);
 
   useEffect(() => {
     const shell = document.querySelector('.login-shell');
@@ -193,7 +193,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="login-error-dismiss"
-                aria-label={t('dismissError')}
+                aria-label="Dismiss error"
                 onClick={() => setError('')}
               >
                 ×

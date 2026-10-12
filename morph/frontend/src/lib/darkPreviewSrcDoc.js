@@ -24,13 +24,18 @@ const LEGACY_THEME_OVERRIDE = `<style id="morph-dark-theme-override">
   --bg: #0b1220;
   --card: #111827;
   --accent: #38bdf8;
-  --accent-purple: #818cf8;
+  --accent-2: #a78bfa;
+  --accent-3: #34d399;
+  --accent-purple: #a78bfa;
 }
 body {
-  background: radial-gradient(1200px 600px at 10% -10%, #1e1b4b 0%, #0b1220 55%) !important;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+  background: #070b14 !important;
   color: #e8eef7 !important;
 }
 a, .prose a { color: #38bdf8 !important; }
+h2, .prose h2 { color: #a78bfa !important; }
+h3, .prose h3 { color: #34d399 !important; }
 </style>`;
 
 function needsLegacyThemeOverride(html) {

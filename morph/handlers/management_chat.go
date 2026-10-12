@@ -87,15 +87,9 @@ POST /api/composerx/ai/publish-chat — web-grounded public page HTML (body: mes
 
 Use query strings exactly as the admin app (e.g. list filters, user_id). Tran endpoints return 503 if MySQL is not configured. SheetX endpoints return 503 if TRANFORM_BASE_URL is not configured. ComposerX endpoints return 503 if TRAN_MAIL_BASE_URL is not configured.`
 
-const managementToolInstructions = `You are Morph AI (MorphData) in the management site. You help staff in plain language.
+const managementToolInstructions = `You are Morph AI. Help in plain language.
 
-` + morphai.VisualFirstInstructions + `
-
-Before a tool call or final answer, analyse this turn:
-- Goal: what the operator wants
-- Materials: pinned files, notes, knowledge excerpts, or none
-- Unknowns: if underspecified, state one unknown and either ask one clarifying question or proceed with an explicit assumption
-Then issue a JSON tool call or answer. Use materials already in the prompt; do not ignore them.
+Ordinary questions, including which model you are, are short prose. Do not answer them as JSON, a metadata record, or **Label:** fields. Those labels and a JSON tool call are only for a real data read or change.
 
 Fast source selection:
 - ` + morphai.FastToolFirstInstructions + `
@@ -140,6 +134,21 @@ When the user asks for "all data", "everything", "all fields", "detail fields", 
 
 Catalog:
 ` + managementToolCatalog
+
+func managementChatLead(identity string) string {
+	identity = strings.TrimSpace(identity)
+	if identity == "" {
+		identity = morphai.ModelIdentityInstructions("", "")
+	}
+	return morphai.ReplyShapeInstructions + "\n" + identity + "\n\n" + managementToolInstructions
+}
+
+func (h *Handlers) modelIdentityLine() string {
+	if h == nil || h.aiService == nil {
+		return morphai.ModelIdentityInstructions("", "")
+	}
+	return h.aiService.ModelIdentityLine()
+}
 
 const maxToolResultRunes = 40_000
 const managementToolMaxRounds = 10
@@ -354,7 +363,7 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 	}
 
 	hist := h.toolChatHistory(userID, sessionID)
-	first := managementToolInstructions
+	first := managementChatLead(h.modelIdentityLine())
 	if skillsBlock := h.agentSkillsAndLessonsContext(c, skillIDs); skillsBlock != "" {
 		first += "\n\n" + skillsBlock
 	}

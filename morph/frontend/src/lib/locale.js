@@ -34,25 +34,6 @@ export function applyDocumentLang(locale) {
   document.documentElement.lang = documentLang(normalizeLocale(locale) || 'en');
 }
 
-function readSaved() {
-  try {
-    return localStorage.getItem(LOCALE_STORAGE_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
-function browserLanguages() {
-  if (typeof navigator === 'undefined') return ['en'];
-  if (navigator.languages && navigator.languages.length) return navigator.languages;
-  return [navigator.language || 'en'];
-}
-
-function readQuery() {
-  if (typeof window === 'undefined') return '';
-  return new URLSearchParams(window.location.search).get('lang') || '';
-}
-
 export function getLocale() {
   if (!current) {
     try {

@@ -90,7 +90,11 @@ func TestBuildEnabledSkillsContextIncludesDefaultBodiesWithoutPicker(t *testing.
 	if !strings.Contains(got, builtinDesignInstructions) {
 		t.Fatalf("design body missing:\n%s", got)
 	}
-	if !strings.Contains(got, builtinGraphsInstructions) {
-		t.Fatalf("graphs body missing:\n%s", got)
+	if strings.Contains(got, builtinGraphsInstructions) || strings.Contains(got, "### Graphs") {
+		t.Fatalf("graphs must stay opt-in:\n%s", got)
+	}
+	selected := h.buildEnabledSkillsContext([]string{builtinGraphsID})
+	if !strings.Contains(selected, builtinGraphsInstructions) {
+		t.Fatalf("selected graphs body missing:\n%s", selected)
 	}
 }

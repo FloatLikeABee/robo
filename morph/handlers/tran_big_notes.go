@@ -440,43 +440,7 @@ func buildBigNoteHTML(title, markdown, kind string, questions []bigNoteQuestion,
 	if theme == "" || strings.EqualFold(theme, "default") {
 		theme = "dark"
 	}
-	dark := strings.Contains(strings.ToLower(theme), "dark")
-	lightProseCSS := `.prose{font-size:1.05rem;color:var(--ink)}
-.prose>:first-child{margin-top:0}
-.prose h1,.prose h2,.prose h3,.prose h4{line-height:1.25;margin:1.35em 0 .55em;font-weight:700}
-.prose h1{font-size:1.55rem}.prose h2{font-size:1.3rem}.prose h3{font-size:1.12rem}
-.prose p,.prose ul,.prose ol,.prose blockquote,.prose pre,.prose table{margin:.85em 0}
-.prose ul,.prose ol{padding-left:1.4em}
-.prose li{margin:.25em 0}
-.prose blockquote{padding:.35em 0 .35em 1em;border-left:3px solid var(--accent);color:var(--muted)}
-.prose code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:var(--card);padding:.12em .35em;border-radius:4px;border:1px solid var(--line)}
-.prose pre{overflow:auto;padding:1em;border-radius:10px;background:var(--card);border:1px solid var(--line)}
-.prose pre code{background:transparent;border:0;padding:0}
-.prose a{color:var(--accent)}
-.prose hr{border:0;border-top:1px solid var(--line);margin:1.5em 0}
-.prose strong{font-weight:700}
-.prose table{border-collapse:collapse;width:100%;font-size:.95em}
-.prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
-.prose th{background:var(--card)}`
-	var css string
-	if dark {
-		css = htmldoc.DarkBigNoteDocumentCSS()
-	} else {
-		css = `:root{--ink:#1c1917;--muted:#57534e;--line:#e7e5e4;--bg:#fafaf9;--card:#fff;--accent:#0f766e;}
-*{box-sizing:border-box}body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:linear-gradient(180deg,#f5f5f4,var(--bg));line-height:1.55}
-.wrap{max-width:720px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
-h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2}
-` + lightProseCSS + `
-.q{margin:1.25rem 0;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:12px;background:var(--card)}
-.q label{display:block;font-family:system-ui,sans-serif;font-weight:600;margin-bottom:.55rem}
-.q input[type=text],.q textarea,.q select{width:100%;padding:.65rem .75rem;border:1px solid var(--line);border-radius:8px;font:inherit}
-.q textarea{min-height:96px;resize:vertical}
-.opts{display:grid;gap:.4rem;font-family:system-ui,sans-serif}
-.opts label{font-weight:500;display:flex;gap:.5rem;align-items:flex-start}
-button.primary{margin-top:1.25rem;padding:.7rem 1.1rem;border:0;border-radius:999px;background:var(--accent);color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer}
-.theme{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
-	}
+	css := htmldoc.DarkBigNoteDocumentCSS()
 	mdBody := stripLeadingTitleHeading(markdown, title)
 	rendered := markdownToHTMLFragment(mdBody)
 	var body strings.Builder

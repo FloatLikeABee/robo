@@ -71,7 +71,7 @@ func TestTextAssistImprovePromptIncludesTitle(t *testing.T) {
 	assertNoSchoolOpsLeftover(t, p)
 }
 
-func TestTextAssistPromptsAllowMermaidFences(t *testing.T) {
+func TestTextAssistPromptsStayPlainUnlessADiagramHelps(t *testing.T) {
 	prompts := []string{
 		textAssistGenerateNotePrompt("onboarding flow"),
 		textAssistGenerateTodoPrompt("onboarding flow"),
@@ -81,11 +81,11 @@ func TestTextAssistPromptsAllowMermaidFences(t *testing.T) {
 		textAssistTaskChainStepPrompt("onboarding flow", ""),
 	}
 	for _, p := range prompts {
-		if strings.Contains(strings.ToLower(p), "no markdown fences") {
-			t.Errorf("still forbids mermaid fences:\n%s", p)
+		if !strings.Contains(p, "ordinary question") {
+			t.Errorf("missing reply shape:\n%s", p)
 		}
-		if !strings.Contains(p, "mermaid") && !strings.Contains(p, "Visual-first") {
-			t.Errorf("expected mermaid or Visual-first:\n%s", p)
+		if strings.Contains(p, "Visual-first") || strings.Contains(p, "short caption") || strings.Contains(strings.ToLower(p), "you may include a mermaid") {
+			t.Errorf("diagram invitation leaked:\n%s", p)
 		}
 	}
 }

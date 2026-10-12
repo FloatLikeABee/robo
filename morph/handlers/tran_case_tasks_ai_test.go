@@ -166,10 +166,13 @@ func TestParseCaseTaskAIDraftOutputMarkdownFallsBackToDescription(t *testing.T) 
 
 func TestCaseTaskAIDraftPromptAsksForMarkdown(t *testing.T) {
 	p := caseTaskAIDraftPrompt("source")
-	for _, want := range []string{"markdown", "mermaid", "Visual-first"} {
+	for _, want := range []string{"markdown", "only when", "ordinary question"} {
 		if !strings.Contains(p, want) {
 			t.Fatalf("missing %q in:\n%s", want, p)
 		}
+	}
+	if strings.Contains(p, "Visual-first") || strings.Contains(p, "short caption") {
+		t.Fatalf("diagram-first leaked:\n%s", p)
 	}
 }
 

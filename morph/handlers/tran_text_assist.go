@@ -86,15 +86,15 @@ func (h *Handlers) TranTextAssist(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"text": out})
 }
 
-const textAssistBodyOnlyRules = `Follow only that title as the topic. Do not invent a different subject. Do not output a replacement title (the app keeps the user's title). You may include a mermaid fenced diagram when the topic is structure, process, or quantities. No preamble. Output only the body.
+const textAssistBodyOnlyRules = `Follow only that title as the topic. Do not invent a different subject. Do not output a replacement title (the app keeps the user's title). No preamble. Output only the body.
 
-` + morphai.VisualFirstInstructions
+` + morphai.ReplyShapeInstructions
 
 func textAssistGenerateNotePrompt(seed string) string {
 	if seed == "" {
-		return `Write a concise personal note (2–6 short paragraphs) on a generic personal or work topic. You may include a mermaid fenced diagram when the topic is structure, process, or quantities. No preamble. Output only the body.
+		return `Write a concise personal note (2–6 short paragraphs) on a generic personal or work topic. No preamble. Output only the body.
 
-` + morphai.VisualFirstInstructions
+` + morphai.ReplyShapeInstructions
 	}
 	return `Title: "` + seed + `"
 
@@ -104,9 +104,9 @@ Write a concise personal note (2–6 short paragraphs) about that title.
 
 func textAssistGenerateTodoPrompt(seed string) string {
 	if seed == "" {
-		return `Write an actionable TODO body: up to 5 bullet subtasks for a generic personal or work task. You may include a mermaid fenced diagram when the topic is structure, process, or quantities. No preamble. Output only the body.
+		return `Write an actionable TODO body: up to 5 bullet subtasks for a generic personal or work task. No preamble. Output only the body.
 
-` + morphai.VisualFirstInstructions
+` + morphai.ReplyShapeInstructions
 	}
 	return `Title: "` + seed + `"
 
@@ -126,9 +126,9 @@ func textAssistImprovePrompt(kind, seed, text string) string {
 	if strings.TrimSpace(seed) != "" {
 		extra = "\nItem title (keep this topic):\n" + seed + "\n"
 	}
-	return `Improve the following ` + kindHint + ` text for clarity, tone, and usefulness. Keep the same meaning; fix grammar; be concise. You may include a mermaid fenced diagram when the topic is structure, process, or quantities. No preamble or closing remarks.` + extra + `
+	return `Improve the following ` + kindHint + ` text for clarity, tone, and usefulness. Keep the same meaning; fix grammar; be concise. No preamble or closing remarks.` + extra + `
 
-` + morphai.VisualFirstInstructions + `
+` + morphai.ReplyShapeInstructions + `
 
 Text to improve:
 ` + text + `
@@ -155,9 +155,7 @@ Rules:
 - Produce concrete, useful output: drafts, summaries, plans, email text, checklists, tables, or step-by-step instructions — whatever fits the task.
 - If the task implies live web search, sending email, or fetching private app data you cannot access, say so briefly and still deliver the best possible draft, outline, or template from context and general knowledge.
 - Build on prior outputs when relevant; note corrections instead of silently contradicting earlier steps.
-- You may include a mermaid fenced diagram when the topic is structure, process, or quantities.
-
-` + morphai.VisualFirstInstructions + `
+` + morphai.ReplyShapeInstructions + `
 
 Response:`
 }

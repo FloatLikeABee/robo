@@ -86,7 +86,8 @@ func renderStatFence(block string) string {
 			w = 1
 		}
 		y := 8 + i*28
-		fmt.Fprintf(&b, `<rect x="108" y="%d" height="16" width="%d" rx="4" fill="#38bdf8"/>`, y, w)
+		fills := []string{"#38bdf8", "#a78bfa", "#34d399", "#fbbf24"}
+		fmt.Fprintf(&b, `<rect x="108" y="%d" height="16" width="%d" rx="4" fill="%s"/>`, y, w, fills[i%len(fills)])
 		fmt.Fprintf(&b, `<text x="0" y="%d" fill="#94a3b8" font-size="12" font-family="system-ui,sans-serif">%s</text>`, y+13, html.EscapeString(row.label))
 	}
 	b.WriteString(`</svg></div>`)

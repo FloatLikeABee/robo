@@ -1,7 +1,29 @@
 package handlers
 
-import "strings"
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/robo/morphai"
+)
+
+func TestManagementChatLeadStatesReplyShapeAndIdentity(t *testing.T) {
+	text := managementChatLead(morphai.ModelIdentityInstructions("ollama", "llama3.2"))
+	for _, needle := range []string{
+		"ordinary question",
+		"provider ollama",
+		"model llama3.2",
+		"only for a real data read or change",
+		"GET /api/tran/case-tasks",
+	} {
+		if !strings.Contains(text, needle) {
+			t.Errorf("lead missing %q", needle)
+		}
+	}
+	if strings.Contains(text, "Visual-first") || strings.Contains(text, "short caption") || strings.Contains(text, "5.1") {
+		t.Fatalf("diagram-first or invented version leaked:\n%s", text)
+	}
+}
 
 func TestModuleRecordInstructionsNameRoutes(t *testing.T) {
 	text := managementToolInstructions

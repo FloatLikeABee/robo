@@ -33,13 +33,16 @@ test('empty inputs restore default', () => {
   expect(resolveRestoredSessionId({ lastId: '', sessionIds: [] })).toBe('default');
 });
 
-test('workspace stays open on phone and desktop, including a saved closed choice', () => {
-  expect(initialWorkspaceOpen({ stored: null, phone: true })).toBe(true);
-  expect(initialWorkspaceOpen({ phone: true })).toBe(true);
+test('unset phone workspace starts closed and desktop stays open', () => {
+  expect(initialWorkspaceOpen({ stored: null, phone: true })).toBe(false);
+  expect(initialWorkspaceOpen({ phone: true })).toBe(false);
   expect(initialWorkspaceOpen({ stored: null, phone: false })).toBe(true);
-  expect(initialWorkspaceOpen({ stored: '0', phone: true })).toBe(true);
-  expect(initialWorkspaceOpen({ stored: '0', phone: false })).toBe(true);
+});
+
+test('saved workspace choice wins on a phone', () => {
   expect(initialWorkspaceOpen({ stored: '1', phone: true })).toBe(true);
+  expect(initialWorkspaceOpen({ stored: '0', phone: true })).toBe(false);
+  expect(initialWorkspaceOpen({ stored: '0', phone: false })).toBe(false);
 });
 
 test('unset storage still reads as open for the desktop helper', () => {
@@ -54,5 +57,6 @@ test('readWorkspaceTab maps leftover files tab to knowledge', () => {
   expect(readWorkspaceTab('s1')).toBe('notes');
   localStorage.removeItem(workspaceTabStorageKey('s-none'));
   expect(readWorkspaceTab('s-none')).toBe(null);
-  expect(TABS.map((t) => t.id)).toEqual(['knowledge', 'notes']);
+  expect(TABS.map((t) => t.id)).toEqual(['notes', 'knowledge']);
+  expect(TABS.map((t) => t.label)).toEqual(['Notes & TODOs', 'Context & Knowledge']);
 });

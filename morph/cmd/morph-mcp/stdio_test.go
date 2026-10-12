@@ -19,6 +19,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"idongivaflyinfa/auth"
 	morphdb "idongivaflyinfa/db"
+	"idongivaflyinfa/mcp"
 )
 
 func TestMain(m *testing.M) {
@@ -117,12 +118,12 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		names[item["name"].(string)] = true
 		ann, _ := item["annotations"].(map[string]any)
 		name := item["name"].(string)
-		if name == "create_note" {
+		if strings.HasPrefix(name, "create_") {
 			if ann["readOnlyHint"] != false {
-				t.Fatalf("create_note annotations = %#v", ann)
+				t.Fatalf("%s annotations = %#v", name, ann)
 			}
 		} else if ann["readOnlyHint"] != true {
-			t.Fatalf("%v annotations = %#v", name, ann)
+			t.Fatalf("%s annotations = %#v", name, ann)
 		}
 	}
 	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note"} {
@@ -130,7 +131,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 			t.Fatalf("missing %s in %#v", name, tools)
 		}
 	}
-	if len(tools) != 4 {
+	if len(tools) != mcp.ToolCount {
 		t.Fatalf("tools = %#v", tools)
 	}
 

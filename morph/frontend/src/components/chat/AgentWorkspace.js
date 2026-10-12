@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 import NotesTodosContent from '../notesTodos/NotesTodosContent';
 import HybridContextDrawer from '../../HybridContextDrawer';
-import { useT } from '../../lib/localeReact';
 
 export const TABS = [
-  { id: 'knowledge', labelKey: 'contextKnowledge' },
-  { id: 'notes', labelKey: 'notesTodos' },
+  { id: 'notes', label: 'Notes & TODOs' },
+  { id: 'knowledge', label: 'Context & Knowledge' },
 ];
 
 const VALID_TABS = new Set(TABS.map((t) => t.id));
@@ -61,8 +60,10 @@ export function readStoredWorkspaceChoice() {
   return null;
 }
 
-export function initialWorkspaceOpen() {
-  return true;
+export function initialWorkspaceOpen({ stored = null, phone = false } = {}) {
+  if (stored === '0' || stored === false) return false;
+  if (stored === '1' || stored === true) return true;
+  return !phone;
 }
 
 export function writeWorkspaceOpen(open) {
@@ -110,7 +111,6 @@ export default function AgentWorkspace({
   onBringToConversation,
   onAttachmentChange,
 }) {
-  const t = useT();
   const tab = TABS.some((item) => item.id === activeTab) ? activeTab : 'knowledge';
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function AgentWorkspace({
   }, [sessionId, tab]);
 
   return (
-    <aside className="agent-workspace" aria-label={t('workspace')}>
+    <aside className="agent-workspace" aria-label="Agent workspace">
       <div className="agent-workspace-tabs" role="tablist">
         {TABS.map((item) => (
           <button
@@ -129,7 +129,7 @@ export default function AgentWorkspace({
             className={`agent-workspace-tab${tab === item.id ? ' is-active' : ''}`}
             onClick={() => onTabChange?.(item.id)}
           >
-            {t(item.labelKey)}
+            {item.label}
           </button>
         ))}
       </div>

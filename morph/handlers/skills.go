@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/robo/morphai"
 )
 
 type skillCreateBody struct {
@@ -261,11 +260,11 @@ const (
 const builtinResearchInstructions = `You are Morph AI Research. Analyse the operator's goal, which materials apply (pinned files, notes, knowledge, graph hits), and unknowns. Then:
 - For uploaded docs or library content, POST /api/graph/search first; use excerpts already in the prompt.
 - Use allowed catalog tools and web search only after that when needed.
-- Structure the answer by argument. Diagram first (mermaid) for structure or quantities; do not invent citations.`
+- Structure the answer by argument. Use a diagram only when it makes that structure clearer. Do not invent citations.`
 
-const builtinDesignInstructions = `You are Morph AI Design. Analyse the goal, materials, and unknowns first. Name constraints, sketch 2–3 options, recommend one. Show options as a mermaid diagram when it clarifies the trade-off. Do not jump to implementation unless the operator asked to build it.`
+const builtinDesignInstructions = `You are Morph AI Design. Analyse the goal, materials, and unknowns first. Name constraints, sketch 2–3 options, recommend one. Use a diagram only when it clarifies the trade-off. Do not jump to implementation unless the operator asked to build it.`
 
-const builtinGraphsInstructions = morphai.VisualFirstInstructions
+const builtinGraphsInstructions = `When this skill is selected, add one mermaid diagram if the question is structure, process, or quantities and a chart is clearer than prose. Otherwise answer in prose. Do not invent numbers.`
 
 type builtinSkillSeed struct {
 	id, name, description, instructions string
@@ -306,7 +305,7 @@ func builtinSkillSeeds() []builtinSkillSeed {
 		{
 			id:           builtinGraphsID,
 			name:         "Graphs",
-			description:  "When a reply can show structure or quantities, include a mermaid diagram or chart.",
+			description:  "Opt-in. Add one mermaid diagram only when a chart explains the question better than prose.",
 			instructions: builtinGraphsInstructions,
 		},
 	}
@@ -362,11 +361,24 @@ func (h *Handlers) skillBodyInstructions(id string) string {
 	return fallback
 }
 
+func staleDiagramOrder(instr string) bool {
+	lower := strings.ToLower(instr)
+	return strings.Contains(lower, "diagram first") || strings.Contains(lower, "visual-first") || strings.Contains(lower, "short caption")
+}
+
+func preferAlwaysOnInstructions(stored, fallback string) string {
+	stored = strings.TrimSpace(stored)
+	if stored == "" || staleDiagramOrder(stored) {
+		return fallback
+	}
+	return stored
+}
+
 func (h *Handlers) appendAlwaysOnAgentSkills(b *strings.Builder) {
 	b.WriteString("\n--- Default agent skills ---\n")
-	for _, id := range []string{builtinResearchID, builtinDesignID, builtinGraphsID} {
-		name, _ := defaultAgentSkillBody(id)
-		instr := h.skillBodyInstructions(id)
+	for _, id := range []string{builtinResearchID, builtinDesignID} {
+		name, fallback := defaultAgentSkillBody(id)
+		instr := preferAlwaysOnInstructions(h.skillBodyInstructions(id), fallback)
 		if name == "" || instr == "" {
 			continue
 		}
@@ -474,7 +486,15 @@ func (h *Handlers) skillPromptRows(skillIDs []string, all []db.AISkill) []skillP
 		}
 		if h != nil && h.db != nil {
 			if body, err := h.db.GetAISkillBody(id); err == nil {
-				row.Instructions = body.Instructions
+				row.Instructions = strings.TrimSpace(body.Instructions)
+			}
+		}
+		if strings.TrimSpace(row.Instructions) == "" {
+			if name, instr := defaultAgentSkillBody(id); strings.TrimSpace(instr) != "" {
+				if strings.TrimSpace(row.Name) == "" || row.Name == id {
+					row.Name = name
+				}
+				row.Instructions = instr
 			}
 		}
 		rows = append(rows, row)

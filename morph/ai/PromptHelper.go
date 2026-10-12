@@ -31,14 +31,14 @@ func BuildSQLPrompt(userPrompt string, sqlFiles []models.SQLFile) string {
 func BuildFormHTMLPrompt(formJSON string, formName string, formDescription string) string {
 	var promptBuilder strings.Builder
 	promptBuilder.WriteString("You are a professional web developer. Generate a beautiful, modern, and professional HTML form page.\n\n")
-	
-	promptBuilder.WriteString("Theme Colors (STRICT):\n")
-	promptBuilder.WriteString("- Primary/Accent: Dark Orange ONLY (use colors like #FF8C00, #FF7F00, or #E67300). Do NOT use any other accent colors.\n")
-	promptBuilder.WriteString("- Background: Really Dark Grey ONLY (use colors like #121212, #181818, or #1e1e1e). Do NOT introduce other background colors.\n")
-	promptBuilder.WriteString("- Text: Light grey or white for contrast on dark background.\n")
-	promptBuilder.WriteString("- Inputs: Background slightly darker than main background, with borders just a bit lighter than the dark grey (e.g. border colors around #303030–#3a3a3a). No colorful borders.\n")
-	promptBuilder.WriteString("- Overall: A minimal, professional dark theme using ONLY dark grey and dark orange, no other colors.\n\n")
-	
+
+	promptBuilder.WriteString("Theme (STRICT, dark only):\n")
+	promptBuilder.WriteString("- Font: Arial, Helvetica Neue, Helvetica, sans-serif.\n")
+	promptBuilder.WriteString("- Background: near-black (#070b14). Do not use a light page.\n")
+	promptBuilder.WriteString("- Text: light (#e8eef7) with clear heading sizes and spacing.\n")
+	promptBuilder.WriteString("- Accents: use several, not one hue. Cyan #38bdf8 for links, violet #a78bfa for section headings, mint #34d399 for a third accent.\n")
+	promptBuilder.WriteString("- Inputs: dark cards (#111827) with light text and a visible border (#1e293b).\n\n")
+
 	promptBuilder.WriteString("Form Information:\n")
 	if formName != "" {
 		promptBuilder.WriteString(fmt.Sprintf("Form Name: %s\n", formName))
@@ -47,15 +47,15 @@ func BuildFormHTMLPrompt(formJSON string, formName string, formDescription strin
 		promptBuilder.WriteString(fmt.Sprintf("Form Description: %s\n", formDescription))
 	}
 	promptBuilder.WriteString("\n")
-	
+
 	promptBuilder.WriteString("IMPORTANT: You must ONLY use the \"UDGridSections\" part of the JSON below. ")
 	promptBuilder.WriteString("All other properties (InIPBoundary, RequireIPAddress, ID, DataTypeId, etc.) are configuration and should be HIDDEN from the visible form. ")
 	promptBuilder.WriteString("Only render the sections and their fields (UDGridFields) as form elements.\n\n")
-	
+
 	promptBuilder.WriteString("Form JSON Structure:\n")
 	promptBuilder.WriteString(formJSON)
 	promptBuilder.WriteString("\n\n")
-	
+
 	promptBuilder.WriteString("Requirements:\n")
 	promptBuilder.WriteString("1. Extract ONLY the UDGridSections array from the JSON\n")
 	promptBuilder.WriteString("2. For each section, create a section header with the section Name\n")
@@ -69,7 +69,7 @@ func BuildFormHTMLPrompt(formJSON string, formName string, formDescription strin
 	promptBuilder.WriteString("   - Attachment: <input type=\"file\">\n")
 	promptBuilder.WriteString("4. Use DisplayName for field labels\n")
 	promptBuilder.WriteString("5. Mark required fields (Required: true) with an asterisk (*) and use the 'required' attribute\n")
-	promptBuilder.WriteString("6. Create a professional, modern design using ONLY dark grey and dark orange (no other colors)\n")
+	promptBuilder.WriteString("6. Create a dark futuristic page with the Arial stack and the cyan, violet, and mint accents above\n")
 	promptBuilder.WriteString("7. Use proper spacing, padding, and typography\n")
 	promptBuilder.WriteString("8. Make the form responsive and mobile-friendly\n")
 	promptBuilder.WriteString("9. Add a submit button at the bottom\n")
