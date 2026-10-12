@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>AI assist</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #070b14;
+    --card: #111827;
+    --ink: #e8eef7;
+    --muted: #94a3b8;
+    --line: #1e293b;
+    --accent: #38bdf8;
+    --accent-2: #a78bfa;
+    --accent-3: #34d399;
+  }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 480px at 8% -12%, rgba(167,139,250,.55) 0%, transparent 58%),
+      radial-gradient(720px 420px at 100% 0%, rgba(56,189,248,.35) 0%, transparent 52%),
+      var(--bg);
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  header, main, form, button, input, textarea, pre { font: inherit; color: inherit; }
+  header { padding: 14px 16px 0; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: var(--accent-2); }
+  main { padding: 8px 16px 16px; display: grid; gap: 10px; }
+  .muted { color: var(--muted); margin: 0; }
+  .meta { color: var(--accent); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+  .q { margin: 0; color: var(--accent-3); font-size: 16px; }
+  form, #stage { display: grid; gap: 8px; }
+  input, textarea, pre {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  pre { white-space: pre-wrap; margin: 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #070b14; border-color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI assist</h1>
+  <p id="status" class="muted">Open this panel from an MCP Apps host.</p>
+</header>
+<main>
+  <form id="start">
+    <input id="title" name="title" maxlength="200" placeholder="Title" autocomplete="off">
+    <textarea id="description" name="description" maxlength="4000" placeholder="Optional details"></textarea>
+    <button class="primary" id="begin" type="button">Start</button>
+  </form>
+  <section id="stage"></section>
+</main>
+<script>
+(function () {
+  var nextId = 1;
+  var pending = {};
+  var surface = "mcp";
+  var ctx = { kind: "note", title: "", description: "" };
+  var sessionId = "";
+
+  function clear(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function el(tag, text, className) {
+    var node = document.createElement(tag);
+    if (text != null) node.textContent = String(text);
+    if (className) node.className = className;
+    return node;
+  }
+
+  function showStatus(text) {
+    var status = document.getElementById("status");
+    if (status) status.textContent = text || "";
+  }
+
+  function button(label, className, onClick) {
+    var node = el("button", label, className);
+    node.type = "button";
+    node.addEventListener("click", onClick);
+    return node;
+  }
+
+  function hideStart() {
+    var form = document.getElementById("start");
+    if (form) form.hidden = true;
+  }
+
+  function renderQuestion(data) {
+    var stage = document.getElementById("stage");
+    clear(stage);
+    stage.appendChild(el("p", "Question " + data.asked + " of " + data.planned, "meta"));
+    stage.appendChild(el("p", data.question || "", "q"));
+    var box = document.createElement("textarea");
+    box.id = "answer";
+    box.placeholder = "Your answer";
+    stage.appendChild(box);
+    var row = el("div", null, "row");
+    row.appendChild(button("Skip", "", function () {
+      callTool("note_grill", { action: "skip", id: sessionId });
+    }));
+    row.appendChild(button("Enough", "", function () {
+      callTool("note_grill", { action: "finish", id: sessionId });
+    }));
+    row.appendChild(button("Next", "primary", function () {
+      var value = document.getElementById("answer").value || "";
+      if (!value.trim()) {
+        showStatus("Type an answer, or skip.");
+        return;
+      }
+      callTool("note_grill", { action: "answer", id: sessionId, answer: value });
+    }));
+    stage.appendChild(row);
+    showStatus("");
+  }
+
+  function renderReview(data) {
+    var stage = document.getElementById("stage");
+    clear(stage);
+    stage.appendChild(el("p", "Draft", "meta"));
+    stage.appendChild(el("pre", data.draft || ""));
+    if (surface === "spa") {
+      stage.appendChild(el("p", "Use this from the panel when it looks right.", "muted"));
+    } else {
+      stage.appendChild(button("Save note", "primary", function () {
+        callTool("create_note", {
+          title: data.title || ctx.title,
+          body: data.draft || ""
+        }).then(function (result) {
+          if (result && result.isError) return;
+          showStatus("Saved.");
+        });
+      }));
+    }
+    showStatus("");
+  }
+
+  function showResult(result) {
+    if (!result) return;
+    if (result.isError) {
+      var bits = [];
+      var content = result.content || [];
+      for (var i = 0; i < content.length; i++) {
+        if (content[i] && content[i].text) bits.push(String(content[i].text));
+      }
+      showStatus(bits.join(" ") || "AI assist failed");
+      return;
+    }
+    var data = result.structuredContent || {};
+    if (data.id) sessionId = String(data.id);
+    if (data.phase === "review") renderReview(data);
+    else if (data.question) {
+      hideStart();
+      renderQuestion(data);
+    }
+  }
+
+  function sendRequest(method, params) {
+    var id = nextId++;
+    return new Promise(function (resolve, reject) {
+      pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params }, "*");
+    });
+  }
+
+  function sendNotification(method, params) {
+    window.parent.postMessage({ jsonrpc: "2.0", method: method, params: params || {} }, "*");
+  }
+
+  function onMessage(event) {
+    var data = event.data;
+    if (!data || data.jsonrpc !== "2.0") return;
+    if (data.method === "ui/notifications/host-context") {
+      var params = data.params || {};
+      surface = params.surface || "mcp";
+      ctx.kind = params.kind || "note";
+      ctx.title = params.title || "";
+      ctx.description = params.description || "";
+      if (surface === "spa") hideStart();
+      if (surface === "spa" && ctx.title && !sessionId) {
+        callTool("note_grill", {
+          action: "start",
+          kind: ctx.kind,
+          title: ctx.title,
+          description: ctx.description
+        });
+      }
+      return;
+    }
+    if (data.id != null && pending[data.id]) {
+      var waiter = pending[data.id];
+      delete pending[data.id];
+      if (data.error) waiter.reject(data.error);
+      else waiter.resolve(data.result);
+      return;
+    }
+    if (data.method === "ui/notifications/tool-result") showResult(data.params || {});
+  }
+
+  function callTool(name, args) {
+    return sendRequest("tools/call", { name: name, arguments: args || {} }).then(function (result) {
+      showResult(result);
+      return result;
+    }).catch(function (err) {
+      var message = err && err.message ? err.message : "AI assist failed";
+      showStatus(String(message));
+    });
+  }
+
+  function reportSize() {
+    if (typeof ResizeObserver !== "function") return;
+    var lastH = 0;
+    var observer = new ResizeObserver(function () {
+      var height = Math.ceil(document.documentElement.scrollHeight);
+      if (height === lastH) return;
+      lastH = height;
+      sendNotification("ui/notifications/size-changed", { height: height });
+    });
+    observer.observe(document.documentElement);
+  }
+
+  function boot() {
+    window.addEventListener("message", onMessage);
+    document.getElementById("begin").addEventListener("click", function () {
+      var title = document.getElementById("title").value || "";
+      if (!title.trim()) {
+        showStatus("Add a title first.");
+        return;
+      }
+      ctx.kind = "note";
+      ctx.title = title;
+      ctx.description = document.getElementById("description").value || "";
+      callTool("note_grill", {
+        action: "start",
+        kind: "note",
+        title: ctx.title,
+        description: ctx.description
+      });
+    });
+    reportSize();
+    sendRequest("ui/initialize", {
+      protocolVersion: "2026-01-26",
+      appInfo: { name: "Morph grill", version: "0.3.0" },
+      appCapabilities: { availableDisplayModes: ["inline"] }
+    }).then(function () {
+      sendNotification("ui/notifications/initialized", {});
+    }).catch(function (err) {
+      var message = err && err.message ? err.message : "Could not open AI assist";
+      showStatus(String(message));
+    });
+  }
+
+  if (typeof window !== "undefined" && window.parent && window.parent !== window) boot();
+})();
+</script>
+</body>
+</html>

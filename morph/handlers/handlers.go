@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"idongivaflyinfa/ai"
 	"idongivaflyinfa/auth"
 	"idongivaflyinfa/db"
+	"idongivaflyinfa/grill"
 	"idongivaflyinfa/hybridcontext"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +53,10 @@ type Handlers struct {
 	distillLesson func(ctx context.Context, transcript string) (trigger, rule string, err error)
 	// managementReply, if set, replaces the model inside chatWithManagementTools (tests).
 	managementReply func(ctx context.Context, prompt string) (string, error)
+	grillSessions   *grill.Store
+	grillMu         sync.Mutex
+	// grillComplete, if set, replaces the model for note and TODO AI assist (tests).
+	grillComplete grill.Completer
 }
 
 // New creates a new Handlers instance.
@@ -75,5 +81,6 @@ func New(database *db.DB, aiService *ai.AIService, externalAPIBase string, tranS
 		entityAttachmentMax:     entityAttachmentMax,
 		entityAttachmentRootDir: strings.TrimSpace(entityAttachmentDir),
 		importJobs:              newImportJobStore(),
+		grillSessions:           grill.NewStore(),
 	}
 }

@@ -1,6 +1,6 @@
 # morph-mcp
 
-Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui`. Tools: read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` (not read-only). `resources/list` returns `ui://morph/notes` (`text/html;profile=mcp-app`). `resources.listChanged` is not advertised.
+Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui`. Tools include read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` and `note_grill` (not read-only), and create, list, and get for stick notes, timelines, stories, research, and event logs. `resources/list` returns `ui://morph/notes` and `ui://morph/grill` (`text/html;profile=mcp-app`). `resources.listChanged` is not advertised. `note_grill` does not insert a note.
 
 `list_my_tasks` and `get_task` return the signed-in user's own Notes & TODOs (`user_note_todo`), not the shared MorphNotes Tasks board. Rows are filtered by the token subject. Optional list filters: `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), `limit` (default 50, max 100). `get_task` takes an integer `id`. Someone else's id is not found.
 
@@ -59,7 +59,7 @@ Put the JSON `token` in `MORPH_MCP_TOKEN`. Placeholders only. Do not commit a re
 
 ## MCP Apps (Claude Desktop)
 
-`list_my_tasks`, `get_task`, and `create_note` point at `ui://morph/notes`. Claude Desktop renders that page in a sandboxed iframe. The page lists notes, opens one, and creates one by calling those tools through the host. The page does not receive the token. The MCP Apps overview also names Claude, VS Code GitHub Copilot, Microsoft 365 Copilot, Goose, Postman, MCPJam, and Archestra.AI as renderers of this same stdio server.
+`list_my_tasks`, `get_task`, and `create_note` point at `ui://morph/notes`. `note_grill` points at `ui://morph/grill`. Claude Desktop renders those pages in a sandboxed iframe. The notes page lists notes, opens one, and creates one by calling those tools through the host. The grill page drafts a body and calls `create_note` only after that draft is shown. The pages do not receive the token. The MCP Apps overview also names Claude, VS Code GitHub Copilot, Microsoft 365 Copilot, Goose, Postman, MCPJam, and Archestra.AI as renderers of this same stdio server.
 
 Local Morph is http://localhost:3031/. The API is http://127.0.0.1:9090. Get the token with the login request in [Token for local Morph](#token-for-local-morph), then put these three variables in `claude_desktop_config.json`. Placeholders only.
 

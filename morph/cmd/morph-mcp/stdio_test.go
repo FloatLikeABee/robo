@@ -118,7 +118,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		names[item["name"].(string)] = true
 		ann, _ := item["annotations"].(map[string]any)
 		name := item["name"].(string)
-		if strings.HasPrefix(name, "create_") {
+		if strings.HasPrefix(name, "create_") || name == "note_grill" {
 			if ann["readOnlyHint"] != false {
 				t.Fatalf("%s annotations = %#v", name, ann)
 			}
@@ -126,7 +126,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 			t.Fatalf("%s annotations = %#v", name, ann)
 		}
 	}
-	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note"} {
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note", "note_grill"} {
 		if !names[name] {
 			t.Fatalf("missing %s in %#v", name, tools)
 		}
@@ -444,6 +444,10 @@ func TestStdioNotesApp(t *testing.T) {
 			if nested != "" || flat != "" {
 				t.Fatalf("whoami meta = %#v", tool.Meta)
 			}
+		case "note_grill":
+			if nested != "ui://morph/grill" || flat != "ui://morph/grill" || !strings.Contains(strings.Join(visibility, ","), "model") || !strings.Contains(strings.Join(visibility, ","), "app") {
+				t.Fatalf("note_grill meta = %#v", tool.Meta)
+			}
 		}
 	}
 
@@ -451,7 +455,7 @@ func TestStdioNotesApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://morph/notes" || resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
+	if len(resources.Resources) != 2 || !stdioResource(resources.Resources, "ui://morph/notes") || !stdioResource(resources.Resources, "ui://morph/grill") {
 		t.Fatalf("resources = %+v", resources.Resources)
 	}
 	read, err := proc.session.ReadResource(ctx, &sdkmcp.ReadResourceParams{URI: "ui://morph/notes"})
@@ -491,6 +495,15 @@ func TestStdioNotesApp(t *testing.T) {
 	metaJSON, _ := json.Marshal(metaDump)
 	t.Logf("MCP Apps go-sdk stdio transcript (token redacted)\ninitialize ui extension: %s\ntools/list ui meta: %s\nresources/read uri: %s mime: %s htmlBytes: %d\ntools/call list_my_tasks type=note: %s",
 		redactToken(string(extRaw), tok), redactToken(string(metaJSON), tok), read.Contents[0].URI, read.Contents[0].MIMEType, len(html), listText)
+}
+
+func stdioResource(resources []*sdkmcp.Resource, uri string) bool {
+	for _, resource := range resources {
+		if resource != nil && resource.URI == uri && resource.MIMEType == "text/html;profile=mcp-app" {
+			return true
+		}
+	}
+	return false
 }
 
 func stdioToolUI(tool *sdkmcp.Tool) (nested, flat string, visibility []string) {
