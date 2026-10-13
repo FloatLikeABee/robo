@@ -94,6 +94,7 @@ Unsure between two kinds? Call `suggest_note_kind`. Pass the ask as `intent` and
 - Dates: ISO (`2026-10-12` or RFC3339).
 - Length: `note` a few paragraphs; `todo` one action; `big_note` chapters; `timeline` dated bullets; `research` prompt, findings, sources.
 - Diagrams: rarely. A table or a short list is enough.
+- HTML: Morph's base skill is html-anything, vendored at `skills/vendor/html-anything/` (Apache-2.0, nexu-io/html-anything). Load `.cursor/skills/html-anything/SKILL.md` when writing HTML or markdown that becomes HTML. Use Arial or a similar sans font, futuristic dark mode, clear content, and varied colours (cyan, violet, mint).
 - Do not write `MORPH_MCP_TOKEN`, `JWT_SECRET`, passwords, or raw PATs into a note, a commit, or the chat.
 
 ## 6. The grill

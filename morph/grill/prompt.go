@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/robo/morphai"
 )
 
 const (
@@ -154,7 +156,7 @@ func WritePrompt(s Session) string {
 	default:
 		b.WriteString("- Two to five short paragraphs.\n")
 	}
-	return b.String()
+	return morphai.WithHTMLSkill(b.String())
 }
 
 // ParseQuestions keeps on-topic questions and fills up to n from the fallback list.

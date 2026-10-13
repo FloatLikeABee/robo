@@ -75,6 +75,15 @@ func TestPromptsDoNotAskTheModelToAnswer(t *testing.T) {
 	}
 }
 
+func TestWritePromptLoadsHTMLSkillAndStaysBodyOnly(t *testing.T) {
+	write := WritePrompt(Session{Kind: KindNote, Title: exampleTitle, Turns: []Turn{{Question: "Who is it for?", Answer: "Agents"}}})
+	for _, needle := range []string{"html-anything", "Arial", "#38bdf8", "Output only the body."} {
+		if !strings.Contains(write, needle) {
+			t.Fatalf("missing %q in:\n%s", needle, write)
+		}
+	}
+}
+
 func TestStopPhraseIsTheWholeAnswer(t *testing.T) {
 	if !IsStopPhrase("enough, write it now") || !IsStopPhrase("  DONE ") {
 		t.Fatal("expected stop phrases")

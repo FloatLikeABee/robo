@@ -69,6 +69,9 @@ coverage.*
 *.dylib
 bin/
 vendor/
+# Morph-vendored skills are not Go modules.
+!skills/vendor/
+!skills/vendor/**
 
 # Nested repo backups (monorepo migration)
 **/.git.nested-backup/

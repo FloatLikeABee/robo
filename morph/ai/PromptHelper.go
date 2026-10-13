@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"idongivaflyinfa/models"
+
+	"github.com/robo/morphai"
 )
 
 // BuildSQLPrompt constructs a prompt for SQL generation based on user request and reference SQL files
@@ -82,7 +84,7 @@ func BuildFormHTMLPrompt(formJSON string, formName string, formDescription strin
 	promptBuilder.WriteString("Do not include any markdown code blocks or explanations. ")
 	promptBuilder.WriteString("The HTML must be self-contained and render a functional form based on the UDGridSections data.")
 
-	return promptBuilder.String()
+	return morphai.WithHTMLSkill(promptBuilder.String())
 }
 
 // BuildFormSelectionPrompt builds the system + user prompt for choosing a form by name.

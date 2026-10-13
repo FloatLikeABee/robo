@@ -39,3 +39,16 @@ Assistant markdown rendered in Morph AI chat MUST use a sans-serif font stack an
 - **WHEN** Morph AI renders an assistant markdown reply
 - **THEN** the markdown block uses a sans-serif font stack
 - **AND** it does not switch the chat to a light background
+
+### Requirement: Generation prompts load the html-anything skill
+When Morph asks a model to write HTML or markdown that becomes a generated document, the prompt MUST include the compact html-anything skill and Ge's Arial dark multi-accent overlay. It MUST NOT request a light page or a single-accent palette.
+
+#### Scenario: Form HTML prompt
+- **WHEN** Morph builds the form HTML generation prompt
+- **THEN** the prompt includes the compact html-anything skill
+- **AND** it names a dark theme, a sans-serif font, and more than one accent color
+
+#### Scenario: Generated markdown prompt
+- **WHEN** Morph builds a timeline, research, or story generation prompt
+- **THEN** the prompt includes the compact html-anything skill
+- **AND** it still asks for markdown that the server can render, not raw HTML unless the path is form HTML

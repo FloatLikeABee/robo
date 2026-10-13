@@ -11,7 +11,7 @@ If `create_note`, `list_my_tasks`, or `get_task` is not available, stop and repo
 
 `whoami` is optional. Call it when it is available and you do not know which user the server is. Do not refuse a create solely because you skipped `whoami`. These tools take no user-id argument. They act as the verified session user.
 
-When the kind is unclear, call `suggest_note_kind` with the ask as `intent`. If `use_grill` is true, run `note_grill` and show the draft before `create_note`. Check for a duplicate before creating.
+When the kind is unclear, call `suggest_note_kind` with the ask as `intent`. If `use_grill` is true, run `note_grill` and show the draft before `create_note`. Check for a duplicate before creating. HTML or generated-document output uses the html-anything skill (`.cursor/skills/html-anything/SKILL.md`, `skills/vendor/html-anything/`).
 
 ## When
 
