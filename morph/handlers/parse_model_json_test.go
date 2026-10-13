@@ -52,6 +52,29 @@ func TestParseModelJSONFixtureWithFencesAndProse(t *testing.T) {
 	}
 }
 
+func TestParseModelJSONMissingCommaAfterValue(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "ai_json", "qwen_missing_comma.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if json.Valid(raw) {
+		t.Fatal("fixture must stay invalid until missing-comma repair")
+	}
+	var out struct {
+		Title    string `json:"title"`
+		Markdown string `json:"markdown"`
+	}
+	if err := parseModelJSON(string(raw), &out); err != nil {
+		t.Fatalf("parseModelJSON missing comma: %v", err)
+	}
+	if out.Title != "Creating MorphNotes: a Field Guide" {
+		t.Fatalf("title = %q", out.Title)
+	}
+	if !strings.Contains(out.Markdown, "sharing pools") {
+		t.Fatalf("markdown = %q", out.Markdown)
+	}
+}
+
 func TestParseModelJSONValidUnchanged(t *testing.T) {
 	raw := `{"title":"Hi","markdown":"Line one\nLine two"}`
 	var out struct {

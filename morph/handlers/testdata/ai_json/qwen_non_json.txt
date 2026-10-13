@@ -1,0 +1,4 @@
+I cannot return JSON for the note. Creating MorphNotes is a field guide for agents.
+
+Use note kinds, the consent-based sharing pool, and the secret/PII block.
+Do not invent extra products.

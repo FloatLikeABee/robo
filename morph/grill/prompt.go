@@ -182,7 +182,10 @@ func WritePrompt(s Session) string {
 	}
 	b.WriteString("- Hex colours only (#38bdf8 #a78bfa #34d399). Never write a colour name before a hex.\n")
 	b.WriteString("- Do not write a letter. No Dear, no Best regards, no [Your Name].\n")
-	return morphai.WithHTMLSkill(b.String()) + "\n\nFormat (wins): Output only the body. This is note content, not a letter and not a full HTML page. Hex only. No Dear, no sign-off, no [Your Name], no <!DOCTYPE html>.\n"
+	b.WriteString("- Use only the interview answers. Keep the user's units and currency.\n")
+	b.WriteString("- Do not invent dates or places.\n")
+	b.WriteString("- Card fill #111827; accent as border only. Never fill a card with #a78bfa.\n")
+	return morphai.WithHTMLSkill(b.String()) + "\n\nFormat (wins): Output only the body fragment. Keep units and currency. Do not invent dates or places. No <!DOCTYPE html>, no <style>, no html/head/body. Card #111827 with accent border.\n"
 }
 
 // ParseQuestions keeps on-topic questions and fills up to n from the fallback list.
@@ -275,7 +278,17 @@ func IsStopPhrase(answer string) bool {
 	}
 }
 
-var chattyDraft = regexp.MustCompile(`(?i)(great[!]|(?:i['’]m|i am) morph|as an ai|feel free to (?:let me know|ask)|how can i (?:help|assist)|let me know if you)`)
+var (
+	chattyDraft = regexp.MustCompile(`(?i)(great[!]|(?:i['’]m|i am) morph|as an ai|feel free to (?:let me know|ask)|how can i (?:help|assist)|let me know if you)`)
+	styleBlock  = regexp.MustCompile(`(?is)<style\b[^>]*>.*?</style>`)
+	headBlock   = regexp.MustCompile(`(?is)<head\b[^>]*>.*?</head>`)
+	doctypeTag  = regexp.MustCompile(`(?i)<!doctype[^>]*>`)
+	htmlTag     = regexp.MustCompile(`(?i)</?html\b[^>]*>`)
+	bodyTag     = regexp.MustCompile(`(?i)</?body\b[^>]*>`)
+	weekdayWord = regexp.MustCompile(`(?i)\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b`)
+	clockStamp  = regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*(am|pm)?\b`)
+	dollarAmt   = regexp.MustCompile(`\$\s*\d`)
+)
 
 func looksLikeLetter(text string) bool {
 	low := strings.ToLower(text)
@@ -288,10 +301,50 @@ func looksLikeLetter(text string) bool {
 	return (greet && sign) || (htmlDoc && (greet || sign))
 }
 
-// SanitizeDraft drops a chatty assistant reply or a letter-shaped HTML page.
+func stripHTMLDocument(s string) string {
+	s = styleBlock.ReplaceAllString(s, "")
+	s = headBlock.ReplaceAllString(s, "")
+	s = doctypeTag.ReplaceAllString(s, "")
+	s = htmlTag.ReplaceAllString(s, "")
+	s = bodyTag.ReplaceAllString(s, "")
+	return strings.TrimSpace(s)
+}
+
+func interviewFacts(s Session) string {
+	var b strings.Builder
+	b.WriteString(s.Title)
+	b.WriteByte('\n')
+	b.WriteString(s.Description)
+	for _, turn := range s.Turns {
+		b.WriteByte('\n')
+		b.WriteString(turn.Answer)
+	}
+	return b.String()
+}
+
+func factsNameRMB(facts string) bool {
+	low := strings.ToLower(facts)
+	return strings.Contains(low, "rmb") || strings.Contains(low, "cny") || strings.Contains(low, "yuan") || strings.Contains(low, "¥")
+}
+
+func ungroundedDraft(sess Session, draft string) bool {
+	facts := interviewFacts(sess)
+	if factsNameRMB(facts) && dollarAmt.MatchString(draft) {
+		return true
+	}
+	if clockStamp.MatchString(draft) && !clockStamp.MatchString(facts) {
+		return true
+	}
+	if weekdayWord.MatchString(draft) && !weekdayWord.MatchString(facts) {
+		return true
+	}
+	return false
+}
+
+// SanitizeDraft drops a chatty assistant reply, a document wrapper, or an ungrounded draft.
 func SanitizeDraft(sess Session, raw string) string {
-	text := stripFences(raw)
-	if looksLikeLetter(text) {
+	text := stripHTMLDocument(stripFences(raw))
+	if looksLikeLetter(text) || ungroundedDraft(sess, text) {
 		return DraftFromFacts(sess)
 	}
 	paras := splitParas(text)
@@ -300,6 +353,9 @@ func SanitizeDraft(sess Session, raw string) string {
 		text = strings.TrimSpace(strings.Join(paras, "\n\n"))
 	}
 	if text == "" || (chattyDraft.MatchString(text) && utf8.RuneCountInString(text) < 400) {
+		return DraftFromFacts(sess)
+	}
+	if ungroundedDraft(sess, text) {
 		return DraftFromFacts(sess)
 	}
 	return text

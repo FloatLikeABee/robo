@@ -153,48 +153,11 @@ func (h *Handlers) attachBigNoteURL(n *bigNote) {
 }
 
 func extractJSONObjectAware(s string) (string, bool) {
-	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "```json")
-	s = strings.TrimPrefix(s, "```JSON")
-	s = strings.TrimPrefix(s, "```")
-	s = strings.TrimSuffix(s, "```")
-	s = strings.TrimSpace(s)
-	start := strings.Index(s, "{")
-	if start < 0 {
+	objs := extractJSONObjects(s)
+	if len(objs) == 0 {
 		return "", false
 	}
-	depth := 0
-	inString := false
-	escaped := false
-	for i := start; i < len(s); i++ {
-		ch := s[i]
-		if inString {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if ch == '\\' {
-				escaped = true
-				continue
-			}
-			if ch == '"' {
-				inString = false
-			}
-			continue
-		}
-		switch ch {
-		case '"':
-			inString = true
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				return s[start : i+1], true
-			}
-		}
-	}
-	return "", false
+	return objs[0], true
 }
 
 func scanBigNote(scanner interface {
@@ -294,6 +257,7 @@ Questionnaire rules:
 		b.WriteString(`
 Note rules:
 - Long-form readable note (article style), concise.
+- At least 3 ## sections, each with a short paragraph. One paragraph is too thin.
 - questions must be [].
 `)
 	}
@@ -330,16 +294,93 @@ func (h *Handlers) generateBigNoteContent(ctx context.Context, idea, theme, kind
 
 	genCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	raw, err := h.aiService.ChatCompletionLong(genCtx, []ai.DashScopeMessage{{Role: "user", Content: bigNoteGeneratePrompt(idea, theme, kind, prompt, currentMD)}})
+	userPrompt := bigNoteGeneratePrompt(idea, theme, kind, prompt, currentMD)
+	raw, err := h.aiService.ChatCompletionLong(genCtx, []ai.DashScopeMessage{{Role: "user", Content: userPrompt}})
 	if err != nil {
 		return out, err
 	}
-	if err := parseModelJSON(raw, &out); err != nil {
-		if errors.Is(err, errNoModelJSON) {
-			return out, errors.New("AI did not return JSON for the note")
+	replies := []string{raw}
+	parsedOK := parseModelJSON(raw, &out) == nil
+	if !parsedOK || thinBigNoteMarkdown(out.Markdown) {
+		raw2, err2 := h.aiService.ChatCompletionLong(genCtx, []ai.DashScopeMessage{{Role: "user", Content: userPrompt}})
+		if err2 == nil {
+			replies = append(replies, raw2)
 		}
-		return out, fmt.Errorf("parse AI note JSON: %w", err)
 	}
+	return resolveBigNoteFromReplies(idea, theme, kind, replies)
+}
+
+func thinBigNoteMarkdown(md string) bool {
+	return strings.Count(md, "## ") < 3
+}
+
+func ideaBulletLines(idea string) string {
+	var lines []string
+	for _, part := range strings.FieldsFunc(idea, func(r rune) bool {
+		return r == ',' || r == ';' || r == ':'
+	}) {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			lines = append(lines, "- "+part)
+		}
+	}
+	if len(lines) == 0 {
+		return idea
+	}
+	return strings.Join(lines, "\n")
+}
+
+func expandBigNoteFromIdea(idea, md string) string {
+	md = strings.TrimSpace(md)
+	idea = strings.TrimSpace(idea)
+	if !thinBigNoteMarkdown(md) {
+		return md
+	}
+	if md == "" {
+		md = idea
+	}
+	n := strings.Count(md, "## ")
+	if n == 0 {
+		return "## Overview\n\n" + md + "\n\n## Details\n\n" + idea + "\n\n## What this covers\n\n" + ideaBulletLines(idea)
+	}
+	for _, h := range []string{"## Details", "## What this covers", "## Notes"} {
+		if strings.Count(md, "## ") >= 3 {
+			break
+		}
+		if strings.Contains(md, h) {
+			continue
+		}
+		md += "\n\n" + h + "\n\n" + idea
+	}
+	return md
+}
+
+func resolveBigNoteFromReplies(idea, theme, kind string, replies []string) (bigNoteAIResult, error) {
+	var out bigNoteAIResult
+	have := false
+	last := ""
+	for _, raw := range replies {
+		last = raw
+		var next bigNoteAIResult
+		if err := parseModelJSON(raw, &next); err != nil {
+			continue
+		}
+		if !have || (thinBigNoteMarkdown(out.Markdown) && !thinBigNoteMarkdown(next.Markdown)) {
+			out = next
+			have = true
+		}
+		if !thinBigNoteMarkdown(out.Markdown) {
+			break
+		}
+	}
+	if !have {
+		out.Markdown = strings.TrimSpace(stripModelFences(last))
+	}
+	finishBigNoteResult(&out, idea, kind, theme)
+	return out, nil
+}
+
+func finishBigNoteResult(out *bigNoteAIResult, idea, kind, theme string) {
 	out.Title = strings.TrimSpace(out.Title)
 	out.Markdown = strings.TrimSpace(out.Markdown)
 	out.HTML = strings.TrimSpace(out.HTML)
@@ -349,6 +390,7 @@ func (h *Handlers) generateBigNoteContent(ctx context.Context, idea, theme, kind
 	if out.Markdown == "" {
 		out.Markdown = "# " + out.Title + "\n\n" + idea
 	}
+	out.Markdown = expandBigNoteFromIdea(idea, out.Markdown)
 	if kind == "questionnaire" && len(out.Questions) == 0 {
 		out.Questions = []bigNoteQuestion{{
 			ID:    "q1",
@@ -380,7 +422,6 @@ func (h *Handlers) generateBigNoteContent(ctx context.Context, idea, theme, kind
 	if utf8.RuneCountInString(out.Title) > 255 {
 		out.Title = string([]rune(out.Title)[:255])
 	}
-	return out, nil
 }
 
 func markdownToHTMLFragment(markdown string) string {
