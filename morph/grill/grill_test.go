@@ -3,6 +3,8 @@ package grill
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -153,6 +155,78 @@ func TestSanitizeReplacesTheChattyScreenshot(t *testing.T) {
 	}
 	if !strings.Contains(got, "People building agents") || !strings.Contains(got, exampleTitle) {
 		t.Fatalf("draft = %q", got)
+	}
+}
+
+func offsiteSess() Session {
+	return Session{
+		Kind:  KindNote,
+		Title: "Team offsite plan for 12 people in Hangzhou",
+		Turns: []Turn{
+			{Question: "What should this note help someone do?", Answer: "Plan a 2-day offsite for 12 people in Hangzhou, budget 30k RMB."},
+			{Question: "Which details are essential?", Answer: "West Lake area. Late November. Strategy workshop then hike and dinner."},
+			{Question: "Who is it for?", Answer: "The team going to Hangzhou."},
+		},
+	}
+}
+
+func TestSanitizeStripsGrillDraftDocument(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "grill-draft.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := SanitizeDraft(offsiteSess(), string(raw))
+	low := strings.ToLower(got)
+	for _, banned := range []string{"<!doctype", "<html", "<head", "<body", "<style"} {
+		if strings.Contains(low, banned) {
+			t.Fatalf("wrapper leaked %q in:\n%s", banned, got)
+		}
+	}
+}
+
+func TestSanitizeDropsDollarRewriteOfRMB(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "grill-draft.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := SanitizeDraft(offsiteSess(), string(raw))
+	if strings.Contains(got, "$30,000") || strings.Contains(got, "$5,000") {
+		t.Fatalf("currency rewrite kept: %q", got)
+	}
+	if !strings.Contains(got, "RMB") && !strings.Contains(got, "30k") {
+		t.Fatalf("facts dropped: %q", got)
+	}
+	if strings.Contains(got, "Tuesday") || strings.Contains(got, "12:00") {
+		t.Fatalf("invented clock kept: %q", got)
+	}
+}
+
+func TestWritePromptGroundsUnitsAndPlaces(t *testing.T) {
+	write := WritePrompt(offsiteSess())
+	low := strings.ToLower(write)
+	if !strings.Contains(low, "units") && !strings.Contains(low, "currency") {
+		t.Fatalf("write prompt must keep units/currency:\n%s", write)
+	}
+	if !strings.Contains(low, "do not invent") && !strings.Contains(low, "don't invent") {
+		t.Fatalf("write prompt must forbid invented dates/places:\n%s", write)
+	}
+	if !strings.Contains(write, "30k RMB") {
+		t.Fatal("write prompt dropped the answer")
+	}
+}
+
+func TestAppHTMLCardIsDarkWithAccentBorder(t *testing.T) {
+	if !strings.Contains(AppHTML, "--card: #111827") {
+		t.Fatal("missing #111827 card")
+	}
+	if !strings.Contains(AppHTML, "border: 1px solid var(--accent)") && !strings.Contains(AppHTML, "border:1px solid var(--accent)") {
+		t.Fatal("question/draft card must use an accent border")
+	}
+	if strings.Contains(AppHTML, "background: #a78bfa") || strings.Contains(AppHTML, "background:#a78bfa") {
+		t.Fatal("violet card fill")
+	}
+	if strings.Contains(AppHTML, ".q { margin: 0; color: var(--accent-3);") {
+		t.Fatal("mint question text on the card")
 	}
 }
 

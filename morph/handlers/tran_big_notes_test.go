@@ -131,4 +131,22 @@ func TestBigNoteGeneratePromptGroundsIdea(t *testing.T) {
 	if !strings.Contains(low, "do not invent") && !strings.Contains(low, "forbid invent") {
 		t.Fatalf("prompt must forbid invented features:\n%s", got)
 	}
+	if !strings.Contains(got, "##") || (!strings.Contains(low, "at least 3") && !strings.Contains(low, "at least three") && !strings.Contains(low, "three ##")) {
+		t.Fatalf("prompt must require at least three ## sections:\n%s", got)
+	}
+}
+
+func TestResolveBigNoteExpandsOneParagraph(t *testing.T) {
+	idea := "PR152 run 1: field guide to Morph notes for agents: note kinds, the consent-based sharing pool, and the secret/PII block"
+	thin := `{"title":"Creating MorphNotes: a Field Guide","markdown":"MorphNotes is designed to support secure, consent-based sharing pools. This guide will help agents understand the key features, including note kinds, the consent-based sharing pool, and the secret/PII block."}`
+	out, err := resolveBigNoteFromReplies(idea, "dark", "note", []string{thin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(out.Markdown, "## "); n < 3 {
+		t.Fatalf("want ≥3 ## sections, got %d in:\n%s", n, out.Markdown)
+	}
+	if !strings.Contains(out.Markdown, "sharing pool") && !strings.Contains(out.Markdown, "note kinds") {
+		t.Fatalf("expand dropped the idea: %q", out.Markdown)
+	}
 }
