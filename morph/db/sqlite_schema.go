@@ -489,6 +489,81 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 	if err := migrateNotePlatform(db); err != nil {
 		return err
 	}
+	return migrateNotePool(db)
+}
+
+func migrateNotePool(db *sql.DB) error {
+	if err := sqliteAddColumnIfMissing(db, "plat_users", "pool_alias", "TEXT NULL"); err != nil {
+		return err
+	}
+	_, _ = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uk_plat_users_pool_alias ON plat_users(pool_alias)`)
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS pool_share (
+			id TEXT NOT NULL PRIMARY KEY,
+			owner_user_id TEXT NOT NULL,
+			source_kind TEXT NOT NULL,
+			source_id INTEGER NOT NULL,
+			visibility TEXT NOT NULL DEFAULT 'pool',
+			title TEXT NOT NULL DEFAULT '',
+			summary TEXT NOT NULL DEFAULT '',
+			content TEXT NOT NULL DEFAULT '',
+			license TEXT NOT NULL DEFAULT 'CC-BY-4.0',
+			author_alias TEXT NOT NULL DEFAULT 'anonymous',
+			status TEXT NOT NULL DEFAULT 'live',
+			created_at TEXT NOT NULL,
+			revoked_at TEXT NULL,
+			view_count INTEGER NOT NULL DEFAULT 0,
+			report_count INTEGER NOT NULL DEFAULT 0
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_pool_share_status ON pool_share(status, visibility)`,
+		`CREATE TABLE IF NOT EXISTS pool_share_tag (
+			share_id TEXT NOT NULL,
+			tag TEXT NOT NULL,
+			PRIMARY KEY (share_id, tag)
+		)`,
+		`CREATE TABLE IF NOT EXISTS pool_share_topic (
+			share_id TEXT NOT NULL,
+			topic TEXT NOT NULL,
+			PRIMARY KEY (share_id, topic)
+		)`,
+		`CREATE TABLE IF NOT EXISTS pool_topic (
+			slug TEXT NOT NULL PRIMARY KEY,
+			label TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS pool_report (
+			id TEXT NOT NULL PRIMARY KEY,
+			share_id TEXT NOT NULL,
+			reporter_user_id TEXT NOT NULL,
+			reason TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			UNIQUE (share_id, reporter_user_id)
+		)`,
+	}
+	for _, s := range stmts {
+		if _, err := db.Exec(s); err != nil {
+			return err
+		}
+	}
+	if _, err := db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS pool_fts USING fts5(
+		title, summary, content, tags, share_id UNINDEXED,
+		tokenize='unicode61'
+	)`); err != nil {
+		return err
+	}
+	for _, row := range [][2]string{
+		{"productivity", "Productivity"},
+		{"learning", "Learning"},
+		{"travel", "Travel"},
+		{"cooking", "Cooking"},
+		{"writing", "Writing"},
+		{"research-methods", "Research methods"},
+		{"tools-and-workflows", "Tools and workflows"},
+		{"health-general", "Health (general)"},
+	} {
+		if _, err := db.Exec(`INSERT OR IGNORE INTO pool_topic (slug, label) VALUES (?, ?)`, row[0], row[1]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

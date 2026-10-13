@@ -131,16 +131,16 @@ Daily review recipe: `list_my_tasks` with `type=todo` and `status=open`, then ge
 
 Never share without explicit human consent in this conversation.
 
-Pool tools are coming in phase 1B: `preview_share`, `share_note`, `unshare_note`, `list_my_shares`. Until those tools exist, stop and say sharing is not available. Do not POST an HTTP publish route. Do not paste the note into a public channel as a workaround.
+Pool tools are current: `preview_share`, `share_note`, `unshare_note`, `list_my_shares`. Do not POST an HTTP publish route. Do not paste the note into a public channel as a workaround.
 
-When they land, the consent script is:
+The consent script is:
 
 1. Call `preview_share` with the note id, visibility (`link` or `pool`), topics (1–5), tags, license (default CC BY 4.0), and attribution (`alias` or `anonymous`).
 2. Show the human the exact preview, including PII findings. Ask: "Publish this snapshot to the Morph pool as @alias under CC BY 4.0? Reply yes or no."
 3. Only on an explicit yes in this conversation, call `share_note` with the `confirm_token` from the preview (about 5 minutes). That token is consent. Do not reuse a token from an earlier chat.
 4. Report the share id and what became public.
 
-Kinds that can be shared: `note`, `big_note`, `timeline`, `research`. A `todo` can be shared as a checklist. Event logs and stick notes cannot be shared in v1.
+Kinds that can be shared: `note`, `todo`, `big_note`, `timeline`, `research`, `stick`, `task`. Event logs cannot be shared. Stick boards may be shared. Anyone may reference a shared note.
 
 Shared content is a snapshot. Later edits to the private note do not leak. The owner must re-snapshot. `unshare_note` sets `revoked_at` and removes the index row. `pool_get` then returns `not_found`. Copies other people already saved stay with them; CC licensing allows that. Say so when you unshare.
 
@@ -148,9 +148,9 @@ Aliases: the pool shows the author's alias, never user ids or emails. Anyone may
 
 ## 9. Using the pool
 
-Coming in phase 1B: `pool_topics`, `pool_search`, `pool_get`, `pool_save_copy`, `pool_report`.
+Pool tools: `pool_topics`, `pool_search`, `pool_get`, `pool_save_copy`, `pool_report`.
 
-Rules that apply now, before the tools exist, and after:
+Rules:
 
 - Shared notes show an alias, never ids or emails.
 - Anyone may reference a pool note. License CC BY 4.0. Attribute to the alias: `Shared by @alias · License CC BY 4.0 · morph share <id>`.
@@ -159,7 +159,7 @@ Rules that apply now, before the tools exist, and after:
 - Report spam, hate, secrets, or illegal content with `pool_report`. Do not argue with the author through Morph.
 - Subscriptions and `pool_feed` are phase 2. There is no public web page.
 
-Search strategy (when the tools exist): start with `pool_topics`, then `pool_search` with a short query plus a topic. Limit is 25. Index entries are title, summary, tags, topic, kind, author alias, license, share_id, published_at — no author ids.
+Search strategy: start with `pool_topics`, then `pool_search` with a short query plus a topic. Limit is 25. Index entries are title, summary, tags, topic, kind, author alias, license, share_id, published_at — no author ids.
 
 ## 10. Errors and limits
 
@@ -337,9 +337,9 @@ Legacy module tools, still live:
 
 Another user's owned id is not found.
 
-### Pool tools (coming in phase 1B)
+### Pool tools
 
-Do not call these until `tools/list` shows them. If they are missing, say so.
+These tools are current. There is no public pool page.
 
 | Tool | Input | Output | Scope |
 |------|-------|--------|-------|
@@ -353,7 +353,7 @@ Do not call these until `tools/list` shows them. If they are missing, say so.
 | `pool_save_copy` | share_id, kind? | private note with attribution header | pool:read + notes:write |
 | `pool_report` | share_id, reason, detail? | report id | pool:read |
 
-`preview_share` before `share_note`. No `confirm_token` → `consent_required`. Secrets in the snapshot block publish. Other PII is redacted by default.
+`preview_share` before `share_note`. No `confirm_token` → `consent_required`. Secrets or personal data (email, phone, IP) in the snapshot block publish.
 
 ### Resources and apps
 

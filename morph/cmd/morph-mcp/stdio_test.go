@@ -118,7 +118,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		names[item["name"].(string)] = true
 		ann, _ := item["annotations"].(map[string]any)
 		name := item["name"].(string)
-		if name == "note_grill" || name == "update_note" || name == "append_to_note" || name == "archive_note" || strings.HasPrefix(name, "create_") {
+		if name == "note_grill" || name == "update_note" || name == "append_to_note" || name == "archive_note" || name == "preview_share" || name == "share_note" || name == "unshare_note" || name == "pool_save_copy" || name == "pool_report" || strings.HasPrefix(name, "create_") {
 			if ann["readOnlyHint"] != false {
 				t.Fatalf("%s annotations = %#v", name, ann)
 			}
@@ -131,7 +131,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 			t.Fatalf("missing %s in %#v", name, tools)
 		}
 	}
-	if len(tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
+	if len(tools) != mcp.AdvertisedToolCount() {
 		t.Fatalf("tools = %#v", tools)
 	}
 
