@@ -199,6 +199,23 @@ func TestWriteFailureKeepsAnswers(t *testing.T) {
 	}
 }
 
+func TestStartTimelineAndUnknownKind(t *testing.T) {
+	store := NewStore()
+	started, err := store.Act(context.Background(), "ada", Input{Action: "start", Kind: KindTimeline, Title: "shift log"}, func(context.Context, string) (string, error) {
+		return "What happened on the shift log?", nil
+	})
+	if err != nil || started.Kind != KindTimeline || started.ID == "" {
+		t.Fatalf("start = %+v err=%v", started, err)
+	}
+	_, err = store.Act(context.Background(), "ada", Input{Action: "start", Kind: "banana", Title: "nope"}, func(context.Context, string) (string, error) {
+		t.Fatal("model called for unknown kind")
+		return "", nil
+	})
+	if !errors.Is(err, ErrKind) {
+		t.Fatalf("banana err = %v", err)
+	}
+}
+
 func TestStartRequiresTitleAndDoesNotCallModel(t *testing.T) {
 	called := false
 	_, err := NewStore().Act(context.Background(), "ada", Input{Action: "start", Kind: KindNote, Title: "  "}, func(context.Context, string) (string, error) {

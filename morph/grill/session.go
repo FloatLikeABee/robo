@@ -111,7 +111,7 @@ func (s *Store) Act(ctx context.Context, owner string, in Input, complete Comple
 
 func (s *Store) start(ctx context.Context, owner string, in Input, complete Completer) (View, error) {
 	kind := strings.ToLower(strings.TrimSpace(in.Kind))
-	if kind != KindNote && kind != KindTodo {
+	if !ValidKind(kind) {
 		return View{}, ErrKind
 	}
 	title := strings.Join(strings.Fields(in.Title), " ")

@@ -12,6 +12,8 @@
 package mcp
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"strings"
@@ -27,10 +29,12 @@ const TokenEnv = "MORPH_MCP_TOKEN"
 // Identity is the Morph user a server acts as. It is taken from verified
 // JWT claims, not from a database lookup.
 type Identity struct {
-	UserID   string
-	Email    string
-	Username string
-	Roles    []string
+	UserID    string
+	Email     string
+	Username  string
+	Roles     []string
+	Scopes    []string
+	ExpiresAt string
 }
 
 // IdentityFromEnv reads TokenEnv and verifies it with auth.LoadTokenConfig
@@ -40,10 +44,26 @@ type Identity struct {
 // LoadTokenConfig can substitute that default. In production the secret
 // strength and JWT_EXPIRY_HOURS rules from config.ValidateStartup apply too.
 func IdentityFromEnv() (Identity, error) {
+	token := strings.TrimSpace(os.Getenv(TokenEnv))
+	if auth.IsPAT(token) {
+		db, err := OpenReadOnly(SQLitePath())
+		if err != nil {
+			return Identity{}, err
+		}
+		defer db.Close()
+		id, err := ResolvePAT(context.Background(), db, token)
+		if err != nil {
+			return Identity{}, err
+		}
+		if err := ConfirmPlatUser(context.Background(), db, id.UserID); err != nil {
+			return Identity{}, err
+		}
+		return id, nil
+	}
 	if err := validateStartupAuth(); err != nil {
 		return Identity{}, err
 	}
-	return ResolveIdentity(os.Getenv(TokenEnv), auth.LoadTokenConfig())
+	return ResolveIdentity(token, auth.LoadTokenConfig())
 }
 
 // validateStartupAuth applies the same JWT gate as morph-api main before
@@ -82,9 +102,51 @@ func RejectJWTSecret(secret string) error {
 }
 
 // RecheckFromEnv verifies the process token again. Tool handlers call it
-// so an expired token becomes a tool error without restarting.
+// so an expired, revoked, or deleted-user token becomes a tool error
+// without restarting. A PAT is checked against SQLite. A JWT is decoded
+// here; RecheckWithStore also confirms plat_users when a store is open.
 func RecheckFromEnv() error {
-	return RecheckToken(os.Getenv(TokenEnv), auth.LoadTokenConfig())
+	return recheckEnv(context.Background(), nil)
+}
+
+// RecheckWithStore is RecheckFromEnv plus a plat_users check on db.
+func RecheckWithStore(db *sql.DB) func() error {
+	return func() error {
+		return recheckEnv(context.Background(), db)
+	}
+}
+
+func recheckEnv(ctx context.Context, db *sql.DB) error {
+	token := strings.TrimSpace(os.Getenv(TokenEnv))
+	if token == "" {
+		return errors.New("MORPH_MCP_TOKEN is required")
+	}
+	if auth.IsPAT(token) {
+		if db == nil {
+			opened, err := OpenReadOnly(SQLitePath())
+			if err != nil {
+				return err
+			}
+			db = opened
+			defer db.Close()
+		}
+		id, err := ResolvePAT(ctx, db, token)
+		if err != nil {
+			return err
+		}
+		return ConfirmPlatUser(ctx, db, id.UserID)
+	}
+	if err := RecheckToken(token, auth.LoadTokenConfig()); err != nil {
+		return err
+	}
+	if db == nil {
+		return nil
+	}
+	id, err := ResolveIdentity(token, auth.LoadTokenConfig())
+	if err != nil {
+		return err
+	}
+	return ConfirmPlatUser(ctx, db, id.UserID)
 }
 
 // RecheckToken verifies the session JWT again for one tool call.

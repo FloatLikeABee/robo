@@ -25,11 +25,22 @@ type ModuleList struct {
 	Limit   int            `json:"limit"`
 }
 
-// CreateStickNote inserts a shared-board stick note. Empty times become the
-// current UTC hour and the following hour.
-func CreateStickNote(ctx context.Context, db *sql.DB, title, description, startAt, endAt string) (ModuleRecord, error) {
+// CreateStickNote inserts a stick note for the token subject.
+func CreateStickNote(ctx context.Context, db *sql.DB, ownerUserID, title, description, startAt, endAt string) (ModuleRecord, error) {
+	return CreateBoardNote(ctx, db, ownerUserID, KindStick, title, description, startAt, endAt)
+}
+
+// CreateBoardNote inserts a CaseTask row for stick or task.
+func CreateBoardNote(ctx context.Context, db *sql.DB, ownerUserID, kind, title, description, startAt, endAt string) (ModuleRecord, error) {
 	if db == nil {
 		return ModuleRecord{}, errors.New("note store is not open")
+	}
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		return ModuleRecord{}, errors.New("not a notes user for this session")
+	}
+	if kind != KindStick && kind != KindTask {
+		return ModuleRecord{}, errors.New("invalid kind")
 	}
 	title = strings.TrimSpace(title)
 	if title == "" {
@@ -44,13 +55,15 @@ func CreateStickNote(ctx context.Context, db *sql.DB, title, description, startA
 	}
 	stored := agentTitle(title)
 	res, err := db.ExecContext(ctx, `
-		INSERT INTO CaseTask (title, description, start_at, end_at)
-		VALUES (?, ?, ?, ?)`, stored, strings.TrimSpace(description), start, end)
+		INSERT INTO CaseTask (title, description, start_at, end_at, owner_user_id, board_kind, version)
+		VALUES (?, ?, ?, ?, ?, ?, 1)`, stored, strings.TrimSpace(description), start, end, ownerUserID, kind)
 	if err != nil {
 		return ModuleRecord{}, errors.New("could not store the stick note")
 	}
 	id, _ := res.LastInsertId()
-	return GetStickNote(ctx, db, int(id))
+	rec := ModuleRecord{ID: int(id), Title: stored, Body: strings.TrimSpace(description), StartAt: start, EndAt: end}
+	_ = upsertFTS(ctx, db, ownerUserID, noteFromModule(kind, rec))
+	return rec, nil
 }
 
 func stickWindow(startAt, endAt string) (string, string, error) {
@@ -74,8 +87,8 @@ func stickWindow(startAt, endAt string) (string, string, error) {
 	return start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339), nil
 }
 
-// ListStickNotes returns the shared stick-note board, newest id first.
-func ListStickNotes(ctx context.Context, db *sql.DB, limit int) (ModuleList, error) {
+// ListStickNotes returns the caller's stick notes, newest id first.
+func ListStickNotes(ctx context.Context, db *sql.DB, ownerUserID string, limit int) (ModuleList, error) {
 	n, err := appliedLimit(limit)
 	if err != nil {
 		return ModuleList{}, err
@@ -85,7 +98,9 @@ func ListStickNotes(ctx context.Context, db *sql.DB, limit int) (ModuleList, err
 	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT ID, title, COALESCE(description, ''), COALESCE(start_at, ''), COALESCE(end_at, '')
-		FROM CaseTask ORDER BY ID DESC LIMIT ?`, n)
+		FROM CaseTask
+		WHERE owner_user_id = ? AND board_kind = 'stick' AND (archived_at IS NULL OR archived_at = '')
+		ORDER BY ID DESC LIMIT ?`, strings.TrimSpace(ownerUserID), n)
 	if err != nil {
 		return ModuleList{}, errors.New("could not list stick notes")
 	}
@@ -101,8 +116,8 @@ func ListStickNotes(ctx context.Context, db *sql.DB, limit int) (ModuleList, err
 	return out, rows.Err()
 }
 
-// GetStickNote reads one shared stick note. A missing id is not found.
-func GetStickNote(ctx context.Context, db *sql.DB, id int) (ModuleRecord, error) {
+// GetStickNote reads one of the caller's stick notes. Another user's id is not found.
+func GetStickNote(ctx context.Context, db *sql.DB, ownerUserID string, id int) (ModuleRecord, error) {
 	if id <= 0 {
 		return ModuleRecord{}, errors.New("invalid id")
 	}
@@ -112,7 +127,9 @@ func GetStickNote(ctx context.Context, db *sql.DB, id int) (ModuleRecord, error)
 	var rec ModuleRecord
 	err := db.QueryRowContext(ctx, `
 		SELECT ID, title, COALESCE(description, ''), COALESCE(start_at, ''), COALESCE(end_at, '')
-		FROM CaseTask WHERE ID = ?`, id).Scan(&rec.ID, &rec.Title, &rec.Body, &rec.StartAt, &rec.EndAt)
+		FROM CaseTask
+		WHERE ID = ? AND owner_user_id = ? AND board_kind = 'stick' AND (archived_at IS NULL OR archived_at = '')`,
+		id, strings.TrimSpace(ownerUserID)).Scan(&rec.ID, &rec.Title, &rec.Body, &rec.StartAt, &rec.EndAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ModuleRecord{}, ErrNotFound
 	}
@@ -129,11 +146,15 @@ func CreateTimeline(ctx context.Context, db *sql.DB, tokenUserID, title, content
 	if title == "" || content == "" {
 		return ModuleRecord{}, errors.New("title and content are required")
 	}
-	return insertOwned(ctx, db, tokenUserID, `
+	rec, err := insertOwned(ctx, db, tokenUserID, `
 		INSERT INTO timeline (user_id, title, source_summary, has_paste, markdown_content)
 		SELECT owner.UserID, ?, ?, 1, ?
 		FROM (`+ownerUserSelect()+`) AS owner`,
 		agentTitle(title), clip(content, 240), content)
+	if err == nil {
+		_ = upsertFTS(ctx, db, tokenUserID, noteFromModule(KindTimeline, rec))
+	}
+	return rec, err
 }
 
 // CreateStory stores a story for the session user without running the generator.
@@ -153,11 +174,15 @@ func CreateStory(ctx context.Context, db *sql.DB, tokenUserID, title, idea, body
 	if body == "" {
 		body = idea
 	}
-	return insertOwned(ctx, db, tokenUserID, `
+	rec, err := insertOwned(ctx, db, tokenUserID, `
 		INSERT INTO big_note (user_id, title, idea, markdown_content, theme)
 		SELECT owner.UserID, ?, ?, ?, 'dark'
 		FROM (`+ownerUserSelect()+`) AS owner`,
 		agentTitle(title), idea, body)
+	if err == nil {
+		_ = upsertFTS(ctx, db, tokenUserID, noteFromModule(KindBigNote, rec))
+	}
+	return rec, err
 }
 
 // CreateResearch stores a finished research row for the session user.
@@ -174,11 +199,15 @@ func CreateResearch(ctx context.Context, db *sql.DB, tokenUserID, prompt, body s
 	if i := strings.IndexAny(title, "\r\n"); i >= 0 {
 		title = title[:i]
 	}
-	return insertOwned(ctx, db, tokenUserID, `
+	rec, err := insertOwned(ctx, db, tokenUserID, `
 		INSERT INTO research (user_id, title, prompt, status, markdown_content, round_target)
 		SELECT owner.UserID, ?, ?, 'complete', ?, 0
 		FROM (`+ownerUserSelect()+`) AS owner`,
 		agentTitle(title), prompt, body)
+	if err == nil {
+		_ = upsertFTS(ctx, db, tokenUserID, noteFromModule(KindResearch, rec))
+	}
+	return rec, err
 }
 
 func insertOwned(ctx context.Context, db *sql.DB, tokenUserID, query string, args ...any) (ModuleRecord, error) {
@@ -234,7 +263,7 @@ func ListOwned(ctx context.Context, db *sql.DB, tokenUserID, table string, limit
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, title, COALESCE(`+bodyCol+`, '')
 		FROM `+table+`
-		WHERE user_id = (`+ownerUserSelect()+`)
+		WHERE user_id = (`+ownerUserSelect()+`) AND (archived_at IS NULL OR archived_at = '')
 		ORDER BY id DESC LIMIT ?`, strings.TrimSpace(tokenUserID), n)
 	if err != nil {
 		return ModuleList{}, errors.New("could not list records")
@@ -270,7 +299,7 @@ func GetOwned(ctx context.Context, db *sql.DB, tokenUserID, table string, id int
 	err := db.QueryRowContext(ctx, `
 		SELECT id, title, COALESCE(`+bodyCol+`, '')
 		FROM `+table+`
-		WHERE id = ? AND user_id = (`+ownerUserSelect()+`)`, id, strings.TrimSpace(tokenUserID)).
+		WHERE id = ? AND user_id = (`+ownerUserSelect()+`) AND (archived_at IS NULL OR archived_at = '')`, id, strings.TrimSpace(tokenUserID)).
 		Scan(&rec.ID, &rec.Title, &rec.Body)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ModuleRecord{}, ErrNotFound

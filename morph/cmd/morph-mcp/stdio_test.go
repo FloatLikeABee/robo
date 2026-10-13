@@ -118,7 +118,7 @@ func TestStdioHandshakeAndWhoami(t *testing.T) {
 		names[item["name"].(string)] = true
 		ann, _ := item["annotations"].(map[string]any)
 		name := item["name"].(string)
-		if strings.HasPrefix(name, "create_") || name == "note_grill" {
+		if name == "note_grill" || name == "update_note" || name == "append_to_note" || name == "archive_note" || strings.HasPrefix(name, "create_") {
 			if ann["readOnlyHint"] != false {
 				t.Fatalf("%s annotations = %#v", name, ann)
 			}

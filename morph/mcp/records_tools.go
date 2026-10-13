@@ -5,10 +5,12 @@ import (
 	"database/sql"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"idongivaflyinfa/auth"
 )
 
-// ToolCount is whoami, the notes tools, note_grill, and create, list, and get for five modules.
-const ToolCount = 20
+// ToolCount is whoami, unified notes tools, aliases, note_grill, and event logs.
+// suggest_note_kind and morph_guide are counted separately as AgentRuntimeToolCount.
+const ToolCount = 26
 
 type limitInput struct {
 	Limit int `json:"limit,omitempty" jsonschema:"Maximum rows. Default 50, capped at 100."`
@@ -42,9 +44,9 @@ type eventInput struct {
 }
 
 func registerModuleTools(server *sdkmcp.Server, id Identity, tasks *sql.DB, notes *noteStore, recheck func() error, readOnly func(name, title, description string) *sdkmcp.Tool) {
-	sdkmcp.AddTool(server, readOnly("list_stick_notes", "List stick notes", "List stick notes on the shared board, newest first."), listStick(tasks, recheck))
-	sdkmcp.AddTool(server, readOnly("get_stick_note", "Get stick note", "Read one stick note by id. A missing id is not found."), getStick(tasks, recheck))
-	sdkmcp.AddTool(server, writeTool("create_stick_note", "Create stick note", "Create a stick note on the shared board. The stored title starts with [morph-mcp]. Does not create a Notes and TODOs row."), createStick(notes, recheck))
+	sdkmcp.AddTool(server, readOnly("list_stick_notes", "List stick notes", "List the signed-in user's stick notes, newest first. Another user does not see them."), listStick(id, tasks, recheck))
+	sdkmcp.AddTool(server, readOnly("get_stick_note", "Get stick note", "Read one of the signed-in user's stick notes by id. Another user's id is not found."), getStick(id, tasks, recheck))
+	sdkmcp.AddTool(server, writeTool("create_stick_note", "Create stick note", "Create a stick note for the signed-in user. The stored title starts with [morph-mcp]. Does not create a Notes and TODOs row."), createStick(id, notes, recheck))
 
 	sdkmcp.AddTool(server, readOnly("list_timelines", "List timelines", "List the signed-in user's timelines."), listOwnedTool(id, tasks, recheck, "timeline"))
 	sdkmcp.AddTool(server, readOnly("get_timeline", "Get timeline", "Read one of the signed-in user's timelines. Another user's id is not found."), getOwnedTool(id, tasks, recheck, "timeline"))
@@ -78,36 +80,45 @@ func writeTool(name, title, description string) *sdkmcp.Tool {
 	}
 }
 
-func listStick(tasks *sql.DB, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, limitInput) (*sdkmcp.CallToolResult, ModuleList, error) {
+func listStick(id Identity, tasks *sql.DB, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, limitInput) (*sdkmcp.CallToolResult, ModuleList, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in limitInput) (*sdkmcp.CallToolResult, ModuleList, error) {
 		if err := callRecheck(recheck); err != nil {
 			return nil, ModuleList{}, err
 		}
-		out, err := ListStickNotes(ctx, tasks, in.Limit)
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
+			return nil, ModuleList{}, err
+		}
+		out, err := ListStickNotes(ctx, tasks, id.UserID, in.Limit)
 		return nil, out, err
 	}
 }
 
-func getStick(tasks *sql.DB, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, idInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
+func getStick(id Identity, tasks *sql.DB, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, idInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in idInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 		if err := callRecheck(recheck); err != nil {
 			return nil, ModuleRecord{}, err
 		}
-		out, err := GetStickNote(ctx, tasks, in.ID)
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
+			return nil, ModuleRecord{}, err
+		}
+		out, err := GetStickNote(ctx, tasks, id.UserID, in.ID)
 		return nil, out, err
 	}
 }
 
-func createStick(notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, stickInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
+func createStick(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, stickInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in stickInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 		if err := callRecheck(recheck); err != nil {
+			return nil, ModuleRecord{}, err
+		}
+		if err := RequireScope(id, auth.ScopeNotesWrite); err != nil {
 			return nil, ModuleRecord{}, err
 		}
 		db, err := notes.writer()
 		if err != nil {
 			return nil, ModuleRecord{}, err
 		}
-		out, err := CreateStickNote(ctx, db, in.Title, in.Description, in.StartAt, in.EndAt)
+		out, err := CreateStickNote(ctx, db, id.UserID, in.Title, in.Description, in.StartAt, in.EndAt)
 		return nil, out, err
 	}
 }
@@ -115,6 +126,9 @@ func createStick(notes *noteStore, recheck func() error) func(context.Context, *
 func listOwnedTool(id Identity, tasks *sql.DB, recheck func() error, table string) func(context.Context, *sdkmcp.CallToolRequest, limitInput) (*sdkmcp.CallToolResult, ModuleList, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in limitInput) (*sdkmcp.CallToolResult, ModuleList, error) {
 		if err := callRecheck(recheck); err != nil {
+			return nil, ModuleList{}, err
+		}
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
 			return nil, ModuleList{}, err
 		}
 		out, err := ListOwned(ctx, tasks, id.UserID, table, in.Limit)
@@ -127,6 +141,9 @@ func getOwnedTool(id Identity, tasks *sql.DB, recheck func() error, table string
 		if err := callRecheck(recheck); err != nil {
 			return nil, ModuleRecord{}, err
 		}
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
+			return nil, ModuleRecord{}, err
+		}
 		out, err := GetOwned(ctx, tasks, id.UserID, table, in.ID)
 		return nil, out, err
 	}
@@ -134,7 +151,7 @@ func getOwnedTool(id Identity, tasks *sql.DB, recheck func() error, table string
 
 func createTimelineTool(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
-		return writeOwned(ctx, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
+		return writeOwned(ctx, id, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
 			return CreateTimeline(ctx, db, id.UserID, in.Title, in.Content)
 		})
 	}
@@ -142,7 +159,7 @@ func createTimelineTool(id Identity, notes *noteStore, recheck func() error) fun
 
 func createStoryTool(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
-		return writeOwned(ctx, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
+		return writeOwned(ctx, id, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
 			return CreateStory(ctx, db, id.UserID, in.Title, in.Idea, in.Content)
 		})
 	}
@@ -150,14 +167,17 @@ func createStoryTool(id Identity, notes *noteStore, recheck func() error) func(c
 
 func createResearchTool(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in textInput) (*sdkmcp.CallToolResult, ModuleRecord, error) {
-		return writeOwned(ctx, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
+		return writeOwned(ctx, id, notes, recheck, func(db *sql.DB) (ModuleRecord, error) {
 			return CreateResearch(ctx, db, id.UserID, in.Prompt, in.Content)
 		})
 	}
 }
 
-func writeOwned(ctx context.Context, notes *noteStore, recheck func() error, insert func(*sql.DB) (ModuleRecord, error)) (*sdkmcp.CallToolResult, ModuleRecord, error) {
+func writeOwned(ctx context.Context, id Identity, notes *noteStore, recheck func() error, insert func(*sql.DB) (ModuleRecord, error)) (*sdkmcp.CallToolResult, ModuleRecord, error) {
 	if err := callRecheck(recheck); err != nil {
+		return nil, ModuleRecord{}, err
+	}
+	if err := RequireScope(id, auth.ScopeNotesWrite); err != nil {
 		return nil, ModuleRecord{}, err
 	}
 	db, err := notes.writer()

@@ -18,7 +18,7 @@ func TestCreateStickNoteAndOwnedRecords(t *testing.T) {
 	t.Cleanup(func() { _ = notes.Close() })
 
 	beforeNotes := noteCount(t, writer)
-	stick, err := mcp.CreateStickNote(ctx, notes, "Dock check", "west gate", "", "")
+	stick, err := mcp.CreateStickNote(ctx, notes, "ada-id", "Dock check", "west gate", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,9 +28,16 @@ func TestCreateStickNoteAndOwnedRecords(t *testing.T) {
 	if noteCount(t, writer) != beforeNotes {
 		t.Fatal("stick note wrote a Notes and TODOs row")
 	}
-	listed, err := mcp.ListStickNotes(ctx, notes, 10)
+	listed, err := mcp.ListStickNotes(ctx, notes, "ada-id", 10)
 	if err != nil || len(listed.Records) == 0 || listed.Records[0].ID != stick.ID {
 		t.Fatalf("list = %+v err=%v", listed, err)
+	}
+	if _, err := mcp.GetStickNote(ctx, notes, "bea-id", stick.ID); err != mcp.ErrNotFound {
+		t.Fatalf("bea stick get = %v", err)
+	}
+	beaList, err := mcp.ListStickNotes(ctx, notes, "bea-id", 10)
+	if err != nil || len(beaList.Records) != 0 {
+		t.Fatalf("bea list = %+v err=%v", beaList, err)
 	}
 
 	story, err := mcp.CreateStory(ctx, notes, "ada-id", "Night shift", "handover", "keys are in the box")

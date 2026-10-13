@@ -161,7 +161,11 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			assignee_type TEXT NOT NULL DEFAULT '',
 			assignee_id INTEGER NOT NULL DEFAULT 0,
 			created_on TEXT DEFAULT CURRENT_TIMESTAMP,
-			last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+			last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
+			owner_user_id TEXT NOT NULL DEFAULT '',
+			board_kind TEXT NOT NULL DEFAULT 'stick',
+			version INTEGER NOT NULL DEFAULT 1,
+			archived_at TEXT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS CaseTaskAssignee (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -482,7 +486,130 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 	if err := migrateAgentLessonColumns(db); err != nil {
 		return err
 	}
+	if err := migrateNotePlatform(db); err != nil {
+		return err
+	}
 	return nil
+}
+
+func migrateNotePlatform(db *sql.DB) error {
+	for _, col := range []struct{ table, name, decl string }{
+		{"CaseTask", "owner_user_id", "TEXT NOT NULL DEFAULT ''"},
+		{"CaseTask", "board_kind", "TEXT NOT NULL DEFAULT 'stick'"},
+		{"CaseTask", "version", "INTEGER NOT NULL DEFAULT 1"},
+		{"CaseTask", "archived_at", "TEXT NULL"},
+		{"user_note_todo", "version", "INTEGER NOT NULL DEFAULT 1"},
+		{"user_note_todo", "archived_at", "TEXT NULL"},
+		{"big_note", "version", "INTEGER NOT NULL DEFAULT 1"},
+		{"big_note", "archived_at", "TEXT NULL"},
+		{"timeline", "version", "INTEGER NOT NULL DEFAULT 1"},
+		{"timeline", "archived_at", "TEXT NULL"},
+		{"research", "version", "INTEGER NOT NULL DEFAULT 1"},
+		{"research", "archived_at", "TEXT NULL"},
+	} {
+		if err := sqliteAddColumnIfMissing(db, col.table, col.name, col.decl); err != nil {
+			return err
+		}
+	}
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS agent_token (
+			id TEXT NOT NULL PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			token_hash TEXT NOT NULL,
+			scopes TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			expires_at TEXT NOT NULL,
+			last_used_at TEXT NULL,
+			revoked_at TEXT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_agent_token_user ON agent_token(user_id)`,
+		`CREATE TABLE IF NOT EXISTS note_tag (
+			owner_user_id TEXT NOT NULL,
+			source_kind TEXT NOT NULL,
+			source_id INTEGER NOT NULL,
+			tag TEXT NOT NULL,
+			PRIMARY KEY (owner_user_id, source_kind, source_id, tag)
+		)`,
+		`CREATE TABLE IF NOT EXISTS note_idempotency (
+			owner_user_id TEXT NOT NULL,
+			idempotency_key TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			source_id INTEGER NOT NULL,
+			created_at TEXT NOT NULL,
+			PRIMARY KEY (owner_user_id, idempotency_key)
+		)`,
+	}
+	for _, s := range stmts {
+		if _, err := db.Exec(s); err != nil {
+			return err
+		}
+	}
+	if _, err := db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS my_notes_fts USING fts5(
+		title, body, tags, owner_user_id UNINDEXED, kind UNINDEXED, source_id UNINDEXED,
+		tokenize='unicode61'
+	)`); err != nil {
+		return err
+	}
+	return claimLegacyCaseTaskOwners(db)
+}
+
+func claimLegacyCaseTaskOwners(db *sql.DB) error {
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS case_task_owner_backfill (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			decided_at TEXT NOT NULL,
+			claimed_user_id TEXT NOT NULL DEFAULT ''
+		)`); err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var decided int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM case_task_owner_backfill WHERE id = 1`).Scan(&decided); err != nil {
+		return err
+	}
+	if decided > 0 {
+		return tx.Commit()
+	}
+	var n int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM plat_users`).Scan(&n); err != nil {
+		return err
+	}
+	if n == 0 {
+		return tx.Commit()
+	}
+	claimed := firstAdminPlatUserID(tx)
+	if claimed != "" {
+		if _, err := tx.Exec(`UPDATE CaseTask SET owner_user_id = ? WHERE owner_user_id = ''`, claimed); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(
+		`INSERT INTO case_task_owner_backfill (id, decided_at, claimed_user_id) VALUES (1, datetime('now'), ?)`,
+		claimed,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func firstAdminPlatUserID(tx *sql.Tx) string {
+	var id string
+	err := tx.QueryRow(`
+		SELECT id FROM plat_users
+		WHERE lower(roles) LIKE '%admin%'
+		ORDER BY created_at ASC, id ASC LIMIT 1`).Scan(&id)
+	if err == nil && id != "" {
+		return id
+	}
+	if err := tx.QueryRow(`SELECT id FROM plat_users ORDER BY created_at ASC, id ASC LIMIT 1`).Scan(&id); err != nil {
+		return ""
+	}
+	return id
 }
 
 // migrateAgentLessonColumns adds per-user ownership and the enabled flag.

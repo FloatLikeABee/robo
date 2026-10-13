@@ -164,6 +164,7 @@ func CreateMyNote(ctx context.Context, db *sql.DB, tokenUserID, title, body stri
 				AND existing.ItemType = 'note'
 				AND existing.Title = ?
 				AND existing.Body = ?
+				AND (existing.archived_at IS NULL OR existing.archived_at = '')
 		)`, storedTitle, storedBody, strings.TrimSpace(tokenUserID), storedTitle, storedBody)
 	if err != nil {
 		log.Printf("create note: %v", err)
@@ -176,6 +177,9 @@ func CreateMyNote(ctx context.Context, db *sql.DB, tokenUserID, title, body stri
 	task, err := findMyNote(ctx, db, tokenUserID, storedTitle, storedBody)
 	if errors.Is(err, ErrNotFound) {
 		return Task{}, errors.New("not a notes user for this session")
+	}
+	if err == nil {
+		_ = upsertFTS(ctx, db, tokenUserID, noteFromTask(task))
 	}
 	return task, err
 }
@@ -209,6 +213,7 @@ func findMyNote(ctx context.Context, db *sql.DB, tokenUserID, title, body string
 		SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
 		FROM user_note_todo
 		WHERE ItemType = 'note' AND Title = ? AND Body = ? AND `+clause+`
+			AND (archived_at IS NULL OR archived_at = '')
 		ORDER BY ID DESC LIMIT 1`, append([]any{title, body}, clauseArgs...)...)
 	task, err := scanTask(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -274,7 +279,7 @@ func GetMyTask(ctx context.Context, db *sql.DB, tokenUserID string, id int) (Tas
 	}
 	row := db.QueryRowContext(ctx, `
 		SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
-		FROM user_note_todo WHERE ID = ? AND `+clause, append([]any{id}, clauseArgs...)...)
+		FROM user_note_todo WHERE ID = ? AND `+clause+` AND (archived_at IS NULL OR archived_at = '')`, append([]any{id}, clauseArgs...)...)
 	task, err := scanTask(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Task{}, ErrNotFound
@@ -374,7 +379,7 @@ func listQuery(tokenUserID, itemType, status string, limit int) (string, []any, 
 		order = `Completed ASC, (DeadlineAt IS NULL) ASC, DeadlineAt ASC, CreatedOn DESC`
 	}
 	q := `SELECT ID, ItemType, Title, Body, Completed, DeadlineAt, CreatedOn, LastUpdated
-		FROM user_note_todo WHERE ` + clause
+		FROM user_note_todo WHERE ` + clause + ` AND (archived_at IS NULL OR archived_at = '')`
 	if itemType != "" {
 		q += ` AND ItemType = ?`
 		args = append(args, itemType)

@@ -99,7 +99,7 @@ func TestAgentRuntimeToolCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(b), "const ToolCount = 20") {
+	if !strings.Contains(string(b), "const ToolCount = 26") {
 		t.Fatal("records_tools.go ToolCount changed")
 	}
 }

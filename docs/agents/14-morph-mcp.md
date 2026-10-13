@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes read-only `whoami`, `list_my_tasks`, and `get_task`, plus `create_note` and `note_grill` (neither is read-only), and create, list, and get tools for stick notes, timelines, stories, research, and event logs. `resources/list` returns `ui://morph/notes`, `ui://morph/grill`, and `morph://guide` (the agent playbook). `suggest_note_kind` and `morph_guide` are read-only. There are no prompts. `resources.listChanged` is not advertised.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes `whoami`, unified own-notes tools (`create_note`, `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, `search_my_notes`), `note_grill`, the previous module names as aliases, event-log tools, and read-only `suggest_note_kind` and `morph_guide`. `resources/list` returns `ui://morph/notes`, `ui://morph/grill`, and `morph://guide` (the agent playbook). There are no prompts. `resources.listChanged` is not advertised.
 
 ## Build
 
@@ -21,19 +21,44 @@ Stdout is reserved for protocol messages. Logs go to stderr.
 
 ## Identity
 
-Set `MORPH_MCP_TOKEN` to a Morph session JWT from `POST /api/auth/login` (`token` in the JSON body). The process verifies it with `morph/auth` (`auth.DecodeToken`, HS256). `JWT_SECRET` must be the same value the Morph API used to sign the token.
+Set `MORPH_MCP_TOKEN` to either a Morph session JWT from `POST /api/auth/login` or a personal access token from `POST /api/agent-tokens`. A PAT starts with `morph_pat_`. Prefer a PAT in client configs so the machine does not need `JWT_SECRET`.
 
-Missing or invalid tokens fail at startup with a message on stderr. The process exits non-zero and does not write a protocol message. Errors do not include the token. A raw user id is not accepted.
+Missing or invalid tokens fail at startup with a message on stderr. The process exits non-zero and does not write a protocol message. Errors do not include the token. A raw user id is not accepted. Do not commit the token.
 
-There is no separate API token yet. Do not commit the JWT. Pass it in the client config, not in git.
+### Personal access tokens
 
-`JWT_SECRET` must be set to the same non-default value the API used to sign the token. An empty secret, or the built-in development default `morph-dev-jwt-secret-change-me`, refuses startup. The API substitutes that default when the variable is unset; morph-mcp does not. Startup verifies the token with `auth.DecodeToken` (signature and `exp`) before it checks `plat_users`. When `MORPH_ENV` is `production`, morph-mcp also applies the API's production JWT secret rules and the 168-hour token lifetime cap. A short local secret is refused in that mode.
+Mint, list, and revoke tokens with a session JWT. There is no Settings page.
 
-On startup, after the token verifies, the process checks that the token `sub` still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again, including the production lifetime cap. An expired token is a tool error; the process stays up so the client can show that error. A user deleted after the process has started can keep calling tools until that process exits. Rotating `JWT_SECRET` only blocks new launches and new tool calls that fail verification. To drop a deleted account immediately, stop the running morph-mcp processes. There is no per-user revoke list in this build.
+```bash
+curl -s -X POST http://127.0.0.1:9090/api/agent-tokens \
+  -H "Authorization: Bearer <session JWT>" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"cursor"}'
+```
+
+```bash
+curl -s http://127.0.0.1:9090/api/agent-tokens \
+  -H "Authorization: Bearer <session JWT>"
+```
+
+```bash
+curl -s -X DELETE http://127.0.0.1:9090/api/agent-tokens/<id> \
+  -H "Authorization: Bearer <session JWT>"
+```
+
+The create response includes the plaintext token once. The store keeps only a SHA-256 hash. Default scopes are `notes:read`, `notes:write`, and `pool:read`. Default expiry is 90 days. Ask for `pool:publish` or `admin:pool` only when needed. List is owner-scoped. Revoking another user's id is not found.
+
+`morph-mcp` accepts `MORPH_MCP_TOKEN=morph_pat_…` without `JWT_SECRET`. It resolves the subject from the hashed row and confirms that user still exists in `plat_users`. A revoked, expired, or deleted-user token fails the next tool call. A PAT without `notes:read` cannot run a read notes tool. A PAT without `notes:write` cannot run a write notes tool (`forbidden_scope`).
+
+### Session JWT
+
+`JWT_SECRET` must be set to the same non-default value the API used to sign the token. An empty secret, or the built-in development default `morph-dev-jwt-secret-change-me`, refuses startup. The API substitutes that default when the variable is unset; morph-mcp does not. Startup verifies the token with `auth.DecodeToken` (signature and `exp`) before it checks `plat_users`. When `MORPH_ENV` is `production`, morph-mcp also applies the API's production JWT secret rules and the 168-hour token lifetime cap. A short local secret is refused in that mode. A session JWT is treated as `notes:read` and `notes:write`.
+
+On startup, after the token verifies, the process checks that the token subject still exists in `plat_users`. A deleted user cannot start a new process. Every tool call verifies the token again (JWT expiry/signature, or PAT hash/revoke/expiry, plus `plat_users`). An expired or revoked token is a tool error; the process stays up so the client can show that error. A user deleted after launch fails the next tool call.
 
 MCP never exposes private data to unauthenticated callers. `mcp.ExposeRecord` returns a record to a caller with no user id only when `publish.Visible` is true (the published slug is non-empty). It returns true for any verified user on any record, so it is not an owner check. `list_my_tasks`, `get_task`, `create_note`, and `note_grill` do not call it. The notes tools run only after the token verifies and the subject exists in `plat_users`, and `ownerClause` limits every read and the insert to that user's own Notes & TODOs. A missing or invalid token fails `create_note` before any insert. An expired token is a tool error and writes nothing. `note_grill` keeps its interview in memory for that token subject and does not insert a row.
 
-On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `JWT_SECRET` and `MORPH_MCP_TOKEN` in the MCP config. How to obtain the token for local Morph at `http://localhost:3031/` is in [Local Morph](#local-morph).
+On startup the binary loads the repo-root `.env` (same helper as the API) without overriding variables that are already set. A desktop client often has a clean environment, so set `MORPH_MCP_TOKEN` (and `JWT_SECRET` only for a session JWT) in the MCP config. How to obtain a JWT for local Morph at `http://localhost:3031/` is in [Local Morph](#local-morph).
 
 ## Data access while morph-api is running
 
@@ -49,17 +74,29 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 
 | Tool | Purpose |
 |------|---------|
-| `whoami` | Verified JWT claims: id, email, username, roles. Read-only. |
-| `list_my_tasks` | The signed-in user's own Notes & TODOs (`user_note_todo`). Optional `type` (`all`, `note`, `todo`), `status` (`all`, `open`, `done`), and `limit` (default 50, capped at 100). Read-only. |
-| `get_task` | One of those rows by integer `id`. Read-only. |
-| `create_note` | Insert one note (`item_type` `note`) for that user. Not read-only. |
-| `note_grill` | Interview that user about a note or TODO title, then return a draft body. Not read-only. Does not insert a row. |
+| `whoami` | Verified identity: id, email, username, roles, scopes, and PAT expiry when present. Read-only. |
+| `suggest_note_kind` | Pick a kind from the user's ask. Rules only; does not call a model. Read-only. |
+| `morph_guide` | Markdown excerpt of the agent playbook ([16 — Morph for agents](16-morph-for-agents.md)). Also `morph://guide`. Read-only. |
+| `create_note` | Create one record. `kind` is `note`, `todo`, `big_note`, `timeline`, `research`, `stick`, or `task`. Omitted kind stays a Notes & TODOs `note` and returns an integer `id`. Optional `idempotency_key` and `tags`. |
+| `get_note` | One of the caller's records by `kind:rowid`. Read-only. |
+| `list_notes` | The caller's records. Optional `kind` and `limit`. Read-only. |
+| `update_note` | Patch title, body, or tags. `expected_version` mismatch is `conflict`. |
+| `append_to_note` | Append text to the body. |
+| `archive_note` | Soft-delete. Later get, list, and search treat the id as not found. |
+| `search_my_notes` | Owner-only FTS5 search. A junk query returns an empty page. Read-only. |
+| `list_my_tasks` / `get_task` | Alias for Notes & TODOs list/get by integer id. Read-only. |
+| `create_stick_note` / `list_stick_notes` / `get_stick_note` | Aliases for kind `stick`. Owner-scoped. |
+| `create_timeline` / `list_timelines` / `get_timeline` | Aliases for kind `timeline`. |
+| `create_story` / `list_stories` / `get_story` | Aliases for kind `big_note`. |
+| `create_research` / `list_research` / `get_research` | Aliases for kind `research`. |
+| `note_grill` | Interview that user, then return a draft body. `start` accepts every kind. Does not insert a row. |
+| `list_event_logs` / `get_event_log` / `create_event_log` | Event Logs HTTP API. Does not open Badger. |
 
-`list_my_tasks` and `get_task` are not the shared MorphNotes Tasks board (`CaseTask`). That board has no per-user owner. These tools scope every query by the token subject (`plat_users.id`), joined to that user's active Tran `User`, and return only that user's notes and todos. The text body is the SQLite column. Another user's id is not found. The tools do not say the row is forbidden, and they do not create a user row.
+Every note kind is scoped to the token subject. Another user's id is not found and does not say forbidden. Stick and task rows live on `CaseTask` with `owner_user_id` and `board_kind`. The admin CaseTask HTTP list is still unfiltered.
 
-`create_note` takes `title` and `body`. At least one is required. The title limit is 200 characters and the body limit is 32000 characters. The stored title starts with `[morph-mcp]` and the stored body starts with `source: morph-mcp`, so the owning human can see the note came from an agent. Agent notes, opened from the chat header, lists those rows for the signed-in user. Notes & TODOs still shows the same rows among the user's other notes. A second call with the same title and body returns the existing id. The result includes the id and the stored content. `get_task` with that id, and `list_my_tasks` when the note fits on the page, return the same content. Empty input, an over-long field, a missing Tran user, or a bad token inserts nothing.
+`create_note` with omitted kind still takes `title` and `body`. At least one is required. The title limit is 200 characters and the body limit is 32000 characters. The stored title starts with `[morph-mcp]` and the stored body starts with `source: morph-mcp`. A second call with the same title and body, or the same `idempotency_key`, returns the existing id. Empty input, an over-long field, a missing Tran user, or a bad token inserts nothing.
 
-`note_grill` takes `action` (`start`, `answer`, `skip`, or `finish`). `start` needs `kind` (`note` or `todo`) and `title`. Later steps need the `id` from `start`. The question count depends on the title, with a cap of four. Skip moves on. Finish, or an answer that is only a stop phrase such as "enough" or "write it now", drafts the body. The draft is the tool result. Another user's id is not found, and the error does not include the draft. Saving still requires `create_note` after the draft is shown. The Morph Notes & TODOs AI assist button uses the same interview through `POST /api/tran/grill` and inserts the draft into the editor only when the person confirms. It does not save by itself.
+`note_grill` takes `action` (`start`, `answer`, `skip`, or `finish`). `start` needs `kind` and `title`. Later steps need the `id` from `start`. The question count depends on the title, with a cap of four. Skip moves on. Finish, or an answer that is only a stop phrase such as "enough" or "write it now", drafts the body. The draft is the tool result. Another user's id is not found, and the error does not include the draft. Saving still requires `create_note` after the draft is shown.
 
 An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). Any external agent using Morph as a note platform follows [16 — Morph for agents](16-morph-for-agents.md), also served as `morph://guide` and `morph_guide`. The human still reviews notes at `http://localhost:3031/`. The agent calls the tools in this chapter.
 
@@ -116,7 +153,7 @@ A client that does not render MCP Apps, including Cursor, uses the same binary a
 
 ## Cursor
 
-Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
+Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`. PAT form (no `JWT_SECRET`):
 
 ```json
 {
@@ -124,8 +161,7 @@ Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
     "morph": {
       "command": "/absolute/path/to/morph-mcp",
       "env": {
-        "MORPH_MCP_TOKEN": "<session JWT>",
-        "JWT_SECRET": "<same non-default secret as the Morph API>",
+        "MORPH_MCP_TOKEN": "<morph_pat_…>",
         "TRAN_SQLITE_PATH": "/absolute/path/to/tran.sqlite"
       }
     }
@@ -133,12 +169,14 @@ Project `.cursor/mcp.json`, or the user file `~/.cursor/mcp.json`:
 }
 ```
 
+A session JWT still works if you also set `JWT_SECRET` to the same non-default secret as the Morph API.
+
 ## Environment
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `MORPH_MCP_TOKEN` | yes | Morph session JWT. Never log it. |
-| `JWT_SECRET` | yes | HMAC secret for that JWT. Must match morph-api. Empty and the development default are refused. |
-| `TRAN_SQLITE_PATH` | yes for notes | SQLite file the API already uses. Default `./data/tran.sqlite` if unset. List and get open it read-only. `create_note` needs the file to be writable. |
+| `MORPH_MCP_TOKEN` | yes | Session JWT or `morph_pat_…`. Never log it. |
+| `JWT_SECRET` | JWT only | HMAC secret for a session JWT. Omit it when the token is a PAT. Empty and the development default are refused for JWTs. |
+| `TRAN_SQLITE_PATH` | yes for notes and PATs | SQLite file the API already uses. Default `./data/tran.sqlite` if unset. List and get open it read-only. `create_note` needs the file to be writable. |
 
 `DB_PATH` and `ENTITY_DETAILS_BADGER` are not read by this build.

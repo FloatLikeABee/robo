@@ -39,7 +39,7 @@ func run() error {
 	}
 	defer tasks.Close()
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	server, closeNotes, err := mcp.NewServer(id, tasks, mcp.RecheckFromEnv, logger, mcp.SQLitePath())
+	server, closeNotes, err := mcp.NewServer(id, tasks, mcp.RecheckWithStore(tasks), logger, mcp.SQLitePath())
 	if err != nil {
 		return err
 	}

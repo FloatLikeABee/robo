@@ -27,7 +27,7 @@ func registerGrillTools(server *sdkmcp.Server, id Identity, recheck func() error
 	additive := false
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "note_grill",
-		Description: "Interview the signed-in user about a note or TODO title, then draft the body. action is start, answer, skip, or finish. start needs kind (note or todo) and title. answer, skip, and finish need id. Does not insert a Notes and TODOs row. Another user's grill id is not found.",
+		Description: "Interview the signed-in user about a title, then draft the body. action is start, answer, skip, or finish. start needs kind (note, todo, big_note, timeline, research, stick, or task) and title. answer, skip, and finish need id. Does not insert a row. Another user's grill id is not found.",
 		Meta:        grillAppToolMeta(),
 		Annotations: &sdkmcp.ToolAnnotations{
 			Title:           "Note grill",
@@ -74,7 +74,7 @@ func readGrillApp(context.Context, *sdkmcp.ReadResourceRequest) (*sdkmcp.ReadRes
 type noteGrillInput struct {
 	Action      string `json:"action" jsonschema:"start, answer, skip, or finish"`
 	ID          string `json:"id,omitempty" jsonschema:"Grill id returned by start."`
-	Kind        string `json:"kind,omitempty" jsonschema:"note or todo. Used by start."`
+	Kind        string `json:"kind,omitempty" jsonschema:"note, todo, big_note, timeline, research, stick, or task. Used by start."`
 	Title       string `json:"title,omitempty" jsonschema:"Title. Required for start."`
 	Description string `json:"description,omitempty" jsonschema:"Optional context or existing body."`
 	Answer      string `json:"answer,omitempty" jsonschema:"The user's answer for action answer."`
