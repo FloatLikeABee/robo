@@ -120,3 +120,15 @@ func TestBigNoteHTMLStaysDarkSansEvenWhenThemeSaysLight(t *testing.T) {
 		t.Fatal(html)
 	}
 }
+
+func TestBigNoteGeneratePromptGroundsIdea(t *testing.T) {
+	idea := "Field guide: how agents use Morph notes, kinds, sharing pool and safety"
+	got := bigNoteGeneratePrompt(idea, "dark", "note", "", "")
+	if !strings.Contains(got, idea) {
+		t.Fatal("prompt dropped the idea")
+	}
+	low := strings.ToLower(got)
+	if !strings.Contains(low, "do not invent") && !strings.Contains(low, "forbid invent") {
+		t.Fatalf("prompt must forbid invented features:\n%s", got)
+	}
+}

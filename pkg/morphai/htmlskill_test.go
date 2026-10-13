@@ -28,6 +28,18 @@ func TestHTMLSkillStaysUnderOllamaBudget(t *testing.T) {
 	}
 }
 
+func TestHTMLSkillUsesHexOnly(t *testing.T) {
+	got := HTMLSkillInstructions()
+	if n := EstimateTokens(got); n > HTMLSkillTokenBudget {
+		t.Fatalf("injected skill is %d tokens, budget is %d", n, HTMLSkillTokenBudget)
+	}
+	for _, banned := range []string{"cyan #38bdf8", "violet #a78bfa", "mint #34d399"} {
+		if strings.Contains(strings.ToLower(got), banned) {
+			t.Fatalf("colour name before hex %q in:\n%s", banned, got)
+		}
+	}
+}
+
 func TestWithHTMLSkillAttachesInstructions(t *testing.T) {
 	got := WithHTMLSkill("Title: demo")
 	if !strings.HasPrefix(got, "Title: demo") {

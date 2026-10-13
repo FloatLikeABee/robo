@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -398,14 +397,10 @@ Markdown rules:
 	if err != nil {
 		return out, "", err
 	}
-	jsonStr, ok := extractJSONObjectAware(raw)
-	if !ok {
-		jsonStr, ok = extractJSONObject(raw)
-	}
-	if !ok {
-		return out, "", errors.New("AI did not return JSON for the timeline")
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &out); err != nil {
+	if err := parseModelJSON(raw, &out); err != nil {
+		if errors.Is(err, errNoModelJSON) {
+			return out, "", errors.New("AI did not return JSON for the timeline")
+		}
 		return out, "", fmt.Errorf("parse AI timeline JSON: %w", err)
 	}
 	out.Title = strings.TrimSpace(out.Title)

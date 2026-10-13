@@ -340,6 +340,7 @@ func GuideExcerpt(topic string) (string, error) {
 func guideOutline() string {
 	var b strings.Builder
 	b.WriteString("# Morph for agents\n\nRead the full playbook at morph://guide.\n\n")
+	b.WriteString("HTML: Morph's base skill is html-anything at skills/vendor/html-anything/. Load it when writing HTML.\n\n")
 	for _, line := range strings.Split(AgentGuideMarkdown, "\n") {
 		if strings.HasPrefix(line, "## ") {
 			b.WriteString(line)

@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-10-13 — Local Ollama HTML E2E leftovers
+
+- Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, morph_guide outline, generated `.meta`
+- Rule: Repair raw newlines in model JSON strings. Give hex accents only (no `cyan #38bdf8`). Grill draft is note body, not a letter; ask one question per title part. Empty-topic `morph_guide` must name html-anything. Generated header chrome is Arial, not system-ui.
+- Source: [issue 151](https://github.com/FloatLikeABee/robo/issues/151)
+
 ## 2026-10-06 — Product UI stays English
 
 - Trigger: locale switch, browser language detection, Chinese/English chrome, `morph-locale`

@@ -43,7 +43,7 @@ func VisualBlockCSS() string {
 .stat-row{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0}
 .stat{min-width:6.5rem;padding:.65rem .8rem;border-radius:12px;background:#0f172a;border:1px solid var(--line)}
 .stat b{display:block;font:700 1.3rem/1.1 Arial,"Helvetica Neue",Helvetica,sans-serif;color:var(--accent)}
-.stat span{font:11px/1.3 system-ui,sans-serif;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.stat span{font:11px/1.3 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .chart{margin:.35rem 0 .2rem}
 .chart svg{width:100%;height:auto;display:block}`
 }
@@ -53,10 +53,10 @@ func DarkDocumentCSS() string {
 	return `:root{color-scheme:dark;` + darkRootVars + `}
 *{box-sizing:border-box}body{margin:0;font-family:` + sansStack + `;color:var(--ink);background:` + darkBodyGradient + `;line-height:1.55}
 .wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.meta{font:12px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}
 ` + DarkProseCSS() + `
-.foot{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
+.foot{font:11px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);margin-top:2rem}`
 }
 
 // DarkCaseTaskDocumentCSS includes scrollbars and case-task detail UI hooks.
@@ -65,11 +65,11 @@ func DarkCaseTaskDocumentCSS(extra string) string {
 html,body{height:100%;margin:0}
 *{box-sizing:border-box}body{font-family:` + sansStack + `;color:var(--ink);background:` + darkBodyGradient + `;line-height:1.55}
 .wrap{max-width:760px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.meta{font:12px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}
 ` + DarkProseCSS() + `
 ` + extra + `
-.foot{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}`
+.foot{font:11px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);margin-top:2rem}`
 }
 
 // DarkBigNoteDocumentCSS is the dark Big note page including optional form blocks.
@@ -77,7 +77,7 @@ func DarkBigNoteDocumentCSS() string {
 	return `:root{color-scheme:dark;` + darkRootVars + `}
 *{box-sizing:border-box}body{margin:0;font-family:` + sansStack + `;color:var(--ink);background:` + darkBodyGradient + `;line-height:1.55}
 .wrap{max-width:720px;margin:0 auto;padding:2rem 1.25rem 3rem}
-.meta{font:12px/1.4 system-ui,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
+.meta{font:12px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem}
 h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2;color:#f8fafc}
 ` + `.prose{font-size:1.05rem;color:var(--ink)}
 .prose>:first-child{margin-top:0}
@@ -97,12 +97,12 @@ h1.page-title{font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 1rem;line-height:1.2
 .prose th,.prose td{border:1px solid var(--line);padding:.45em .6em;text-align:left}
 .prose th{background:var(--card)}` + `
 .q{margin:1.25rem 0;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:12px;background:var(--card)}
-.q label{display:block;font-family:system-ui,sans-serif;font-weight:600;margin-bottom:.55rem;color:#e2e8f0}
+.q label{display:block;font-family:Arial, "Helvetica Neue", Helvetica, sans-serif;font-weight:600;margin-bottom:.55rem;color:#e2e8f0}
 .q input[type=text],.q textarea,.q select{width:100%;padding:.65rem .75rem;border:1px solid #334155;border-radius:8px;font:inherit;background:#0f172a;color:#e2e8f0}
 .q textarea{min-height:96px;resize:vertical}
-.opts{display:grid;gap:.4rem;font-family:system-ui,sans-serif}
+.opts{display:grid;gap:.4rem;font-family:Arial, "Helvetica Neue", Helvetica, sans-serif}
 .opts label{font-weight:500;display:flex;gap:.5rem;align-items:flex-start;color:#cbd5e1}
-button.primary{margin-top:1.25rem;padding:.7rem 1.1rem;border:0;border-radius:999px;background:var(--accent);color:#0b1220;font:600 14px system-ui,sans-serif;cursor:pointer}
-.theme{font:11px/1.4 system-ui,sans-serif;color:var(--muted);margin-top:2rem}
+button.primary{margin-top:1.25rem;padding:.7rem 1.1rem;border:0;border-radius:999px;background:var(--accent);color:#0b1220;font:600 14px Arial, "Helvetica Neue", Helvetica, sans-serif;cursor:pointer}
+.theme{font:11px/1.4 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);margin-top:2rem}
 ` + VisualBlockCSS()
 }

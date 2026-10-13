@@ -128,6 +128,9 @@ func TestMorphGuideTopics(t *testing.T) {
 	if !strings.Contains(outline, "Golden rules") || !strings.Contains(outline, "morph://guide") {
 		t.Fatalf("outline = %s", outline)
 	}
+	if !strings.Contains(strings.ToLower(outline), "html-anything") {
+		t.Fatalf("default morph_guide must name html-anything:\n%s", outline)
+	}
 	sharing, err := mcp.GuideExcerpt("sharing")
 	if err != nil {
 		t.Fatal(err)
