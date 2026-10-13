@@ -15,7 +15,10 @@ func TestAgentPack(t *testing.T) {
 	for extra := range toolNames(t, filepath.Join(root, "morph", "mcp", "agent_runtime.go")) {
 		names[extra] = true
 	}
-	for _, want := range []string{"create_note", "list_my_tasks", "get_task", "suggest_note_kind", "morph_guide"} {
+	for extra := range toolNames(t, filepath.Join(root, "morph", "mcp", "pool_tools.go")) {
+		names[extra] = true
+	}
+	for _, want := range []string{"create_note", "list_my_tasks", "get_task", "suggest_note_kind", "morph_guide", "preview_share", "share_note", "pool_search"} {
 		if !names[want] {
 			t.Fatalf("mcp tools %v missing %s", names, want)
 		}
@@ -46,7 +49,10 @@ func TestAgentPack(t *testing.T) {
 	mustContain(t, "skill", skill, shared...)
 	mustContain(t, "instruction", doc, shared...)
 	mustContain(t, "skill", skill, "suggest_note_kind", "morph_guide", "16-morph-for-agents.md", "Never share without explicit human consent")
-	mustContain(t, "guide", guide, "preview_share", "share_note", "unshare_note", "list_my_shares", "pool_topics", "pool_search", "pool_get", "pool_save_copy", "pool_report", "coming in phase 1B", "not_found", "invalid_input", "rate_limited", "forbidden_scope", "consent_required", "CC BY 4.0", "untrusted")
+	mustContain(t, "guide", guide, "preview_share", "share_note", "unshare_note", "list_my_shares", "pool_topics", "pool_search", "pool_get", "pool_save_copy", "pool_report", "not_found", "invalid_input", "rate_limited", "forbidden_scope", "consent_required", "CC BY 4.0", "untrusted")
+	if strings.Contains(guide, "coming in phase 1B") {
+		t.Fatal("guide still marks pool tools as phase 1B")
+	}
 	mustContain(t, "morph-note", createCmd, "create_note")
 	mustContain(t, "morph-notes", listCmd, "list_my_tasks")
 	mustContain(t, "morph-note-get", getCmd, "get_task")
@@ -109,6 +115,7 @@ func toolNames(t *testing.T, path string) map[string]bool {
 	for _, re := range []*regexp.Regexp{
 		regexp.MustCompile(`readOnly\(\s*"([^"]+)"`),
 		regexp.MustCompile(`readOnlyTool\(\s*"([^"]+)"`),
+		regexp.MustCompile(`writeTool\(\s*"([^"]+)"`),
 		regexp.MustCompile(`Name:\s*"([^"]+)"`),
 	} {
 		for _, m := range re.FindAllStringSubmatch(string(b), -1) {

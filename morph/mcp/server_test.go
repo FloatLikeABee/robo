@@ -59,7 +59,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.AdvertisedToolCount() || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	who := toolByName(t, listed.Tools, "whoami")
@@ -222,14 +222,15 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.AdvertisedToolCount() || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
 
 func isWriteToolName(name string) bool {
 	switch name {
-	case "note_grill", "update_note", "append_to_note", "archive_note":
+	case "note_grill", "update_note", "append_to_note", "archive_note",
+		"preview_share", "share_note", "unshare_note", "pool_save_copy", "pool_report":
 		return true
 	}
 	return strings.HasPrefix(name, "create_")
@@ -286,12 +287,12 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 		}
 		got[tool.Name] = true
 	}
-	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note", "note_grill"} {
+	for _, name := range []string{"whoami", "list_my_tasks", "get_task", "create_note", "note_grill", "preview_share", "share_note", "pool_search"} {
 		if !got[name] {
 			t.Fatalf("missing %s in %+v", name, listed.Tools)
 		}
 	}
-	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
+	if len(listed.Tools) != mcp.AdvertisedToolCount() {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -370,7 +371,7 @@ func TestCreateNoteToolRoundTripAndFailClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
+	if len(listed.Tools) != mcp.AdvertisedToolCount() {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {

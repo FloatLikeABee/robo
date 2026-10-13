@@ -102,6 +102,9 @@ func TestAgentRuntimeToolCount(t *testing.T) {
 	if !strings.Contains(string(b), "const ToolCount = 26") {
 		t.Fatal("records_tools.go ToolCount changed")
 	}
+	if mcp.PoolToolCount != 9 {
+		t.Fatalf("PoolToolCount = %d", mcp.PoolToolCount)
+	}
 }
 
 func TestGuideDocMatchesEmbed(t *testing.T) {
@@ -174,7 +177,7 @@ func TestAgentRuntimeToolsAndGuideResource(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
+	if len(listed.Tools) != mcp.AdvertisedToolCount() {
 		t.Fatalf("tools = %d", len(listed.Tools))
 	}
 	for _, name := range []string{"suggest_note_kind", "morph_guide"} {
