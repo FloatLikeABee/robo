@@ -30,6 +30,38 @@ func TestResolveBigNoteNeverHardFailsOnQwenReplies(t *testing.T) {
 	}
 }
 
+func TestResolveBigNoteDoesNotStoreRawEnvelope(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "ai_json", "qwen_backtick_markdown.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	idea := "PR154 run 2: one-page guide to keeping a weekly review habit"
+	out, err := resolveBigNoteFromReplies(idea, "dark", "note", []string{string(raw)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(strings.TrimSpace(out.Markdown), "{") || strings.Contains(out.Markdown, `"markdown":`) {
+		t.Fatalf("stored the envelope:\n%s", out.Markdown[:200])
+	}
+	if out.Title == "Untitled note" || out.Title == "" {
+		t.Fatalf("title = %q, want parsed title or idea", out.Title)
+	}
+}
+
+func TestResolveBigNoteUsesIdeaWhenEnvelopeUnreadable(t *testing.T) {
+	idea := "PR154 run 2: one-page guide to keeping a weekly review habit"
+	out, err := resolveBigNoteFromReplies(idea, "dark", "note", []string{`{"title": "x", "markdown": `})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(strings.TrimSpace(out.Markdown), "{") {
+		t.Fatalf("stored the envelope: %q", out.Markdown)
+	}
+	if !strings.Contains(out.Title, "weekly review") && !strings.Contains(out.Title, idea) {
+		t.Fatalf("title = %q", out.Title)
+	}
+}
+
 func TestResolveBigNoteDoesNotRetryWhenJSONParses(t *testing.T) {
 	raw := `{"title":"Hi","markdown":"## One\n\nA.\n\n## Two\n\nB.\n\n## Three\n\nC."}`
 	out, err := resolveBigNoteFromReplies("idea text", "dark", "note", []string{raw, "SHOULD NOT USE"})

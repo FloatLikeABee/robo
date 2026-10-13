@@ -5,8 +5,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/robo/morphai"
 )
 
 const (
@@ -178,14 +176,12 @@ func WritePrompt(s Session) string {
 	case KindStick, KindTask:
 		b.WriteString("- One to three short sentences.\n")
 	default:
-		b.WriteString("- Two to five short paragraphs.\n")
+		b.WriteString("- Plain structured markdown: ## headings and bullets. No colour codes. No tables of hex.\n")
 	}
-	b.WriteString("- Hex colours only (#38bdf8 #a78bfa #34d399). Never write a colour name before a hex.\n")
 	b.WriteString("- Do not write a letter. No Dear, no Best regards, no [Your Name].\n")
 	b.WriteString("- Use only the interview answers. Keep the user's units and currency.\n")
 	b.WriteString("- Do not invent dates or places.\n")
-	b.WriteString("- Card fill #111827; accent as border only. Never fill a card with #a78bfa.\n")
-	return morphai.WithHTMLSkill(b.String()) + "\n\nFormat (wins): Output only the body fragment. Keep units and currency. Do not invent dates or places. No <!DOCTYPE html>, no <style>, no html/head/body. Card #111827 with accent border.\n"
+	return b.String() + "\nFormat (wins): Output only the body as plain markdown. Keep units and currency. Do not invent dates or places. No colour codes, no HTML.\n"
 }
 
 // ParseQuestions keeps on-topic questions and fills up to n from the fallback list.
@@ -288,6 +284,8 @@ var (
 	weekdayWord = regexp.MustCompile(`(?i)\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b`)
 	clockStamp  = regexp.MustCompile(`(?i)\b\d{1,2}:\d{2}\s*(am|pm)?\b`)
 	dollarAmt   = regexp.MustCompile(`\$\s*\d`)
+	hexTableRow = regexp.MustCompile(`(?i)^\|\s*#[0-9a-f]{3,8}\s*\|\s*(.*?)\s*\|\s*$`)
+	mdSepRow    = regexp.MustCompile(`^\|\s*[-:| ]+\|\s*$`)
 )
 
 func looksLikeLetter(text string) bool {
@@ -299,6 +297,33 @@ func looksLikeLetter(text string) bool {
 	htmlDoc := strings.Contains(low, "<!doctype html") ||
 		(strings.Contains(low, "<html") && strings.Contains(low, "</html>"))
 	return (greet && sign) || (htmlDoc && (greet || sign))
+}
+
+func flattenHexTable(s string) string {
+	if !strings.Contains(s, "| #") && !strings.Contains(s, "|#") {
+		return s
+	}
+	var lines []string
+	changed := false
+	for _, line := range strings.Split(s, "\n") {
+		trim := strings.TrimSpace(line)
+		if mdSepRow.MatchString(trim) {
+			changed = true
+			continue
+		}
+		if m := hexTableRow.FindStringSubmatch(trim); m != nil {
+			changed = true
+			if cell := strings.TrimSpace(m[1]); cell != "" {
+				lines = append(lines, cell)
+			}
+			continue
+		}
+		lines = append(lines, line)
+	}
+	if !changed {
+		return s
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 func stripHTMLDocument(s string) string {
@@ -343,7 +368,7 @@ func ungroundedDraft(sess Session, draft string) bool {
 
 // SanitizeDraft drops a chatty assistant reply, a document wrapper, or an ungrounded draft.
 func SanitizeDraft(sess Session, raw string) string {
-	text := stripHTMLDocument(stripFences(raw))
+	text := flattenHexTable(stripHTMLDocument(stripFences(raw)))
 	if looksLikeLetter(text) || ungroundedDraft(sess, text) {
 		return DraftFromFacts(sess)
 	}

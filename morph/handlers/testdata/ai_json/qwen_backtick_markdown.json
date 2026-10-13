@@ -1,0 +1,74 @@
+{
+  "title": "Weekly Review Habit Guide",
+  "markdown": `## Setting Up Your Weekly Review Habit
+A weekly review is a powerful tool for improving your productivity and mental health. Here’s a one-page guide to help you establish a sustainable, effective review routine.
+
+### Milestones
+- **Motivation**: Identify why maintaining the habit is important for you.
+- **Planning**: Choose a routine time and place for your reviews and plan your topics.
+- **Implementation**: Start the habit with a few scheduled reviews to build consistency.
+
+### Step-by-Step Instructions
+
+#### 1. **Prioritize Your Goals**
+Begin by identifying what you want to achieve through your weekly review. Determine key areas like tasks completed, tasks to tackle the next week, and areas for improvement.
+
+#### 2. **Create a Schedule**
+Set aside a specific time each week (early morning, lunch time, or evening) to conduct your review. Choose a time when you have a quiet space and limited distractions.
+
+#### 3. **Gather Information**
+Collect information about your progress. This can include:
+
+- **Tasks Completed**: List completed tasks for the current week.
+- **Tasks To-Tackle**: Write down tasks, big or small, that need to be worked on.
+- **Goals**: Review your personal and work goals and ensure you are on track.
+
+#### 4. **Reflect and Evaluate**
+Review and evaluate your progress. Analyze what went well, what didn’t, and what you can improve. Reflect on any obstacles and strategies to overcome them.
+
+#### 5. **Plan for Future Success**
+Use the review to plan for what to work on next week. Be specific about actions you’ll take to achieve your goals.
+
+#### 6. **Track and Review**
+Consider using digital tools or apps to track your progress and set achievable milestones for each review. Regularly review these notes to see how you’ve grown and adjusted your habits.
+
+### Tips for Success
+
+- **Make it a Priority**: Treat your weekly review as an important appointment on your calendar.
+- **Set Specific Goals**: Be clear about what you want to achieve with each weekly review.
+- **Be Consistent**: Stick to your schedule even on weekends.
+- **Reflect on Your Progress**: Use the review as a chance to learn and grow.
+
+### Challenges and Overcoming Them
+
+- **Self-Discipline**: One of the biggest challenges is maintaining consistency. Try setting small, achievable goals to break down the task into manageable parts.
+- **Distractions**: Find a peaceful spot for your review to minimize distractions. Turn off notifications during this time.
+- **Motivation**: If the idea of weekly reviews seems daunting, start small and gradually increase the frequency.
+
+### Benefits of a Weekly Review Habit
+
+- **Improved Productivity**: By regularly reviewing your progress and goals, you become more focused and efficient.
+- **Enhanced Self-Awareness**: Regularly reflecting on your experiences helps you become more conscious of your actions and choices.
+- **Better Mental Health**: Regularly evaluating your progress can mitigate feelings of burnout and increase confidence.
+
+### Sample Weekly Review Template
+
+| **Category**                  | **Notes**                                            |
+|-------------------------------|------------------------------------------------------|
+| **Tasks Completed**            | Task 1: Complete report. Task 2: Read article.      |
+| **Tasks To-Tackle**          | Task 3: Prepare presentation. Task 4: Catch up on social media.                   |
+| **Goals**                    | Complete goal: Read 10 books this year. |
+| **Reflections**               | - Felt great about finishing my report. |
+|                              | - Will aim to catch up on articles next week.       |
+| **Future Success Plan**       | Read a book this weekend. Meet project team for discussion. |
+
+Start your weekly review today, and enjoy the benefits of a more structured approach to achieving your goals.
+
+---
+
+**Note:** This guide is based on the principles of productivity, self-reflection, and self-help. It is recommended to consult with a professional if you feel overwhelmed or have specific challenges.
+`,
+  "questions": [
+    {"id":"q1","label":"What are some specific benefits of a weekly review habit for your productivity and mental health?","type":"single","options":["Improved Productivity","Enhanced Self-Awareness","Better Mental Health","All of the above"]}
+  ]
+}

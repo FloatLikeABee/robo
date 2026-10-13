@@ -75,6 +75,29 @@ func TestParseModelJSONMissingCommaAfterValue(t *testing.T) {
 	}
 }
 
+func TestParseModelJSONBacktickMarkdownFixture(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "ai_json", "qwen_backtick_markdown.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out struct {
+		Title    string `json:"title"`
+		Markdown string `json:"markdown"`
+	}
+	if err := parseModelJSON(string(raw), &out); err != nil {
+		t.Fatalf("parseModelJSON backtick markdown: %v", err)
+	}
+	if out.Title != "Weekly Review Habit Guide" {
+		t.Fatalf("title = %q", out.Title)
+	}
+	if strings.HasPrefix(strings.TrimSpace(out.Markdown), "{") {
+		t.Fatalf("markdown is still the envelope: %q", out.Markdown[:80])
+	}
+	if !strings.Contains(out.Markdown, "weekly review") && !strings.Contains(out.Markdown, "Weekly Review") {
+		t.Fatalf("markdown = %q", out.Markdown[:120])
+	}
+}
+
 func TestParseModelJSONValidUnchanged(t *testing.T) {
 	raw := `{"title":"Hi","markdown":"Line one\nLine two"}`
 	var out struct {
