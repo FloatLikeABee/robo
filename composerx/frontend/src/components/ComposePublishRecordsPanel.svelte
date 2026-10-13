@@ -10,11 +10,6 @@
   let published = $state([])
   let publishedLoading = $state(false)
 
-  /** @type {{ id: number, name: string, html_content: string, theme: string, updated_at: string } | null} */
-  let draftDetail = $state(null)
-  let draftDetailOpen = $state(false)
-  let draftDetailLoading = $state(false)
-
   const rows = $derived(mergePublishedContents(drafts, published))
   const loading = $derived(draftsLoading || publishedLoading)
 
@@ -77,19 +72,6 @@
 
   async function refreshAll() {
     await Promise.all([loadDrafts(), loadPublished()])
-  }
-
-  async function openDraftDetail(id) {
-    draftDetailLoading = true
-    draftDetailOpen = true
-    try {
-      draftDetail = await apiGet(`/publish-drafts/${id}`)
-    } catch (err) {
-      notify('error', err instanceof Error ? err.message : 'Failed to load draft')
-      draftDetailOpen = false
-    } finally {
-      draftDetailLoading = false
-    }
   }
 
   async function deleteDraft(id) {
@@ -159,9 +141,6 @@
                 <td>{row.updated_at ? new Date(row.updated_at).toLocaleString() : '—'}</td>
                 <td class="grid-actions">
                   <span class="grid-actions-inner">
-                    {#if row.canView}
-                      <button type="button" class="btn-ghost" onclick={() => openDraftDetail(row.draftId)}>View</button>
-                    {/if}
                     {#if row.canDelete && row.publishedId}
                       <button type="button" class="btn-ghost btn-danger-lite" onclick={() => removePublished(row)}>Remove</button>
                     {:else if row.canDelete}
@@ -180,39 +159,6 @@
     </div>
   </div>
 </section>
-
-{#if draftDetailOpen}
-  <div
-    class="modal-backdrop"
-    role="presentation"
-    tabindex="-1"
-    onclick={() => (draftDetailOpen = false)}
-    onkeydown={(e) => e.key === 'Escape' && (draftDetailOpen = false)}
-  >
-    <div
-      class="modal-panel publish-draft-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="publish-draft-modal-title"
-      tabindex="-1"
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => e.stopPropagation()}
-    >
-      <header class="modal-header">
-        <h2 id="publish-draft-modal-title" class="modal-title">{draftDetail?.name || 'Draft HTML'}</h2>
-        <button type="button" class="icon-btn modal-close" aria-label="Close" onclick={() => (draftDetailOpen = false)}>×</button>
-      </header>
-      <div class="modal-body">
-        {#if draftDetailLoading}
-          <p class="sidebar-hint">Loading…</p>
-        {:else if draftDetail}
-          <div class="publish-draft-meta">Theme: <strong>{draftDetail.theme || 'default'}</strong></div>
-          <textarea class="publish-draft-html-view" readonly value={draftDetail.html_content}></textarea>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
 
 <style>
   .btn-secondary {
@@ -340,82 +286,5 @@
 
   .btn-danger-lite {
     color: var(--color-danger);
-  }
-
-  .publish-draft-modal {
-    max-width: min(64rem, 96vw);
-    width: min(64rem, 96vw);
-  }
-
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(2, 8, 23, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 70;
-  }
-
-  .modal-panel {
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 0.95rem;
-    background: var(--color-bg-elevated);
-    width: 100%;
-    max-height: min(92vh, 56rem);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .modal-header {
-    border-bottom: 1px solid var(--color-border-subtle);
-    padding: 0.65rem 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .modal-title {
-    margin: 0;
-    font-size: 0.95rem;
-  }
-
-  .modal-body {
-    padding: 0.7rem;
-    min-height: 0;
-    overflow: auto;
-  }
-
-  .icon-btn {
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-bg);
-    color: var(--color-text);
-    width: 1.9rem;
-    height: 1.9rem;
-    border-radius: 0.55rem;
-    cursor: pointer;
-    line-height: 1;
-    font-size: 1rem;
-  }
-
-  .publish-draft-meta {
-    font-size: 0.8rem;
-    color: var(--color-text-subtle);
-    margin-bottom: 0.45rem;
-  }
-
-  .publish-draft-html-view {
-    width: 100%;
-    min-height: min(58vh, 32rem);
-    resize: vertical;
-    border-radius: 0.75rem;
-    border: 1px solid var(--color-border-subtle);
-    padding: 0.55rem 0.65rem;
-    background: var(--color-bg);
-    color: var(--color-text);
-    font-size: 0.78rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 </style>

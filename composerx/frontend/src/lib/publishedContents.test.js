@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mergePublishedContents, slugifyPublishName } from './publishedContents.js'
@@ -30,7 +33,6 @@ test('saved-only rows keep draft actions and no public path', () => {
   assert.equal(rows[0].path, '')
   assert.equal(rows[0].draftId, 8)
   assert.equal(rows[0].canOpen, false)
-  assert.equal(rows[0].canView, true)
   assert.equal(rows[0].canDelete, true)
 })
 
@@ -43,7 +45,16 @@ test('published-only rows can open and can delete', () => {
   assert.equal(rows[0].status, 'Published')
   assert.equal(rows[0].canOpen, true)
   assert.equal(rows[0].canDelete, true)
-  assert.equal(rows[0].canView, false)
   assert.equal(rows[0].publishedId, 3)
   assert.equal(rows[0].draftId, null)
+})
+
+test('Published contents table has no View action', () => {
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../components/ComposePublishRecordsPanel.svelte'),
+    'utf8',
+  )
+  assert.equal(src.includes('>View<'), false)
+  assert.equal(src.includes('openDraftDetail'), false)
+  assert.equal(src.includes('canView'), false)
 })
