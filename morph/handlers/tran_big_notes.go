@@ -292,12 +292,12 @@ func (h *Handlers) generateBigNoteContent(ctx context.Context, idea, theme, kind
 	prompt = strings.TrimSpace(prompt)
 	_ = currentHTML // HTML is rebuilt server-side from markdown/questions.
 
-	genCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	genCtx, cancel := context.WithTimeout(ctx, bigNoteGenerateTimeout)
 	defer cancel()
 	userPrompt := bigNoteGeneratePrompt(idea, theme, kind, prompt, currentMD)
 	raw, err := h.aiService.ChatCompletionLong(genCtx, []ai.DashScopeMessage{{Role: "user", Content: userPrompt}})
 	if err != nil {
-		return out, err
+		return out, wrapBigNoteAIError(err)
 	}
 	replies := []string{raw}
 	parsedOK := parseModelJSON(raw, &out) == nil
@@ -310,8 +310,46 @@ func (h *Handlers) generateBigNoteContent(ctx context.Context, idea, theme, kind
 	return resolveBigNoteFromReplies(idea, theme, kind, replies)
 }
 
+const bigNoteGenerateTimeout = 5 * time.Minute
+
+var errBigNoteTimeout = errors.New("the model timed out; retry")
+
+func wrapBigNoteAIError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "deadline exceeded") {
+		return errBigNoteTimeout
+	}
+	return err
+}
+
+func countH2(md string) int {
+	n := 0
+	for _, line := range strings.Split(md, "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasPrefix(t, "## ") && !strings.HasPrefix(t, "###") {
+			n++
+		}
+	}
+	return n
+}
+
 func thinBigNoteMarkdown(md string) bool {
-	return strings.Count(md, "## ") < 3
+	return countH2(md) < 3
+}
+
+func looksLikeJSONEnvelope(s string) bool {
+	t := strings.TrimSpace(s)
+	return strings.HasPrefix(t, "{") && strings.Contains(t, `"markdown"`)
+}
+
+func titleFromIdea(idea string) string {
+	idea = strings.TrimSpace(idea)
+	if idea == "" {
+		return "Untitled note"
+	}
+	return truncateRunes(idea, 80)
 }
 
 func ideaBulletLines(idea string) string {
@@ -339,12 +377,12 @@ func expandBigNoteFromIdea(idea, md string) string {
 	if md == "" {
 		md = idea
 	}
-	n := strings.Count(md, "## ")
+	n := countH2(md)
 	if n == 0 {
 		return "## Overview\n\n" + md + "\n\n## Details\n\n" + idea + "\n\n## What this covers\n\n" + ideaBulletLines(idea)
 	}
 	for _, h := range []string{"## Details", "## What this covers", "## Notes"} {
-		if strings.Count(md, "## ") >= 3 {
+		if countH2(md) >= 3 {
 			break
 		}
 		if strings.Contains(md, h) {
@@ -374,7 +412,11 @@ func resolveBigNoteFromReplies(idea, theme, kind string, replies []string) (bigN
 		}
 	}
 	if !have {
-		out.Markdown = strings.TrimSpace(stripModelFences(last))
+		if looksLikeJSONEnvelope(last) {
+			out.Markdown = strings.TrimSpace(idea)
+		} else {
+			out.Markdown = strings.TrimSpace(stripModelFences(last))
+		}
 	}
 	finishBigNoteResult(&out, idea, kind, theme)
 	return out, nil
@@ -384,8 +426,8 @@ func finishBigNoteResult(out *bigNoteAIResult, idea, kind, theme string) {
 	out.Title = strings.TrimSpace(out.Title)
 	out.Markdown = strings.TrimSpace(out.Markdown)
 	out.HTML = strings.TrimSpace(out.HTML)
-	if out.Title == "" {
-		out.Title = "Untitled note"
+	if out.Title == "" || out.Title == "Untitled note" {
+		out.Title = titleFromIdea(idea)
 	}
 	if out.Markdown == "" {
 		out.Markdown = "# " + out.Title + "\n\n" + idea

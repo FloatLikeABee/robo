@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -133,6 +135,41 @@ func TestBigNoteGeneratePromptGroundsIdea(t *testing.T) {
 	}
 	if !strings.Contains(got, "##") || (!strings.Contains(low, "at least 3") && !strings.Contains(low, "at least three") && !strings.Contains(low, "three ##")) {
 		t.Fatalf("prompt must require at least three ## sections:\n%s", got)
+	}
+}
+
+func TestBigNoteTimeoutIsRetryable(t *testing.T) {
+	if bigNoteGenerateTimeout <= 90*time.Second {
+		t.Fatalf("timeout = %s, want longer than 90s for Ollama", bigNoteGenerateTimeout)
+	}
+	err := wrapBigNoteAIError(context.DeadlineExceeded)
+	if err == nil || strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("err = %v", err)
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "retry") {
+		t.Fatalf("err = %v, want retryable", err)
+	}
+}
+
+func TestResolveBigNoteExpandsTwoH2WithH3(t *testing.T) {
+	idea := "PR154 run 3: how to plan a 2-day team offsite"
+	raw := `{"title":"How to Plan a 2-Day Team Offsite","markdown":"## Introduction\n\nPlan the offsite.\n\n## Key Milestones\n\n### Define objectives\n\nA.\n\n### Create a schedule\n\nB.\n\n### Gather supplies\n\nC."}`
+	out, err := resolveBigNoteFromReplies(idea, "dark", "note", []string{raw})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, line := range strings.Split(out.Markdown, "\n") {
+		tline := strings.TrimSpace(line)
+		if strings.HasPrefix(tline, "## ") && !strings.HasPrefix(tline, "###") {
+			n++
+		}
+	}
+	if n < 3 {
+		t.Fatalf("want ≥3 ## headings, got %d in:\n%s", n, out.Markdown)
+	}
+	if !strings.Contains(out.Markdown, "offsite") {
+		t.Fatalf("expand dropped the idea: %q", out.Markdown)
 	}
 }
 

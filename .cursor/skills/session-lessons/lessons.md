@@ -4,9 +4,9 @@ Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update 
 
 ## 2026-10-13 — Local Ollama HTML E2E leftovers
 
-- Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, morph_guide outline, generated `.meta`, Qwen fenced/non-JSON replies
-- Rule: Repair raw newlines and missing commas in model JSON. Big-note generate retries once then falls back to markdown — never hard-fail. Grill draft is a body fragment grounded on answers (keep RMB, no invented dates); cards are `#111827` with accent borders, not mint-on-violet. Big notes need ≥3 `##` sections. Hex accents only. Empty-topic `morph_guide` names html-anything. Header chrome is Arial.
-- Source: [issue 153](https://github.com/FloatLikeABee/robo/issues/153)
+- Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, morph_guide outline, generated `.meta`, Qwen fenced/non-JSON replies, backtick JSON, Ollama timeout, grill hex table
+- Rule: Unwrap backtick JSON values; never store a raw envelope; empty title uses the idea. Repair newlines and missing commas. Generate waits >90s and returns a retry error on deadline. Count real `##` headings (not `###`); scaffold if still thin. Grill write is colour-free markdown; hex tables are stripped; `#111827` cards are CSS. Compact skill stays ≤512 tokens and off the grill prompt.
+- Source: [issue 155](https://github.com/FloatLikeABee/robo/issues/155)
 
 ## 2026-10-06 — Product UI stays English
 

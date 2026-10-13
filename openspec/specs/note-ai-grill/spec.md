@@ -134,12 +134,12 @@ The conversation UI MUST be one HTML document served as an MCP app resource and 
 - **AND** no session is stored
 
 ### Requirement: Grill write prompt loads the html-anything skill
-The prompt that writes the grill draft MUST include the compact html-anything skill and Ge overlay. The draft MUST remain body text for the kind, not a raw HTML document, not a chat greeting, and not a signed letter.
+The grill write prompt MUST ask for plain structured markdown (headings and bullets) and MUST NOT include hex colour codes, card-fill instructions, or the compact html-anything skill. The draft MUST remain body text for the kind, not a raw HTML document, not a chat greeting, and not a signed letter. `#111827` card styling is applied by the grill page at render time.
 
 #### Scenario: Write prompt includes the skill
 - **WHEN** the grill builds the write prompt after the interview
-- **THEN** the prompt includes the compact html-anything skill
-- **AND** it still asks for the note or TODO body only
+- **THEN** the prompt asks for the note or TODO body only
+- **AND** it does not contain `html-anything` or hex colour codes
 
 ### Requirement: Question count covers each title part
 The grill interview MUST plan at least one question per title part. Parts are the segments of the title split on commas, semicolons, `and`, and facet prepositions (`for`, `in`, `with`, `about`, `versus`, `vs`). A short single-intent title with no parts still plans one question. The count MUST stay at most four.
@@ -154,13 +154,12 @@ The grill interview MUST plan at least one question per title part. Parts are th
 - **THEN** the planned question count is 1
 
 ### Requirement: Grill draft is note content not a letter
-The grill write prompt MUST ask for the note or TODO body only, MUST use hex colour values with no colour word before a hex, and MUST say not to write a letter (no greeting, no sign-off, no `[Your Name]`). A model reply that is a full HTML letter or that greets with `Dear` and signs off MUST be replaced with a body built from the interview facts.
+The grill write prompt MUST ask for the note or TODO body only and MUST say not to write a letter (no greeting, no sign-off, no `[Your Name]`). It MUST NOT include hex colour codes. A model reply that is a full HTML letter or that greets with `Dear` and signs off MUST be replaced with a body built from the interview facts.
 
 #### Scenario: Write prompt forbids letter and colour names
 - **WHEN** the grill builds the write prompt
-- **THEN** the prompt includes the compact html-anything skill
-- **AND** it asks for the body only
-- **AND** it does not contain `cyan #38bdf8`
+- **THEN** it asks for the body only
+- **AND** it does not contain `cyan #38bdf8` or other hex colour codes
 - **AND** it forbids a letter greeting and sign-off
 
 #### Scenario: Letter-shaped HTML is discarded
@@ -197,3 +196,16 @@ The grill page MUST paint cards with background `#111827` and an accent colour a
 - **THEN** it sets `--card` to `#111827`
 - **AND** the question or draft card uses that background and an accent border
 - **AND** it does not set a violet (`#a78bfa`) card fill
+
+### Requirement: Grill write is colour-free structured markdown
+The grill write prompt MUST ask for plain structured markdown (headings and bullets). It MUST NOT include hex colour codes, card-fill instructions, or the compact html-anything skill. `#111827` card styling MUST be applied by the grill page CSS at render time.
+
+#### Scenario: Write prompt has no hex
+- **WHEN** the grill builds the write prompt
+- **THEN** the prompt asks for headings or bullets
+- **AND** it does not contain `#38bdf8`, `#a78bfa`, `#111827`, or `html-anything`
+
+#### Scenario: Hex table draft is stripped
+- **WHEN** the model returns a markdown table whose first column is hex codes
+- **THEN** the stored draft has no `#111827` or `#E8E8EF` cells
+- **AND** it still contains the answers (for example `30k RMB`)

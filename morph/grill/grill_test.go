@@ -77,17 +77,21 @@ func TestPromptsDoNotAskTheModelToAnswer(t *testing.T) {
 	}
 }
 
-func TestWritePromptLoadsHTMLSkillAndStaysBodyOnly(t *testing.T) {
+func TestWritePromptIsPlainStructuredMarkdown(t *testing.T) {
 	write := WritePrompt(Session{Kind: KindNote, Title: exampleTitle, Turns: []Turn{{Question: "Who is it for?", Answer: "Agents"}}})
-	for _, needle := range []string{"html-anything", "Arial", "#38bdf8", "Output only the body."} {
-		if !strings.Contains(write, needle) {
-			t.Fatalf("missing %q in:\n%s", needle, write)
+	low := strings.ToLower(write)
+	if !strings.Contains(write, "Output only the body.") {
+		t.Fatalf("missing body-only rule:\n%s", write)
+	}
+	if !strings.Contains(low, "markdown") && !strings.Contains(low, "heading") && !strings.Contains(low, "bullet") {
+		t.Fatalf("write prompt must ask for structured markdown:\n%s", write)
+	}
+	for _, banned := range []string{"#38bdf8", "#a78bfa", "#111827", "html-anything"} {
+		if strings.Contains(low, strings.ToLower(banned)) {
+			t.Fatalf("colour/skill leaked %q in:\n%s", banned, write)
 		}
 	}
-	if strings.Contains(strings.ToLower(write), "cyan #38bdf8") {
-		t.Fatal("write prompt still names cyan before the hex")
-	}
-	if !strings.Contains(strings.ToLower(write), "not a letter") && !strings.Contains(strings.ToLower(write), "do not write a letter") {
+	if !strings.Contains(low, "not a letter") && !strings.Contains(low, "do not write a letter") {
 		t.Fatal("write prompt must forbid a letter")
 	}
 }
@@ -212,6 +216,20 @@ func TestWritePromptGroundsUnitsAndPlaces(t *testing.T) {
 	}
 	if !strings.Contains(write, "30k RMB") {
 		t.Fatal("write prompt dropped the answer")
+	}
+}
+
+func TestSanitizeFlattensHexTable(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "grill-hex-table.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := SanitizeDraft(offsiteSess(), string(raw))
+	if strings.Contains(got, "#111827") || strings.Contains(strings.ToUpper(got), "#E8E8EF") {
+		t.Fatalf("hex cells kept: %q", got)
+	}
+	if !strings.Contains(got, "30k RMB") || !strings.Contains(got, "West Lake") {
+		t.Fatalf("answers dropped: %q", got)
 	}
 }
 

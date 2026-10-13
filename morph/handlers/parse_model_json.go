@@ -13,6 +13,7 @@ var errNoModelJSON = errors.New("AI did not return JSON")
 // It strips fences, tries each balanced {...} block, escapes raw newlines/tabs
 // inside strings, and inserts missing commas between properties.
 func parseModelJSON(raw string, dest any) error {
+	raw = repairJSONBacktickStrings(stripModelFences(raw))
 	var last error
 	for _, jsonStr := range extractJSONObjects(raw) {
 		repaired := repairJSONPunctuation(repairJSONStringControls(jsonStr))
@@ -26,6 +27,51 @@ func parseModelJSON(raw string, dest any) error {
 		return last
 	}
 	return errNoModelJSON
+}
+
+// repairJSONBacktickStrings turns JS `template` values into JSON strings.
+func repairJSONBacktickStrings(s string) string {
+	var b []byte
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if inString {
+			b = append(b, ch)
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+		if ch == '"' {
+			inString = true
+			b = append(b, ch)
+			continue
+		}
+		if ch == '`' {
+			j := i + 1
+			for j < len(s) && s[j] != '`' {
+				j++
+			}
+			quoted, err := json.Marshal(s[i+1 : j])
+			if err != nil {
+				quoted = []byte(`""`)
+			}
+			b = append(b, quoted...)
+			i = j
+			continue
+		}
+		b = append(b, ch)
+	}
+	return string(b)
 }
 
 func stripModelFences(s string) string {
