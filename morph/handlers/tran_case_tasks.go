@@ -665,6 +665,12 @@ func (h *Handlers) CreateCaseTask(c *gin.Context) {
 	}
 	cols = append(cols, "assignee_type", "assignee_id", "title")
 	args = append(args, legacyType, legacyID, strings.TrimSpace(title))
+	if uid, ok := c.Get("auth_user_id"); ok {
+		if s, ok := uid.(string); ok && strings.TrimSpace(s) != "" {
+			cols = append(cols, "owner_user_id")
+			args = append(args, strings.TrimSpace(s))
+		}
+	}
 
 	stmt := "INSERT INTO CaseTask (" + strings.Join(cols, ",") + ") VALUES (" + strings.TrimRight(strings.Repeat("?,", len(cols)), ",") + ")"
 	res, err := h.TranMySQL.DB.Exec(stmt, args...)

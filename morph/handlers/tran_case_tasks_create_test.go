@@ -33,7 +33,11 @@ func openLegacyCaseTaskDB(t *testing.T) *sql.DB {
 			assignee_type TEXT NOT NULL,
 			assignee_id INTEGER NOT NULL,
 			created_on TEXT,
-			last_updated TEXT
+			last_updated TEXT,
+			owner_user_id TEXT NOT NULL DEFAULT '',
+			board_kind TEXT NOT NULL DEFAULT 'stick',
+			version INTEGER NOT NULL DEFAULT 1,
+			archived_at TEXT NULL
 		)`,
 		`CREATE TABLE CaseTaskAssignee (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,5 +204,25 @@ func TestCreateCaseTaskRejectsBlankTitle(t *testing.T) {
 	}
 	if n != 0 {
 		t.Fatalf("expected no row, got %d", n)
+	}
+}
+
+func TestListCaseTasksKeepsTitleAndDates(t *testing.T) {
+	sqlDB := openLegacyCaseTaskDB(t)
+	if _, err := sqlDB.Exec(`INSERT INTO CaseTask (title, description, start_at, end_at, assignee_type, assignee_id) VALUES ('legacy dock', 'row', '2026-09-01T09:00:00Z', '2026-09-01T10:00:00Z', '', 0)`); err != nil {
+		t.Fatal(err)
+	}
+	gin.SetMode(gin.TestMode)
+	h := &Handlers{TranMySQL: &morphdb.TranSQL{DB: sqlDB}}
+	r := gin.New()
+	r.GET("/api/tran/case-tasks", h.ListCaseTasks)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/tran/case-tasks", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "legacy dock") || !strings.Contains(w.Body.String(), "2026-09-01") {
+		t.Fatalf("list = %s", w.Body.String())
 	}
 }

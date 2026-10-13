@@ -214,6 +214,14 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	}
 }
 
+func isWriteToolName(name string) bool {
+	switch name {
+	case "note_grill", "update_note", "append_to_note", "archive_note":
+		return true
+	}
+	return strings.HasPrefix(name, "create_")
+}
+
 func toolNamed(tools []*sdkmcp.Tool, name string) bool {
 	for _, tool := range tools {
 		if tool.Name == name {
@@ -256,7 +264,7 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 		if tool.Annotations == nil {
 			t.Fatalf("%s annotations = nil", tool.Name)
 		}
-		if strings.HasPrefix(tool.Name, "create_") || tool.Name == "note_grill" {
+		if isWriteToolName(tool.Name) {
 			if tool.Annotations.ReadOnlyHint {
 				t.Fatalf("%s is marked read-only", tool.Name)
 			}

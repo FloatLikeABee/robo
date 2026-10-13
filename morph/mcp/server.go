@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"idongivaflyinfa/auth"
 )
 
 //go:embed notes_app.html
@@ -108,7 +109,7 @@ func NewServerWith(id Identity, tasks *sql.DB, recheck func() error, logger *slo
 	sdkmcp.AddTool(server, getTool, getTask(id, tasks, recheck))
 	sdkmcp.AddTool(server, &sdkmcp.Tool{
 		Name:        "create_note",
-		Description: "Create a note in the signed-in user's Notes and TODOs (user_note_todo). The stored title starts with [morph-mcp] and the body starts with source: morph-mcp. Title or body is required. Title max 200 characters. Body max 32000 characters. Does not create a TODO or a shared MorphNotes Tasks board row.",
+		Description: "Create a note for the signed-in user. kind is note, todo, big_note, timeline, research, stick, or task. Omitted kind stays a Notes and TODOs note and returns an integer id. Optional idempotency_key and tags. The stored title starts with [morph-mcp].",
 		Meta:        notesAppToolMeta(),
 		Annotations: &sdkmcp.ToolAnnotations{
 			Title:           "Create note",
@@ -117,6 +118,7 @@ func NewServerWith(id Identity, tasks *sql.DB, recheck func() error, logger *slo
 			OpenWorldHint:   &closedWorld,
 		},
 	}, createNote(id, notes, recheck))
+	registerUnifiedNoteTools(server, id, tasks, notes, recheck, readOnly)
 	registerModuleTools(server, id, tasks, notes, recheck, readOnly)
 	registerGrillTools(server, id, recheck, complete)
 	server.AddResource(notesAppResource(), readNotesApp)
@@ -212,10 +214,12 @@ func callRecheck(recheck func() error) error {
 type whoamiInput struct{}
 
 type whoamiOutput struct {
-	ID       string   `json:"id"`
-	Email    string   `json:"email"`
-	Username string   `json:"username"`
-	Roles    []string `json:"roles"`
+	ID        string   `json:"id"`
+	Email     string   `json:"email"`
+	Username  string   `json:"username"`
+	Roles     []string `json:"roles"`
+	Scopes    []string `json:"scopes"`
+	ExpiresAt string   `json:"expires_at,omitempty"`
 }
 
 func whoami(id Identity, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, whoamiInput) (*sdkmcp.CallToolResult, whoamiOutput, error) {
@@ -225,11 +229,19 @@ func whoami(id Identity, recheck func() error) func(context.Context, *sdkmcp.Cal
 	} else {
 		roles = append([]string(nil), roles...)
 	}
+	scopes := id.Scopes
+	if len(scopes) == 0 {
+		scopes = []string{auth.ScopeNotesRead, auth.ScopeNotesWrite}
+	} else {
+		scopes = append([]string(nil), scopes...)
+	}
 	out := whoamiOutput{
-		ID:       id.UserID,
-		Email:    id.Email,
-		Username: id.Username,
-		Roles:    roles,
+		ID:        id.UserID,
+		Email:     id.Email,
+		Username:  id.Username,
+		Roles:     roles,
+		Scopes:    scopes,
+		ExpiresAt: id.ExpiresAt,
 	}
 	return func(context.Context, *sdkmcp.CallToolRequest, whoamiInput) (*sdkmcp.CallToolResult, whoamiOutput, error) {
 		if err := callRecheck(recheck); err != nil {
@@ -254,6 +266,9 @@ func listMyTasks(id Identity, tasks *sql.DB, recheck func() error) func(context.
 		if err := callRecheck(recheck); err != nil {
 			return nil, ListResult{}, err
 		}
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
+			return nil, ListResult{}, err
+		}
 		out, err := ListMyTasks(ctx, tasks, id.UserID, TaskFilter{Type: in.Type, Status: in.Status, Limit: in.Limit})
 		if err != nil {
 			return nil, ListResult{}, err
@@ -263,30 +278,58 @@ func listMyTasks(id Identity, tasks *sql.DB, recheck func() error) func(context.
 }
 
 type createNoteInput struct {
-	Title string `json:"title,omitempty" jsonschema:"Note title. Optional. At most 200 characters."`
-	Body  string `json:"body,omitempty" jsonschema:"Note text. Optional. At most 32000 characters. Title or body is required."`
+	Title          string   `json:"title,omitempty" jsonschema:"Note title. Optional. At most 200 characters."`
+	Body           string   `json:"body,omitempty" jsonschema:"Note text. Optional. At most 32000 characters. Title or body is required when kind is note."`
+	Kind           string   `json:"kind,omitempty" jsonschema:"note, todo, big_note, timeline, research, stick, or task. Default note."`
+	Tags           []string `json:"tags,omitempty" jsonschema:"Lowercase tags. At most 10."`
+	IdempotencyKey string   `json:"idempotency_key,omitempty" jsonschema:"Same owner and key returns the existing record."`
+	StartAt        string   `json:"start_at,omitempty" jsonschema:"RFC3339 start for stick or task."`
+	EndAt          string   `json:"end_at,omitempty" jsonschema:"RFC3339 end for stick or task."`
+	Idea           string   `json:"idea,omitempty" jsonschema:"Story idea when kind is big_note."`
+	Prompt         string   `json:"prompt,omitempty" jsonschema:"Research prompt when kind is research."`
+	Content        string   `json:"content,omitempty" jsonschema:"Body text for timeline, story, or research."`
 }
 
-func createNote(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, createNoteInput) (*sdkmcp.CallToolResult, Task, error) {
-	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in createNoteInput) (*sdkmcp.CallToolResult, Task, error) {
+func createNote(id Identity, notes *noteStore, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, createNoteInput) (*sdkmcp.CallToolResult, NoteRecord, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in createNoteInput) (*sdkmcp.CallToolResult, NoteRecord, error) {
 		if err := callRecheck(recheck); err != nil {
-			return nil, Task{}, err
+			return nil, NoteRecord{}, err
+		}
+		if err := RequireScope(id, auth.ScopeNotesWrite); err != nil {
+			return nil, NoteRecord{}, err
 		}
 		db, err := notes.writer()
 		if err != nil {
-			return nil, Task{}, err
+			return nil, NoteRecord{}, err
 		}
-		task, err := CreateMyNote(ctx, db, id.UserID, in.Title, in.Body)
+		body := in.Body
+		if body == "" {
+			body = in.Content
+		}
+		rec, err := CreateNote(ctx, db, id.UserID, CreateNoteArgs{
+			Kind:           in.Kind,
+			Title:          in.Title,
+			Body:           body,
+			Tags:           in.Tags,
+			IdempotencyKey: in.IdempotencyKey,
+			StartAt:        in.StartAt,
+			EndAt:          in.EndAt,
+			Idea:           in.Idea,
+			Prompt:         in.Prompt,
+		})
 		if err != nil {
-			return nil, Task{}, err
+			return nil, NoteRecord{}, err
 		}
-		return nil, task, nil
+		return nil, rec, nil
 	}
 }
 
 func getTask(id Identity, tasks *sql.DB, recheck func() error) func(context.Context, *sdkmcp.CallToolRequest, getInput) (*sdkmcp.CallToolResult, Task, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, in getInput) (*sdkmcp.CallToolResult, Task, error) {
 		if err := callRecheck(recheck); err != nil {
+			return nil, Task{}, err
+		}
+		if err := RequireScope(id, auth.ScopeNotesRead); err != nil {
 			return nil, Task{}, err
 		}
 		task, err := GetMyTask(ctx, tasks, id.UserID, in.ID)
