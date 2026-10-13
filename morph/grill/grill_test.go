@@ -82,6 +82,54 @@ func TestWritePromptLoadsHTMLSkillAndStaysBodyOnly(t *testing.T) {
 			t.Fatalf("missing %q in:\n%s", needle, write)
 		}
 	}
+	if strings.Contains(strings.ToLower(write), "cyan #38bdf8") {
+		t.Fatal("write prompt still names cyan before the hex")
+	}
+	if !strings.Contains(strings.ToLower(write), "not a letter") && !strings.Contains(strings.ToLower(write), "do not write a letter") {
+		t.Fatal("write prompt must forbid a letter")
+	}
+}
+
+func TestQuestionCapCoversTitleParts(t *testing.T) {
+	got := QuestionCap("Team offsite plan for 12 people in Hangzhou")
+	if got < 3 || got > MaxQuestions {
+		t.Fatalf("3-part title cap = %d", got)
+	}
+	if got := QuestionCap("buy milk"); got != 1 {
+		t.Fatalf("short title cap = %d", got)
+	}
+}
+
+const letterHTML = `<!DOCTYPE html>
+<html>
+<head>
+<style>
+h1, h2, h3 { color: cyan #38bdf8; }
+</style>
+</head>
+<body>
+<h1>Team Offsite Plan</h1>
+<p>Dear Team,</p>
+<p>We've selected West Lake.</p>
+<p>Best regards,</p>
+<p>[Your Name]</p>
+</body>
+</html>`
+
+func TestSanitizeDropsLetterHTML(t *testing.T) {
+	sess := Session{
+		Kind:  KindNote,
+		Title: "Team offsite plan for 12 people in Hangzhou",
+		Turns: []Turn{{Question: "Where should it be?", Answer: "West Lake area"}},
+	}
+	got := SanitizeDraft(sess, letterHTML)
+	low := strings.ToLower(got)
+	if strings.Contains(low, "dear team") || strings.Contains(got, "[Your Name]") || strings.Contains(low, "<!doctype html") {
+		t.Fatalf("letter leaked: %q", got)
+	}
+	if !strings.Contains(got, "West Lake area") {
+		t.Fatalf("draft dropped the answer: %q", got)
+	}
 }
 
 func TestStopPhraseIsTheWholeAnswer(t *testing.T) {

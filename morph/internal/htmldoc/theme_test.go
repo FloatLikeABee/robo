@@ -16,3 +16,14 @@ func TestDarkDocumentCSSUsesSansMultiAccentDarkTheme(t *testing.T) {
 		}
 	}
 }
+
+func TestGeneratedHeaderUsesArialNotSystemUI(t *testing.T) {
+	for _, css := range []string{DarkDocumentCSS(), DarkBigNoteDocumentCSS(), DarkCaseTaskDocumentCSS("")} {
+		if !strings.Contains(css, `.meta{font:12px/1.4 `+sansStack) && !strings.Contains(css, `.meta{font:12px/1.4 Arial`) {
+			t.Fatalf("header meta is not Arial:\n%s", css)
+		}
+		if strings.Contains(css, `.meta{font:12px/1.4 system-ui`) {
+			t.Fatal("header meta still uses system-ui")
+		}
+	}
+}

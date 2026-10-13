@@ -15,4 +15,9 @@ func TestFormHTMLPromptAsksForDarkSansAccents(t *testing.T) {
 	if strings.Contains(got, "Dark Orange") || strings.Contains(got, "#FF8C00") {
 		t.Fatal(got)
 	}
+	for _, banned := range []string{"cyan #38bdf8", "Cyan #38bdf8", "violet #a78bfa", "mint #34d399"} {
+		if strings.Contains(got, banned) {
+			t.Fatalf("colour name before hex %q in:\n%s", banned, got)
+		}
+	}
 }

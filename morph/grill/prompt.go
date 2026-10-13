@@ -70,10 +70,34 @@ func QuestionCap(title string) int {
 			score = 3
 		}
 	}
+	if parts := titlePartCount(text); parts > score {
+		score = parts
+	}
 	if score > MaxQuestions {
 		return MaxQuestions
 	}
 	return score
+}
+
+func titlePartCount(title string) int {
+	parts := 1
+	for _, r := range title {
+		if r == ',' || r == ';' {
+			parts++
+		}
+	}
+	for _, field := range strings.FieldsFunc(strings.ToLower(title), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		switch field {
+		case "and", "for", "in", "with", "about", "versus", "vs":
+			parts++
+		}
+	}
+	if parts < 1 {
+		return 1
+	}
+	return parts
 }
 
 // PlanPrompt asks for exactly n questions. It does not ask the model to answer the user.
@@ -156,7 +180,9 @@ func WritePrompt(s Session) string {
 	default:
 		b.WriteString("- Two to five short paragraphs.\n")
 	}
-	return morphai.WithHTMLSkill(b.String())
+	b.WriteString("- Hex colours only (#38bdf8 #a78bfa #34d399). Never write a colour name before a hex.\n")
+	b.WriteString("- Do not write a letter. No Dear, no Best regards, no [Your Name].\n")
+	return morphai.WithHTMLSkill(b.String()) + "\n\nFormat (wins): Output only the body. This is note content, not a letter and not a full HTML page. Hex only. No Dear, no sign-off, no [Your Name], no <!DOCTYPE html>.\n"
 }
 
 // ParseQuestions keeps on-topic questions and fills up to n from the fallback list.
@@ -251,9 +277,23 @@ func IsStopPhrase(answer string) bool {
 
 var chattyDraft = regexp.MustCompile(`(?i)(great[!]|(?:i['’]m|i am) morph|as an ai|feel free to (?:let me know|ask)|how can i (?:help|assist)|let me know if you)`)
 
-// SanitizeDraft drops a chatty assistant reply. A real body is kept.
+func looksLikeLetter(text string) bool {
+	low := strings.ToLower(text)
+	greet := strings.Contains(low, "dear ")
+	sign := strings.Contains(low, "best regards") ||
+		strings.Contains(low, "[your name]") ||
+		strings.Contains(low, "sincerely")
+	htmlDoc := strings.Contains(low, "<!doctype html") ||
+		(strings.Contains(low, "<html") && strings.Contains(low, "</html>"))
+	return (greet && sign) || (htmlDoc && (greet || sign))
+}
+
+// SanitizeDraft drops a chatty assistant reply or a letter-shaped HTML page.
 func SanitizeDraft(sess Session, raw string) string {
 	text := stripFences(raw)
+	if looksLikeLetter(text) {
+		return DraftFromFacts(sess)
+	}
 	paras := splitParas(text)
 	if len(paras) > 0 && chattyDraft.MatchString(paras[0]) {
 		paras = paras[1:]
