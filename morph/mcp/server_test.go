@@ -59,7 +59,7 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	who := toolByName(t, listed.Tools, "whoami")
@@ -90,11 +90,20 @@ func TestHandshakeListAndWhoami(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources.Resources) != 2 || !resourceURI(resources.Resources, "ui://morph/notes") || !resourceURI(resources.Resources, "ui://morph/grill") {
+	if len(resources.Resources) != 3 || !resourceURI(resources.Resources, "ui://morph/notes") || !resourceURI(resources.Resources, "ui://morph/grill") || !resourceURI(resources.Resources, "morph://guide") {
 		t.Fatalf("resources = %+v", resources.Resources)
 	}
-	if resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
-		t.Fatalf("mime = %q", resources.Resources[0].MIMEType)
+	for _, res := range resources.Resources {
+		switch res.URI {
+		case "ui://morph/notes", "ui://morph/grill":
+			if res.MIMEType != "text/html;profile=mcp-app" {
+				t.Fatalf("mime %s = %q", res.URI, res.MIMEType)
+			}
+		case "morph://guide":
+			if res.MIMEType != "text/markdown" {
+				t.Fatalf("mime %s = %q", res.URI, res.MIMEType)
+			}
+		}
 	}
 }
 
@@ -153,10 +162,14 @@ func TestNotesAppSurface(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listedRes.Resources) != 2 || !resourceURI(listedRes.Resources, "ui://morph/notes") || !resourceURI(listedRes.Resources, "ui://morph/grill") {
+	if len(listedRes.Resources) != 3 || !resourceURI(listedRes.Resources, "ui://morph/notes") || !resourceURI(listedRes.Resources, "ui://morph/grill") || !resourceURI(listedRes.Resources, "morph://guide") {
 		t.Fatalf("resources = %+v", listedRes.Resources)
 	}
-	assertNoExternalCSP(t, listedRes.Resources[0].Meta)
+	for _, res := range listedRes.Resources {
+		if res.URI == "ui://morph/notes" || res.URI == "ui://morph/grill" {
+			assertNoExternalCSP(t, res.Meta)
+		}
+	}
 
 	page, err := session.CallTool(ctx, &sdkmcp.CallToolParams{Name: "list_my_tasks"})
 	if err != nil || page.IsError {
@@ -209,7 +222,7 @@ func TestHandshakeNegotiatesNewerProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
+	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount || !toolNamed(listed.Tools, "whoami") || !toolNamed(listed.Tools, "create_note") {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -278,7 +291,7 @@ func TestToolsAreWhoamiListAndGet(t *testing.T) {
 			t.Fatalf("missing %s in %+v", name, listed.Tools)
 		}
 	}
-	if len(listed.Tools) != mcp.ToolCount {
+	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 }
@@ -357,7 +370,7 @@ func TestCreateNoteToolRoundTripAndFailClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != mcp.ToolCount {
+	if len(listed.Tools) != mcp.ToolCount+mcp.AgentRuntimeToolCount {
 		t.Fatalf("tools = %+v", listed.Tools)
 	}
 	for _, name := range []string{"whoami", "list_my_tasks", "get_task"} {

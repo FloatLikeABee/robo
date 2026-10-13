@@ -9,6 +9,7 @@ import (
 )
 
 // ToolCount is whoami, unified notes tools, aliases, note_grill, and event logs.
+// suggest_note_kind and morph_guide are counted separately as AgentRuntimeToolCount.
 const ToolCount = 26
 
 type limitInput struct {

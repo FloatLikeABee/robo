@@ -7,7 +7,7 @@ This is not the HTTP JSON tool catalogs already in the repo. Those catalogs desc
 - Content Maker: `GET /ai/mcp-tools`
 - Event Logs: `GET /api/v1/ai/mcp-tools`, `GET /api/v1/ai/mongodb-mcp`, `POST /api/v1/ai/mongodb-mcp/call`
 
-`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes `whoami`, unified own-notes tools (`create_note`, `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, `search_my_notes`), `note_grill`, the previous module names as aliases, and event-log tools. `resources/list` returns `ui://morph/notes` and `ui://morph/grill`. There are no prompts or `morph://` resources. `resources.listChanged` is not advertised.
+`morph-mcp` speaks MCP revision **2025-06-18**. The pinned Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0) may negotiate a newer revision the client asks for, including 2026-07-28. The server is stdio only. It does not listen on a port. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui` (MIME type `text/html;profile=mcp-app`). The tool list includes `whoami`, unified own-notes tools (`create_note`, `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, `search_my_notes`), `note_grill`, the previous module names as aliases, event-log tools, and read-only `suggest_note_kind` and `morph_guide`. `resources/list` returns `ui://morph/notes`, `ui://morph/grill`, and `morph://guide` (the agent playbook). There are no prompts. `resources.listChanged` is not advertised.
 
 ## Build
 
@@ -75,6 +75,8 @@ It opens `TRAN_SQLITE_PATH` (default `./data/tran.sqlite`, the same default as t
 | Tool | Purpose |
 |------|---------|
 | `whoami` | Verified identity: id, email, username, roles, scopes, and PAT expiry when present. Read-only. |
+| `suggest_note_kind` | Pick a kind from the user's ask. Rules only; does not call a model. Read-only. |
+| `morph_guide` | Markdown excerpt of the agent playbook ([16 — Morph for agents](16-morph-for-agents.md)). Also `morph://guide`. Read-only. |
 | `create_note` | Create one record. `kind` is `note`, `todo`, `big_note`, `timeline`, `research`, `stick`, or `task`. Omitted kind stays a Notes & TODOs `note` and returns an integer `id`. Optional `idempotency_key` and `tags`. |
 | `get_note` | One of the caller's records by `kind:rowid`. Read-only. |
 | `list_notes` | The caller's records. Optional `kind` and `limit`. Read-only. |
@@ -96,7 +98,7 @@ Every note kind is scoped to the token subject. Another user's id is not found a
 
 `note_grill` takes `action` (`start`, `answer`, `skip`, or `finish`). `start` needs `kind` and `title`. Later steps need the `id` from `start`. The question count depends on the title, with a cap of four. Skip moves on. Finish, or an answer that is only a stop phrase such as "enough" or "write it now", drafts the body. The draft is the tool result. Another user's id is not found, and the error does not include the draft. Saving still requires `create_note` after the draft is shown.
 
-An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). The human still reviews them at `http://localhost:3031/`. The agent calls the tools in this chapter.
+An agent that should create, list, or get those notes follows [15 — Morph notes, self-use](15-morph-notes-self-use.md). Any external agent using Morph as a note platform follows [16 — Morph for agents](16-morph-for-agents.md), also served as `morph://guide` and `morph_guide`. The human still reviews notes at `http://localhost:3031/`. The agent calls the tools in this chapter.
 
 ## Local Morph
 

@@ -1,6 +1,6 @@
 # morph-mcp
 
-Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui`. Tools include `whoami`, unified notes (`create_note`, `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, `search_my_notes`), `note_grill`, the previous module names as aliases, and event logs. `resources/list` returns `ui://morph/notes` and `ui://morph/grill` (`text/html;profile=mcp-app`). `resources.listChanged` is not advertised. `note_grill` does not insert a note.
+Local Model Context Protocol server for Morph. Stdio only. `initialize` advertises tools, resources, and the MCP Apps extension `io.modelcontextprotocol/ui`. Tools include `whoami`, unified notes (`create_note`, `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, `search_my_notes`), `note_grill`, the previous module names as aliases, event logs, and read-only `suggest_note_kind` and `morph_guide`. `resources/list` returns `ui://morph/notes`, `ui://morph/grill` (`text/html;profile=mcp-app`), and `morph://guide`. `resources.listChanged` is not advertised. `note_grill` does not insert a note.
 
 `MORPH_MCP_TOKEN` is a session JWT or a `morph_pat_` personal access token. Mint a PAT with `POST /api/agent-tokens` (session JWT required). A PAT does not need `JWT_SECRET` in the client env. Revoked, expired, and deleted-user tokens fail the next call.
 
