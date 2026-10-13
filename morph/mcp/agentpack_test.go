@@ -25,6 +25,7 @@ func TestAgentPack(t *testing.T) {
 	}
 
 	skill := readPack(t, filepath.Join(root, ".cursor", "skills", "morph-notes", "SKILL.md"))
+	htmlSkill := readPack(t, filepath.Join(root, ".cursor", "skills", "html-anything", "SKILL.md"))
 	doc := readPack(t, filepath.Join(root, "docs", "agents", "15-morph-notes-self-use.md"))
 	guide := readPack(t, filepath.Join(root, "docs", "agents", "16-morph-for-agents.md"))
 	createCmd := readPack(t, filepath.Join(root, ".cursor", "commands", "morph-note.md"))
@@ -48,7 +49,12 @@ func TestAgentPack(t *testing.T) {
 	}
 	mustContain(t, "skill", skill, shared...)
 	mustContain(t, "instruction", doc, shared...)
-	mustContain(t, "skill", skill, "suggest_note_kind", "morph_guide", "16-morph-for-agents.md", "Never share without explicit human consent")
+	mustContain(t, "skill", skill, "suggest_note_kind", "morph_guide", "16-morph-for-agents.md", "Never share without explicit human consent", "html-anything")
+	mustContain(t, "guide", guide, "html-anything", "skills/vendor/html-anything/")
+	mustContain(t, "html-anything", htmlSkill, "html-anything", "skills/vendor/html-anything/", "16-morph-for-agents.md")
+	if n := strings.Count(htmlSkill, "\n") + 1; n > 150 {
+		t.Fatalf("html-anything skill is %d lines; pack files stay under 150", n)
+	}
 	mustContain(t, "guide", guide, "preview_share", "share_note", "unshare_note", "list_my_shares", "pool_topics", "pool_search", "pool_get", "pool_save_copy", "pool_report", "not_found", "invalid_input", "rate_limited", "forbidden_scope", "consent_required", "CC BY 4.0", "untrusted")
 	if strings.Contains(guide, "coming in phase 1B") {
 		t.Fatal("guide still marks pool tools as phase 1B")

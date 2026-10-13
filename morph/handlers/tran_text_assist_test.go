@@ -71,6 +71,15 @@ func TestTextAssistImprovePromptIncludesTitle(t *testing.T) {
 	assertNoSchoolOpsLeftover(t, p)
 }
 
+func TestTextAssistGenerateNotePromptLoadsHTMLSkill(t *testing.T) {
+	p := textAssistGenerateNotePrompt("onboarding flow")
+	for _, needle := range []string{"html-anything", "Arial", "#38bdf8", "#a78bfa"} {
+		if !strings.Contains(p, needle) {
+			t.Fatalf("missing %q in:\n%s", needle, p)
+		}
+	}
+}
+
 func TestTextAssistPromptsStayPlainUnlessADiagramHelps(t *testing.T) {
 	prompts := []string{
 		textAssistGenerateNotePrompt("onboarding flow"),

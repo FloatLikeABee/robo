@@ -92,14 +92,14 @@ const textAssistBodyOnlyRules = `Follow only that title as the topic. Do not inv
 
 func textAssistGenerateNotePrompt(seed string) string {
 	if seed == "" {
-		return `Write a concise personal note (2–6 short paragraphs) on a generic personal or work topic. No preamble. Output only the body.
+		return morphai.WithHTMLSkill(`Write a concise personal note (2–6 short paragraphs) on a generic personal or work topic. No preamble. Output only the body.
 
-` + morphai.ReplyShapeInstructions
+` + morphai.ReplyShapeInstructions)
 	}
-	return `Title: "` + seed + `"
+	return morphai.WithHTMLSkill(`Title: "` + seed + `"
 
 Write a concise personal note (2–6 short paragraphs) about that title.
-` + textAssistBodyOnlyRules
+` + textAssistBodyOnlyRules)
 }
 
 func textAssistGenerateTodoPrompt(seed string) string {

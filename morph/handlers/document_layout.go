@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/robo/morphai"
 )
 
-const documentShapePrompt = `
+var documentShapePrompt = morphai.WithHTMLSkill(`
 Document shape (markdown only, never raw HTML):
 - Open with a one-paragraph lede.
 - Use ## sections. Put milestone bullets under a section.
@@ -16,7 +18,7 @@ Document shape (markdown only, never raw HTML):
 - If the source states quantities, add one stat fence and no others. Example:
 ` + "```stat\nPlaces | 5\nTalks | 20\n```" + `
 - Do not invent numbers. If the source has no quantities, do not add a stat fence.
-`
+`)
 
 var (
 	statFenceRE = regexp.MustCompile(`(?s)<pre><code class="language-stat">(.*?)</code></pre>`)

@@ -7,7 +7,7 @@ import (
 
 func TestFormHTMLPromptAsksForDarkSansAccents(t *testing.T) {
 	got := BuildFormHTMLPrompt(`{"UDGridSections":[]}`, "Intake", "")
-	for _, needle := range []string{"Arial", "dark", "#38bdf8", "#a78bfa", "#34d399"} {
+	for _, needle := range []string{"Arial", "dark", "#38bdf8", "#a78bfa", "#34d399", "html-anything"} {
 		if !strings.Contains(got, needle) {
 			t.Fatalf("missing %q", needle)
 		}
