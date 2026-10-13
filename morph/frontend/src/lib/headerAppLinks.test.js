@@ -1,27 +1,19 @@
-import { HEADER_APP_ICONS, morphUtilsBaseURL } from './headerAppLinks';
+import fs from 'fs';
+import path from 'path';
+import { HEADER_APP_ICONS } from './headerAppLinks';
 
 test('header icons are the public svg paths the server must serve', () => {
   expect(HEADER_APP_ICONS.bk).toMatch(/\/icons\/bk-icon\.svg$/);
   expect(HEADER_APP_ICONS.morphdata).toMatch(/\/icons\/morph-data-icon\.svg$/);
-  expect(HEADER_APP_ICONS.morphutils).toMatch(/\/icons\/morph-utils-icon\.svg$/);
+  expect(HEADER_APP_ICONS.morphutils).toBeUndefined();
 });
 
-test('production omits MorphUtils when the URL is unset or loopback', () => {
-  expect(morphUtilsBaseURL('production', undefined)).toBe('');
-  expect(morphUtilsBaseURL('production', '')).toBe('');
-  expect(morphUtilsBaseURL('production', 'http://localhost:3040')).toBe('');
-  expect(morphUtilsBaseURL('production', 'http://127.0.0.1:3040')).toBe('');
-  expect(morphUtilsBaseURL('production', 'http://[::1]:3040')).toBe('');
-  expect(morphUtilsBaseURL('production', 'http://LOCALHOST:9')).toBe('');
-});
-
-test('production keeps a configured public MorphUtils URL', () => {
-  expect(morphUtilsBaseURL('production', '  https://utils.example.com/app  ')).toBe(
-    'https://utils.example.com/app'
-  );
-});
-
-test('development still defaults MorphUtils to localhost', () => {
-  expect(morphUtilsBaseURL('development', undefined)).toBe('http://localhost:3040');
-  expect(morphUtilsBaseURL('development', 'http://127.0.0.1:3040')).toBe('http://127.0.0.1:3040');
+test('Morph AI never mounts a MorphUtils header chip', () => {
+  const chat = fs.readFileSync(path.join(__dirname, '../SkoolAiChat.js'), 'utf8');
+  const links = fs.readFileSync(path.join(__dirname, 'headerAppLinks.js'), 'utf8');
+  expect(chat).not.toMatch(/MorphUtils/);
+  expect(chat).not.toMatch(/morphUtilsBaseURL/);
+  expect(chat).not.toMatch(/REACT_APP_MORPH_UTILS_URL/);
+  expect(links).not.toMatch(/morphUtilsBaseURL/);
+  expect(links).not.toMatch(/morphutils:/);
 });

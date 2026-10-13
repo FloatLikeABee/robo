@@ -35,7 +35,7 @@ function menuItems() {
   return [...document.querySelectorAll('[role="menuitem"]')].map((el) => el.textContent);
 }
 
-test('more menu lists labeled app chips and clear, and omits MorphUtils when it is not configured', () => {
+test('more menu lists labeled app chips and clear, and does not list MorphUtils', () => {
   items[0].onClick.mockClear();
   const view = renderMenu({ items, onClear: jest.fn() });
   click(document.querySelector('[aria-label="More apps"]'));
