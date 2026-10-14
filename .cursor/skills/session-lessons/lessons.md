@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-10-13 — Morph AI header has no MorphUtils chip
+
+- Trigger: MorphUtils header button, Morph AI app chips, MorphNotes vs MorphUtils
+- Rule: Do not put a MorphUtils chip on the Morph AI header. MorphNotes is the in-app entry (Event Logs, Content Maker, Project live there). Leave the MorphUtils tree in the repo; do not launch it from Morph chrome.
+- Source: [Drop MorphUtils chip](current)
+
 ## 2026-10-13 — Local Ollama HTML E2E leftovers
 
 - Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, morph_guide outline, generated `.meta`, Qwen fenced/non-JSON replies, backtick JSON, Ollama timeout, grill hex table
