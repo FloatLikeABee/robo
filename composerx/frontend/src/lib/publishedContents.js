@@ -39,7 +39,6 @@ export function mergePublishedContents(drafts, published) {
       draftId: draft.id,
       publishedId: null,
       canOpen: false,
-      canView: true,
       canDelete: true,
     })
   }
@@ -58,7 +57,6 @@ export function mergePublishedContents(drafts, published) {
       draftId: existing?.draftId ?? null,
       publishedId: page.id,
       canOpen: true,
-      canView: existing?.draftId != null,
       canDelete: true,
     })
   }

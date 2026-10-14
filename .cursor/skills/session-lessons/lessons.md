@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-10-13 — Published contents has no View button
+
+- Trigger: Content Maker Published contents table, View next to Remove
+- Rule: The Published contents list has Remove (and Open for public pages). Do not add a View button or a draft-HTML modal on that table.
+- Source: [Drop published View](current)
+
 ## 2026-10-13 — Morph AI header has no MorphUtils chip
 
 - Trigger: MorphUtils header button, Morph AI app chips, MorphNotes vs MorphUtils
