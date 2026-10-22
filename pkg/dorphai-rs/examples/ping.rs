@@ -9,7 +9,6 @@ async fn main() {
     }
     let client = Client::new(cfg);
     let content = dorphai::env_or_legacy("DORPH_AI_PING_SIZE")
-        .ok()
         .and_then(|s| s.parse().ok())
         .map(|n| format!("Reply with exactly: ok. {}", "z".repeat(n)))
         .unwrap_or_else(|| "Reply with exactly: ok".to_string());

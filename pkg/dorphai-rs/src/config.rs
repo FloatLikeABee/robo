@@ -151,6 +151,17 @@ mod tests {
     }
 
     #[test]
+    fn env_or_legacy_reads_morph_when_dorph_is_empty() {
+        std::env::remove_var("DORPH_TESTONLY_KEY");
+        std::env::set_var("MORPH_TESTONLY_KEY", "from-old");
+        assert_eq!(env_or_legacy("DORPH_TESTONLY_KEY").as_deref(), Some("from-old"));
+        std::env::set_var("DORPH_TESTONLY_KEY", "from-new");
+        assert_eq!(env_or_legacy("DORPH_TESTONLY_KEY").as_deref(), Some("from-new"));
+        std::env::remove_var("DORPH_TESTONLY_KEY");
+        std::env::remove_var("MORPH_TESTONLY_KEY");
+    }
+
+    #[test]
     fn finds_start_all_not_nested_env() {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

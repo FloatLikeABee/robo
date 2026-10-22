@@ -32,7 +32,7 @@ impl Settings {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(9096),
             cors_origin: dorphai::env_or_legacy("DORPH_ENGI_CORS_ORIGIN")
-                .unwrap_or_else(|_| "http://localhost:5179".into()),
+                .unwrap_or_else(|| "http://localhost:5179".into()),
             users_panel_base_url: env::var("USERS_PANEL_BASE_URL")
                 .ok()
                 .filter(|s| !s.trim().is_empty())
