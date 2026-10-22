@@ -29,7 +29,7 @@ In the Published contents table, operation controls (View, Delete, Open, and any
 
 ### Requirement: Published contents chrome
 
-The view SHALL keep the heading **Published contents**. It SHALL NOT show an under-title lede. The app remains dark-only. Product names SHALL stay Content Maker and MorphUtils.
+The view SHALL keep the heading **Published contents**. It SHALL NOT show an under-title lede. The app remains dark-only. Product names SHALL stay Content Maker and DorphUtils.
 
 #### Scenario: No subtitle under the heading
 

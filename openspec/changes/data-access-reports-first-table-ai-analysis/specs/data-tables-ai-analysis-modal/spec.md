@@ -35,7 +35,7 @@ The modal MUST show the analysis as rendered markdown (headings, lists, tables i
 
 ### Requirement: Failures stay in the modal
 
-If Morph AI is not configured or the request fails, the modal MUST show an error. It MUST NOT pretend a successful report was generated.
+If Dorph AI is not configured or the request fails, the modal MUST show an error. It MUST NOT pretend a successful report was generated.
 
 #### Scenario: AI unavailable
 

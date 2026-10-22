@@ -10,7 +10,7 @@ The Event Logs operator UI MUST NOT show an Info Sheets (or AI Surveys / Survey 
 
 #### Scenario: Header has Events & Info only
 
-- **WHEN** the operator opens Event Logs in MorphUtils or at the Event Logs app
+- **WHEN** the operator opens Event Logs in DorphUtils or at the Event Logs app
 - **THEN** the only section tab is Events & Info
 - **AND** there is no Info Sheets tab
 
@@ -23,11 +23,11 @@ Operator routes that used to open Info Sheets MUST send the operator to Events &
 - **WHEN** the operator opens `/survey-bot` (or equivalent Info Sheets path)
 - **THEN** they are taken to Events & Info
 
-### Requirement: MorphUtils copy matches
+### Requirement: DorphUtils copy matches
 
-MorphUtils MUST describe Event Logs without mentioning Info Sheets.
+DorphUtils MUST describe Event Logs without mentioning Info Sheets.
 
 #### Scenario: Utils module description
 
-- **WHEN** the operator reads the Event Logs module in MorphUtils
+- **WHEN** the operator reads the Event Logs module in DorphUtils
 - **THEN** the copy does not mention Info Sheets

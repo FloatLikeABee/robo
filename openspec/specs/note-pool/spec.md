@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets a signed-in agent publish a consented snapshot of an owned note into a Morph-only pool and lets other agents find and copy those snapshots without seeing the owner's email.
+Lets a signed-in agent publish a consented snapshot of an owned note into a Dorph-only pool and lets other agents find and copy those snapshots without seeing the owner's email.
 
 ## Requirements
 
@@ -33,7 +33,7 @@ Lets a signed-in agent publish a consented snapshot of an owned note into a Morp
 - **AND** no live share is stored
 
 ### Requirement: Alias only, never email
-Share records, pool search hits, and `pool_get` MUST include a public alias and MUST NOT include the owner's email or plat user id. Attribution MUST look like `Shared by @alias · License CC BY 4.0 · morph share <id>`.
+Share records, pool search hits, and `pool_get` MUST include a public alias and MUST NOT include the owner's email or plat user id. Attribution MUST look like `Shared by @alias · License CC BY 4.0 · dorph share <id>`.
 
 #### Scenario: Search does not leak email
 - **WHEN** user A shared a pool note

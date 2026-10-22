@@ -12,9 +12,9 @@
 
 ## 3. Blueprint and docs
 
-- [x] 3.1 Append the `formx` service to `render.yaml` without changing the `morph` or `morph-utils` pins and without setting embed URLs
-- [x] 3.2 Document env, disk, and `https://<event-logs public host>` in `formx/README.md` and `deploy/README.md`, and correct the MorphUtils runbook so it no longer says Event Logs is absent
-- [x] 3.3 Update `morph-utils/deploy/check-container-contract.sh` so the service names are `morph`, `morph-utils`, and `formx`
+- [x] 3.1 Append the `formx` service to `render.yaml` without changing the `dorph` or `dorph-utils` pins and without setting embed URLs
+- [x] 3.2 Document env, disk, and `https://<event-logs public host>` in `formx/README.md` and `deploy/README.md`, and correct the DorphUtils runbook so it no longer says Event Logs is absent
+- [x] 3.3 Update `dorph-utils/deploy/check-container-contract.sh` so the service names are `dorph`, `dorph-utils`, and `formx`
 - [x] 3.4 Add `.github/workflows/formx-image.yml` to run the Event Logs contract and `docker build -f formx/Dockerfile .` without editing `ci.yml`
 
 ## 4. Verification
@@ -22,4 +22,4 @@
 - [x] 4.1 `go test ./...` in `formx/backend`
 - [x] 4.2 `npm run build` in `formx/frontend`
 - [x] 4.3 Build the image and confirm `GET /health` and `GET /events-info` from the running container
-- [x] 4.4 Validate `render.yaml` against the Render schema and run the Morph and MorphUtils contract scripts
+- [x] 4.4 Validate `render.yaml` against the Render schema and run the Dorph and DorphUtils contract scripts

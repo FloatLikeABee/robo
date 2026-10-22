@@ -1,5 +1,5 @@
 export type AiProgressApp =
-  | 'morph'
+  | 'dorph'
   | 'formsx'
   | 'sheetx'
   | 'composerx'
@@ -88,8 +88,8 @@ export function inferProgressSteps(ctx: AiProgressContext): string[] {
     /\bform|survey|question|template|landing|sheet/i.test(text)
   ) {
     steps.push('Designing form layout…');
-  } else if (ctx.app === 'morph') {
-    steps.push('Running Morph tools…');
+  } else if (ctx.app === 'dorph') {
+    steps.push('Running Dorph tools…');
   } else if (ctx.app === 'booki') {
     steps.push('Reviewing ledger context…');
   } else if (ctx.app === 'datax') {

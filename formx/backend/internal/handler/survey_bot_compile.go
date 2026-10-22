@@ -9,7 +9,7 @@ import (
 	"github.com/formsx/backend/internal/models"
 	"github.com/formsx/backend/internal/surveybot"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 	"github.com/robo/webresearch"
 )
 
@@ -115,7 +115,7 @@ Do not invent facts that contradict research notes.`
 	}
 	user += "\nExample format:\n" + draftSurveyMarkdown(parsed.Title, parsed.Title, parsed.Instructions, "")
 
-	reply, err := h.AI.ChatCompletionLong(ctx, []morphai.Message{
+	reply, err := h.AI.ChatCompletionLong(ctx, []dorphai.Message{
 		{Role: "user", Content: system + "\n\n" + user},
 	})
 	if err != nil {

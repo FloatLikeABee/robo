@@ -21,8 +21,8 @@ func requireWorkspaceAccess() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// Client identity headers are not a session. Morph strips the same set
-		// before it trusts a JWT. Role and permissions come only from Morph's
+		// Client identity headers are not a session. Dorph strips the same set
+		// before it trusts a JWT. Role and permissions come only from Dorph's
 		// response to the bearer.
 		stripClientIdentityHeaders(c.Request)
 		token := bearerToken(c.GetHeader("Authorization"))
@@ -35,9 +35,9 @@ func requireWorkspaceAccess() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 			return
 		}
-		// Morph-hosted auth: an authenticated admin, or any user Morph granted
+		// Dorph-hosted auth: an authenticated admin, or any user Dorph granted
 		// permissions, may use Event Logs. Employee still needs a form permission
-		// when Morph returned a role and an empty permission list.
+		// when Dorph returned a role and an empty permission list.
 		rawPermissions := strings.Join(panelPerms, ",")
 		if role == "admin" || len(panelPerms) > 0 {
 			c.Next()
@@ -67,7 +67,7 @@ func stripClientIdentityHeaders(r *http.Request) {
 	}
 }
 
-// resolveRoleAndPermissionsFromUsersPanel asks the configured Morph origin
+// resolveRoleAndPermissionsFromUsersPanel asks the configured Dorph origin
 // whether the bearer is a user. The third result is false when that call does
 // not succeed. A client-supplied base URL is not an origin.
 func resolveRoleAndPermissionsFromUsersPanel(c *gin.Context, token string) (string, []string, bool) {

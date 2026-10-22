@@ -5,12 +5,12 @@ See `proposal.md` — Why. This design covers two apps in different languages th
 Current state that shapes the approach:
 
 - **FormsX (Go)** already has `POST /api/v1/survey-bot/templates/ai-draft`, but it ignores AI entirely: `draftSurveyMarkdown` returns a hardcoded three-question template and `webresearch.Gather` output is discarded (`_ = notes`). The Survey Bot markdown parser (`internal/surveybot.ParseMarkdown`) is the validation gate and already returns useful errors.
-- **FormsX** has no PDF or vision capability. `pkg/morphai` is text-only: `Message.Content` is a `string`, so there is no way to attach an image.
+- **FormsX** has no PDF or vision capability. `pkg/dorphai` is text-only: `Message.Content` is a `string`, so there is no way to attach an image.
 - **ComposerX** already solves exactly this problem in Go — `composerx/backend/publish_source.go` extracts PDF text, describes images through an OpenAI-compatible vision call, summarizes each file, and concatenates the results. It is the working reference but lives in `package main` and cannot be imported.
-- **`pkg/morphgraph`** has `ExtractPDFFile`/`ExtractPDFBytes` wrapping `ledongthuc/pdf`, but the module also depends on the Neo4j driver.
-- **Morph Engi (Rust)** already has the two-step, session-persisted, multipart AI feature pattern in `api/verification.rs` with `verification_sessions` / `verification_files`. Its `extract_text_excerpt` handles text extensions only — a PDF becomes `"[Binary or non-text file — N bytes …]"`.
-- **`pkg/morphai-rs`** caps a whole request at `MAX_CHAT_REQUEST_CHARS = 12_000` and enforces it in `trim_messages_for_api`, which drops messages from index 1 upward and then truncates message 0. With only a system and a user message, oversized input silently eats the system prompt.
-- Both apps degrade on a missing `MORPH_AI_API_KEY` rather than failing at boot, and both are organization-scoped through existing auth middleware.
+- **`pkg/dorphgraph`** has `ExtractPDFFile`/`ExtractPDFBytes` wrapping `ledongthuc/pdf`, but the module also depends on the Neo4j driver.
+- **Dorph Engi (Rust)** already has the two-step, session-persisted, multipart AI feature pattern in `api/verification.rs` with `verification_sessions` / `verification_files`. Its `extract_text_excerpt` handles text extensions only — a PDF becomes `"[Binary or non-text file — N bytes …]"`.
+- **`pkg/dorphai-rs`** caps a whole request at `MAX_CHAT_REQUEST_CHARS = 12_000` and enforces it in `trim_messages_for_api`, which drops messages from index 1 upward and then truncates message 0. With only a system and a user message, oversized input silently eats the system prompt.
+- Both apps degrade on a missing `DORPH_AI_API_KEY` rather than failing at boot, and both are organization-scoped through existing auth middleware.
 
 ## Goals / Non-Goals
 
@@ -31,33 +31,33 @@ Current state that shapes the approach:
 
 ## Decisions
 
-### 1. New Go module `pkg/docextract` rather than reusing `pkg/morphgraph`
+### 1. New Go module `pkg/docextract` rather than reusing `pkg/dorphgraph`
 
-`morphgraph.ExtractPDFFile` does what FormsX needs, but importing `github.com/robo/morphgraph` drags in `neo4j-go-driver` and the embedding client for one function.
+`dorphgraph.ExtractPDFFile` does what FormsX needs, but importing `github.com/robo/dorphgraph` drags in `neo4j-go-driver` and the embedding client for one function.
 
 **Decision:** add `pkg/docextract` — a zero-Neo4j Go module whose only dependency is `ledongthuc/pdf`. It exposes classification (`Classify(name, mime) Kind`), `ExtractPDF`, `ExtractText`, and the truncation helper, mirroring the rules in the ingestion spec.
 
 **Alternatives considered:**
 
-- *Import `pkg/morphgraph`* — rejected: unrelated heavy dependency tree in FormsX.
-- *Copy ComposerX's helpers into FormsX* — rejected: a third copy of the same logic (ComposerX, Academi, morphgraph already each have one).
+- *Import `pkg/dorphgraph`* — rejected: unrelated heavy dependency tree in FormsX.
+- *Copy ComposerX's helpers into FormsX* — rejected: a third copy of the same logic (ComposerX, Academi, dorphgraph already each have one).
 - *Extract from ComposerX in this change* — rejected: widens the blast radius to a third app. `pkg/docextract` is written so ComposerX can adopt it later.
 
-### 2. Extend `pkg/morphai` with a multimodal call instead of adding `go-openai` to FormsX
+### 2. Extend `pkg/dorphai` with a multimodal call instead of adding `go-openai` to FormsX
 
 FormsX needs one vision call. ComposerX gets this from `sashabaranov/go-openai`.
 
-**Decision:** add to `pkg/morphai` an additive vision entry point — a `ContentPart`/multimodal message type and a method that posts an OpenAI-style `content` array to the existing `{BaseURL}/chat/completions` path. The existing `Message` struct and all current methods are untouched, so morph, composerx, and booki are unaffected.
+**Decision:** add to `pkg/dorphai` an additive vision entry point — a `ContentPart`/multimodal message type and a method that posts an OpenAI-style `content` array to the existing `{BaseURL}/chat/completions` path. The existing `Message` struct and all current methods are untouched, so dorph, composerx, and booki are unaffected.
 
 Because the multimodal payload shape only exists on the OpenAI-compatible path, the method SHALL return a clear error when the client is configured for the native DashScope `text-generation/generation` endpoint (`UseNativeAPI`). The vision model name comes from an existing optional model variable, defaulting to a Qwen VL model, and falls back to an error rather than silently using a text-only model.
 
 **Alternatives considered:**
 
-- *Add `sashabaranov/go-openai` to FormsX* — rejected: a large dependency for one call, and it leaves `pkg/morphai` unable to do vision for the next caller.
+- *Add `sashabaranov/go-openai` to FormsX* — rejected: a large dependency for one call, and it leaves `pkg/dorphai` unable to do vision for the next caller.
 - *Make `Message.Content` an `any`* — rejected: **breaking** for four apps.
 - *Proxy the vision call through bk's Python image reader* — rejected: makes FormsX depend on a service it currently has no relationship with.
 
-### 3. `pdf-extract` crate for Morph Engi, run on a blocking thread with panic isolation
+### 3. `pdf-extract` crate for Dorph Engi, run on a blocking thread with panic isolation
 
 **Decision:** add the pure-Rust `pdf-extract` crate and call it from `tokio::task::spawn_blocking`, wrapped in `std::panic::catch_unwind`. Extraction failure or panic becomes a per-file error, matching the ingestion spec's "one bad file must not abort the request".
 
@@ -71,11 +71,11 @@ Because the multimodal payload shape only exists on the OpenAI-compatible path, 
 
 ### 4. Keep the AI request inside the shared character budget instead of raising it
 
-`pkg/morphai-rs` trims oversized requests by deleting messages, which would silently discard the system prompt that defines the JSON contract.
+`pkg/dorphai-rs` trims oversized requests by deleting messages, which would silently discard the system prompt that defines the JSON contract.
 
 **Decision:** budget the prompt explicitly on the caller side. Cap extracted text per file and cap the combined document section so the assembled system + user prompt stays comfortably under `MAX_CHAT_REQUEST_CHARS`, with an explicit truncation marker per the ingestion spec. Do not change the shared constant.
 
-**Rationale:** the truncation is then visible and attributable instead of being an invisible prompt-corrupting side effect. Raising the cap would move the cliff without removing it, and it affects every other `morphai-rs` consumer (UsersPanel, SharpReport).
+**Rationale:** the truncation is then visible and attributable instead of being an invisible prompt-corrupting side effect. Raising the cap would move the cliff without removing it, and it affects every other `dorphai-rs` consumer (UsersPanel, SharpReport).
 
 **Follow-on:** if a later change needs bigger prompts, the right fix is a per-request budget parameter on the shared client, not a bigger global constant.
 
@@ -100,20 +100,20 @@ The two apps differ deliberately.
 
 ### 7. Strict JSON contract, parsed with the existing lenient extractors
 
-**Decision:** both AI calls demand a single JSON object with no markdown fences and are parsed with the existing helpers — `morphai.ExtractJSONObject` (Go) and `extract_json_object` (Rust) — which already tolerate a fenced or chatty response. Unknown fields are ignored; missing optional fields are omitted rather than defaulted to invented values.
+**Decision:** both AI calls demand a single JSON object with no markdown fences and are parsed with the existing helpers — `dorphai.ExtractJSONObject` (Go) and `extract_json_object` (Rust) — which already tolerate a fenced or chatty response. Unknown fields are ignored; missing optional fields are omitted rather than defaulted to invented values.
 
 For SurveyX the model is asked for markdown, not JSON, because the Survey Bot parser is the contract. Generation validates with `surveybot.ParseMarkdown` and retries once, feeding the parser's error back into the prompt; a second failure returns the error plus the rejected markdown so the user can fix it by hand. This mirrors the existing `ai-draft` handler, which already returns `{"error": ..., "markdown": md}` on validation failure.
 
 ### 8. Endpoint placement
 
 - FormsX: `POST /api/v1/survey-bot/templates/from-file` — inside the existing protected `survey-bot` group, next to `ai-draft`, so it inherits the same auth.
-- Morph Engi: `POST /api/v1/project-imports/analyze`, `POST /api/v1/project-imports/:id/confirm`, `GET /api/v1/project-imports`, `GET /api/v1/project-imports/:id` — inside the auth-layered `api` router in `api/mod.rs`.
+- Dorph Engi: `POST /api/v1/project-imports/analyze`, `POST /api/v1/project-imports/:id/confirm`, `GET /api/v1/project-imports`, `GET /api/v1/project-imports/:id` — inside the auth-layered `api` router in `api/mod.rs`.
 
 ### 9. Frontend upload helpers
 
 FormsX's `lib/api.ts` gets a multipart method beside `surveyBot.aiDraft`, following the existing `uploadPromptMedia` pattern (no `Content-Type` header; let the browser set the boundary).
 
-Morph Engi's `uploadFile` sends exactly one part named `file`, so a multi-file helper is added that appends repeated `files` parts — the same field name `run_verification` already accepts.
+Dorph Engi's `uploadFile` sends exactly one part named `file`, so a multi-file helper is added that appends repeated `files` parts — the same field name `run_verification` already accepts.
 
 ## Risks / Trade-offs
 
@@ -128,11 +128,11 @@ Morph Engi's `uploadFile` sends exactly one part named `file`, so a multi-file h
 
 ## Migration Plan
 
-1. Ship `pkg/docextract` and the `pkg/morphai` multimodal addition first — both are additive, so existing consumers keep building.
-2. Morph Engi's new tables are created by appending idempotent statements to the `MIGRATIONS` array in `db/migrations.rs`, which runs on every boot and ignores per-statement errors. No backfill, no destructive change.
-3. Each half is independently deployable and independently revertable: the FormsX feature is one new route plus UI, the Morph Engi feature is four new routes plus two tables plus UI.
+1. Ship `pkg/docextract` and the `pkg/dorphai` multimodal addition first — both are additive, so existing consumers keep building.
+2. Dorph Engi's new tables are created by appending idempotent statements to the `MIGRATIONS` array in `db/migrations.rs`, which runs on every boot and ignores per-statement errors. No backfill, no destructive change.
+3. Each half is independently deployable and independently revertable: the FormsX feature is one new route plus UI, the Dorph Engi feature is four new routes plus two tables plus UI.
 4. Rollback: remove the new routes and hide the UI entries. The new tables can be left in place; they are unreferenced when the routes are gone.
-5. Docs (`docs/agents/04-formx.md`, `docs/agents/10-shared-libraries.md`, `morph-engi/README.md`) are updated in the same change so the endpoint tables stay accurate.
+5. Docs (`docs/agents/04-formx.md`, `docs/agents/10-shared-libraries.md`, `dorph-engi/README.md`) are updated in the same change so the endpoint tables stay accurate.
 
 ## Open Questions
 

@@ -125,9 +125,9 @@ func TestHeaderOnlyAdminIs401(t *testing.T) {
 	}
 }
 
-func TestMorphBearerIgnoresSpoofedRole(t *testing.T) {
+func TestDorphBearerIgnoresSpoofedRole(t *testing.T) {
 	allow := true
-	morph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	dorph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer good" {
 			http.Error(w, "no", http.StatusUnauthorized)
 			return
@@ -146,16 +146,16 @@ func TestMorphBearerIgnoresSpoofedRole(t *testing.T) {
 		}
 		_, _ = w.Write([]byte(`{"user":{"roles":["member"]}}`))
 	}))
-	t.Cleanup(morph.Close)
+	t.Cleanup(dorph.Close)
 
-	r := newContentMakerRouterAt(t.TempDir(), morph.URL)
+	r := newContentMakerRouterAt(t.TempDir(), dorph.URL)
 	req := httptest.NewRequest(http.MethodGet, "/templates", nil)
 	req.Header.Set("Authorization", "Bearer good")
 	req.Header.Set("X-User-Role", "admin")
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("morph bearer status %d, want 200", rec.Code)
+		t.Fatalf("dorph bearer status %d, want 200", rec.Code)
 	}
 
 	allow = false

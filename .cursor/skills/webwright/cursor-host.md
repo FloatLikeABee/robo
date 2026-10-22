@@ -28,8 +28,8 @@ web UI flow with reusable Playwright evidence (not a single screenshot).
 - Prefer driving the live local app over guessing from source. Start the
   matching frontend if it is not already listening.
 - Cursor browser MCP is not a substitute for this skill’s run artifacts.
-- MorphNotes `singleSession` chat has no Files pane; do not treat that as a
-  product bug while autotesting Morph AI Files.
+- DorphNotes `singleSession` chat has no Files pane; do not treat that as a
+  product bug while autotesting Dorph AI Files.
 
 ## Python
 

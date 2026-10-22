@@ -16,7 +16,7 @@ What is actually wired:
 - `bk/chat_box_test.py` dials `ws://127.0.0.1:8196/message` with a chat payload. That is not the length-prefixed TCP server, and pytest does not collect the file (`testpaths = tests`).
 - ScholarForge comments say "MCP-style" / "MCP controller" for a dual-model writing pipeline. That is not this server.
 
-Planning root is `bk/` (`openspec` nearest root) so the removal delta archives into `bk/openspec/specs/`. The CLI action context limits edits to `/workspace/bk`. `docs/agents/06-ai-tools.md` is outside that root; the issue explicitly asks docs not to claim a working BK MCP and to name `morph/cmd/morph-mcp` where it helps, so that one file is an intentional exception.
+Planning root is `bk/` (`openspec` nearest root) so the removal delta archives into `bk/openspec/specs/`. The CLI action context limits edits to `/workspace/bk`. `docs/agents/06-ai-tools.md` is outside that root; the issue explicitly asks docs not to claim a working BK MCP and to name `dorph/cmd/dorph-mcp` where it helps, so that one file is an intentional exception.
 
 ## Goals / Non-Goals
 
@@ -29,7 +29,7 @@ Planning root is `bk/` (`openspec` nearest root) so the removal delta archives i
 
 **Non-Goals:**
 
-- Implementing or importing `morph/cmd/morph-mcp`.
+- Implementing or importing `dorph/cmd/dorph-mcp`.
 - Auth on the BK API (issue #25).
 - Rewriting ScholarForge, RAG, assistants, or agents.
 - Deleting `chat_box_test.py` or archive plans that mention other MCP work.
@@ -46,7 +46,7 @@ Rationale: the product decision is removal. The host manager is not connected to
 Alternatives rejected:
 
 - **Feature flag defaulting off.** Dead code and a way to turn the fake server back on. The issue says remove, not finish or hide.
-- **Finish this TCP server as JSON-RPC MCP.** That duplicates `morph/cmd/morph-mcp` (PR #65, not merged). This change must not depend on that code.
+- **Finish this TCP server as JSON-RPC MCP.** That duplicates `dorph/cmd/dorph-mcp` (PR #65, not merged). This change must not depend on that code.
 - **Keep routes and return 410.** OpenAPI would still advertise an MCP tag, and the models and UI would remain. Issue #25 is reducing unauthenticated surface; preserving `/mcp/*` fights that.
 - **Add a `/mcp-hosts` redirect.** Nothing routes there today. A new redirect would be a new feature.
 
@@ -58,7 +58,7 @@ Do not construct `RAGAPI` inside that test. Importing `src.api` builds Chroma an
 
 ### 3. Spec sync needs unique requirement names, and it cannot drop a scenario
 
-`openspec validate --strict` refuses the removal delta while the live requirements share a blank `### Requirement:` heading (duplicate names). Give them the names the delta removes: Single tool registry, Common tool list interface, Structured tool invocation. That rename does not change the requirement text. Archive then removes those three blocks and adds "No BK TCP MCP". Edit the main spec Purpose in place to say the capability is withdrawn and name `morph/cmd/morph-mcp` (a delta `## Purpose` is ignored).
+`openspec validate --strict` refuses the removal delta while the live requirements share a blank `### Requirement:` heading (duplicate names). Give them the names the delta removes: Single tool registry, Common tool list interface, Structured tool invocation. That rename does not change the requirement text. Archive then removes those three blocks and adds "No BK TCP MCP". Edit the main spec Purpose in place to say the capability is withdrawn and name `dorph/cmd/dorph-mcp` (a delta `## Purpose` is ignored).
 
 The same validator refuses a MODIFIED requirement that omits a scenario. Keep the scenario name `MCP tools/list after removal` and change its steps so AI tools does not accept tools/list. Do not delete the scenario heading.
 
@@ -68,7 +68,7 @@ Modify `assistant-module` "Tool system removal" by dropping the `MCPService` too
 
 ### 4. Docs and logs stop claiming BK MCP; unrelated "MCP" strings stay
 
-Update the files listed in Context that claim a working BK MCP. Add one sentence to `bk/README.md` and `docs/agents/06-ai-tools.md` naming `morph/cmd/morph-mcp` and not linking `docs/agents/14-morph-mcp.md` (that page is not on `main`).
+Update the files listed in Context that claim a working BK MCP. Add one sentence to `bk/README.md` and `docs/agents/06-ai-tools.md` naming `dorph/cmd/dorph-mcp` and not linking `docs/agents/14-dorph-mcp.md` (that page is not on `main`).
 
 Leave ScholarForge "MCP-style" wording, `docs/archive/`, and `docs/agents/04-formx.md`. Leave `chat_box_test.py` and its port 8196. A verification grep for the removed modules and routes must be clean; a grep for the substring `MCP` or `8196` will still hit those leftovers on purpose.
 

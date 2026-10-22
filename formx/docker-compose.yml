@@ -1,4 +1,4 @@
-# Event Logs only. Does not start Morph or MorphUtils.
+# Event Logs only. Does not start Dorph or DorphUtils.
 services:
   formx:
     build:

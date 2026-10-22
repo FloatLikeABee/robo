@@ -12,7 +12,7 @@ import (
 
 	"github.com/formsx/backend/internal/surveybot"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 // newFromFileRouter mounts the handler alone, bypassing the workspace-access
@@ -27,10 +27,10 @@ func newFromFileRouter(h *Handler) *gin.Engine {
 // handlerWithAI returns a handler whose AI client is configured but never
 // reached, so tests stop at validation instead of making network calls.
 func handlerWithAI() *Handler {
-	return &Handler{AI: morphai.NewClient(morphai.Config{
+	return &Handler{AI: dorphai.NewClient(dorphai.Config{
 		APIKey:  "test-key",
-		Model:   morphai.DefaultModel,
-		BaseURL: morphai.DefaultBaseURL,
+		Model:   dorphai.DefaultModel,
+		BaseURL: dorphai.DefaultBaseURL,
 	})}
 }
 
@@ -150,7 +150,7 @@ func TestFromFileRejectsTextFileWithGuidance(t *testing.T) {
 }
 
 func TestFromFileReportsUnconfiguredAI(t *testing.T) {
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	w := postUpload(t, h, nil,
 		uploadPart{field: "file", filename: "a.pdf", mime: "application/pdf", content: []byte("%PDF-1.4")},
 	)
@@ -158,7 +158,7 @@ func TestFromFileReportsUnconfiguredAI(t *testing.T) {
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("got %d, want 503: %s", w.Code, w.Body.String())
 	}
-	if msg := errorFrom(t, w); !strings.Contains(msg, "MORPH_AI_API_KEY") {
+	if msg := errorFrom(t, w); !strings.Contains(msg, "DORPH_AI_API_KEY") {
 		t.Errorf("error should name the missing setting, got %q", msg)
 	}
 }
@@ -177,10 +177,10 @@ func TestFromFileReportsPDFWithoutText(t *testing.T) {
 }
 
 func TestFromFileRejectsImageOnNativeEndpoint(t *testing.T) {
-	h := &Handler{AI: morphai.NewClient(morphai.Config{
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{
 		APIKey:       "test-key",
-		Model:        morphai.DefaultModel,
-		APIURL:       morphai.DefaultAPIURL,
+		Model:        dorphai.DefaultModel,
+		APIURL:       dorphai.DefaultAPIURL,
 		UseNativeAPI: true,
 	})}
 	w := postUpload(t, h, nil,
@@ -190,7 +190,7 @@ func TestFromFileRejectsImageOnNativeEndpoint(t *testing.T) {
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("got %d, want 503: %s", w.Code, w.Body.String())
 	}
-	if msg := errorFrom(t, w); !strings.Contains(msg, "MORPH_AI_API_URL") {
+	if msg := errorFrom(t, w); !strings.Contains(msg, "DORPH_AI_API_URL") {
 		t.Errorf("error should name the setting to change, got %q", msg)
 	}
 }
@@ -271,7 +271,7 @@ func TestNormalizeSurveyMarkdownIgnoresInstructionsHeadingAsTitle(t *testing.T) 
 }
 
 func TestFromFileRouteIsRegistered(t *testing.T) {
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	r := gin.New()
 	h.Register(r.Group(""))
 

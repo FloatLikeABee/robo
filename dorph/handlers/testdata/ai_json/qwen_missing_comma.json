@@ -1,0 +1,9 @@
+Here is the note:
+
+```json
+{
+  "title": "Creating DorphNotes: a Field Guide"
+  "markdown": "DorphNotes is designed to support secure, consent-based sharing pools.\nThis guide will help agents understand the key features."
+  "questions": []
+}
+```

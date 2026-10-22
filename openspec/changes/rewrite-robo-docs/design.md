@@ -1,8 +1,8 @@
 ## Context
 
-See proposal.md for why. The root README already lists the remaining products; `docs/agents/` and several per-app READMEs do not. `start-all.sh` `ALL_SERVICES` is the source of truth for what runs: morph, formx, composerx, morph-engi, bk, SharpReport, morph-utils. Local data is SQLite + Badger under `./data/` even where Go packages are still named `mysql` / `mongo`. `deploy/` and `landing/` are absent; `scripts/deploy.sh` still lists Booki and points at missing `DEPLOY-README.md`. This change is documentation only.
+See proposal.md for why. The root README already lists the remaining products; `docs/agents/` and several per-app READMEs do not. `start-all.sh` `ALL_SERVICES` is the source of truth for what runs: dorph, formx, composerx, dorph-engi, bk, SharpReport, dorph-utils. Local data is SQLite + Badger under `./data/` even where Go packages are still named `mysql` / `mongo`. `deploy/` and `landing/` are absent; `scripts/deploy.sh` still lists Booki and points at missing `DEPLOY-README.md`. This change is documentation only.
 
-User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, Event Logs (`formx`, embed id `sheetx`, route `/survey-bot`), Content Maker (`composerx`), Data Access (`SharpReport`, iframe `/datax`), Project (`morph-engi`), AI tools (`bk`). Auth: Morph JWT; env still `USERS_PANEL_BASE_URL` → Morph `:9090`. Chat: Morph AI only. Product UIs: dark-only.
+User-facing names (do not “fix” URL ids): Dorph AI, DorphNotes, DorphUtils, Event Logs (`formx`, embed id `sheetx`, route `/survey-bot`), Content Maker (`composerx`), Data Access (`SharpReport`, iframe `/datax`), Project (`dorph-engi`), AI tools (`bk`). Auth: Dorph JWT; env still `USERS_PANEL_BASE_URL` → Dorph `:9090`. Chat: Dorph AI only. Product UIs: dark-only.
 
 ## Goals / Non-Goals
 
@@ -17,7 +17,7 @@ User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, 
 **Non-Goals:**
 
 - Changing application code, `start-all.sh`, or `scripts/deploy.sh` behavior.
-- Restoring `deploy/`, `landing/`, `DEVELOPER_BASELINE.md`, or `AI_ASSISTANT_MORPHAI_CONTRACT.md`.
+- Restoring `deploy/`, `landing/`, `DEVELOPER_BASELINE.md`, or `AI_ASSISTANT_DORPHAI_CONTRACT.md`.
 - Migrating GraphRAG off `TRAN_MYSQL_DSN`.
 - Rewriting SharpReport API/deployment internals beyond naming if those files stay accurate.
 - Deleting unused product folders (UsersPanel/academi/booki) — that is separate WIP.
@@ -32,15 +32,15 @@ User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, 
 
 | File | After |
 |------|--------|
-| `00-architecture-overview.md` | Live map, ports, SQLite+Badger, Morph AI chat |
-| `01-auth-flow.md` | Morph JWT, cookie `userspanel_session_token`, `USERS_PANEL_BASE_URL` as legacy name |
-| `02-ai-integration.md` | Morph AI + `pkg/morphai` / `pkg/morphai-rs`; no satellite drawers |
-| `03-morph.md` | Morph AI + MorphNotes (Tasks, Timelines, Big notes, Generic data, Settings) |
+| `00-architecture-overview.md` | Live map, ports, SQLite+Badger, Dorph AI chat |
+| `01-auth-flow.md` | Dorph JWT, cookie `userspanel_session_token`, `USERS_PANEL_BASE_URL` as legacy name |
+| `02-ai-integration.md` | Dorph AI + `pkg/dorphai` / `pkg/dorphai-rs`; no satellite drawers |
+| `03-dorph.md` | Dorph AI + DorphNotes (Tasks, Timelines, Big notes, Generic data, Settings) |
 | `04-formx.md` | Event Logs; SQLite+Badger; leftover package names once |
 | `05-composerx.md` | Content Maker; same storage story |
 | `06-ai-tools.md` | Replaces Booki chapter; `bk/` Assistants, RAG, Documents, System |
 | `07-rust-apps.md` | Data Access + Project |
-| `09-morph-utils.md` | MorphUtils iframe shell |
+| `09-dorph-utils.md` | DorphUtils iframe shell |
 | `10-shared-libraries.md` | Drop Booki consumers |
 | `12-build-deploy.md` | Local `start-all`; honest “no deploy/ tree”; Vercel Project preview pointer |
 | `13-conventions.md` | Names, dark-only, one `.env`, ids vs labels |
@@ -50,13 +50,13 @@ User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, 
 
 ### 2. README related-docs point at 00 + 12, not missing contracts
 
-**Choice:** Do not recreate `DEVELOPER_BASELINE.md` or `AI_ASSISTANT_MORPHAI_CONTRACT.md`. Auth and AI live in `01` and `02`. Deploy lives in `12` plus `morph-engi` Vercel notes and `SharpReport/docs/DEPLOYMENT.md` if still accurate.
+**Choice:** Do not recreate `DEVELOPER_BASELINE.md` or `AI_ASSISTANT_DORPHAI_CONTRACT.md`. Auth and AI live in `01` and `02`. Deploy lives in `12` plus `dorph-engi` Vercel notes and `SharpReport/docs/DEPLOYMENT.md` if still accurate.
 
 **Alternatives considered:** Restore the three missing files as stubs. Rejected — stubs would rot like the current dead links.
 
 ### 3. GraphRAG is an appendix, not required infra
 
-**Choice:** README already says Neo4j is optional; keep that. Rewrite `docs/MORPH_GRAPH_OPS.md` so it is clearly optional and still documents `TRAN_MYSQL_DSN` as a **worker** requirement (code truth), not a platform default. Move `docs/MORPH_GRAPH_RAG_PLAN.md`, `docs/SURVEY_BOT_AND_GRAPHRAG_PLAN.md`, and `docs/superpowers/` to `docs/archive/`.
+**Choice:** README already says Neo4j is optional; keep that. Rewrite `docs/DORPH_GRAPH_OPS.md` so it is clearly optional and still documents `TRAN_MYSQL_DSN` as a **worker** requirement (code truth), not a platform default. Move `docs/DORPH_GRAPH_RAG_PLAN.md`, `docs/SURVEY_BOT_AND_GRAPHRAG_PLAN.md`, and `docs/superpowers/` to `docs/archive/`.
 
 **Alternatives considered:** Delete plans outright. Archive keeps git-navigable history for people who want the old design without polluting `docs/agents/`.
 
@@ -64,13 +64,13 @@ User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, 
 
 **Choice:** Replace lying overviews; do not rewrite every API table. Targets:
 
-- `morph/README.md` — replace Transfinder novel with Morph AI / MorphNotes + pointer to `docs/agents/03`.
-- `morph-utils/README.md` — Event Logs not Survey Maker.
+- `dorph/README.md` — replace Transfinder novel with Dorph AI / DorphNotes + pointer to `docs/agents/03`.
+- `dorph-utils/README.md` — Event Logs not Survey Maker.
 - `formx/README.md` — user-facing Event Logs; keep folder/env as formx/SheetX ids.
 - `composerx/backend/README.md` — drop MySQL/Mongo/Redis prerequisites; Content Maker + root `.env`.
 - `bk/README.md` — retitle AI tools; keep useful run/API bits, drop Ground Control as the product name.
-- `SharpReport/README.md` — Data Access, dark-only, Morph SSO, `SHARPREPORT_PORT` / UI `:5178`.
-- `morph-engi/README.md` — already close; MorphUtils (no space), keep Vercel section.
+- `SharpReport/README.md` — Data Access, dark-only, Dorph SSO, `SHARPREPORT_PORT` / UI `:5178`.
+- `dorph-engi/README.md` — already close; DorphUtils (no space), keep Vercel section.
 
 **Alternatives considered:** Delete per-app READMEs and point only at agents. Operators still clone into a single folder; keep a short README there.
 
@@ -80,13 +80,13 @@ User-facing names (do not “fix” URL ids): Morph AI, MorphNotes, MorphUtils, 
 
 ### 6. `openspec/config.yaml` context
 
-**Choice:** Add a short `context:` block: remaining apps, names, ports, SQLite+Badger, Morph JWT, dark-only, one `.env`. Future `/opsx-propose` runs will pick this up.
+**Choice:** Add a short `context:` block: remaining apps, names, ports, SQLite+Badger, Dorph JWT, dark-only, one `.env`. Future `/opsx-propose` runs will pick this up.
 
 ## Risks / Trade-offs
 
 - **[Risk]** Docs describe the intended working tree while some ghost folders may still exist on `origin/main` until other WIP is committed → **Mitigation:** Document the **launcher** stack (`start-all.sh`), not every directory that might still be on disk. Do not claim UsersPanel/academi/booki are gone from git if they are only deleted locally; say they are not part of the supported stack.
 - **[Risk]** Archive path is still discoverable and can confuse search → **Mitigation:** Add `docs/archive/README.md` stating these are historical and not current.
-- **[Risk]** Slimming `bk/README.md` and `morph/README.md` drops still-true API detail → **Mitigation:** Keep run commands and ports; move or drop only Transfinder/Ground Control product fiction.
+- **[Risk]** Slimming `bk/README.md` and `dorph/README.md` drops still-true API detail → **Mitigation:** Keep run commands and ports; move or drop only Transfinder/Ground Control product fiction.
 - **[Trade-off]** Not fixing `scripts/deploy.sh` leaves a script that lists Booki. Accepted: out of scope; `12` will say the script is leftover until `deploy/` exists.
 
 ## Migration Plan

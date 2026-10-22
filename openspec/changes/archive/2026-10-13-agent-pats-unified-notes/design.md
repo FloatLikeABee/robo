@@ -1,34 +1,34 @@
 ## Context
 
-See proposal.md for why. Today morph-mcp verifies one session JWT at startup and on each call, opens `TRAN_SQLITE_PATH` read-only, and writes through a second `mode=rw` connection. It does not run migrations. Notes & TODOs, timelines, stories, and research are already owner-scoped. Stick notes write `CaseTask` with no owner. That table is also the MorphNotes board: one table, two kinds (`stick`, `task`). #134: JWT_SECRET in client configs, no revoke list, deleted users keep working until the process exits.
+See proposal.md for why. Today dorph-mcp verifies one session JWT at startup and on each call, opens `TRAN_SQLITE_PATH` read-only, and writes through a second `mode=rw` connection. It does not run migrations. Notes & TODOs, timelines, stories, and research are already owner-scoped. Stick notes write `CaseTask` with no owner. That table is also the DorphNotes board: one table, two kinds (`stick`, `task`). #134: JWT_SECRET in client configs, no revoke list, deleted users keep working until the process exits.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- PATs hashed in SQLite; morph-mcp verifies them without a client JWT secret.
+- PATs hashed in SQLite; dorph-mcp verifies them without a client JWT secret.
 - One kind-dispatch for create/get/list/update/append/archive plus search, with old names as aliases.
 - Owner on `CaseTask`, backfill, MCP scoped, admin HTTP list unchanged.
 - Grill start accepts every kind.
 
 **Non-Goals:**
 
-- Pool, share, OAuth, Streamable HTTP, Settings UI, `morph_guide`, `suggest_note_kind`.
+- Pool, share, OAuth, Streamable HTTP, Settings UI, `dorph_guide`, `suggest_note_kind`.
 - Changing `tranUserIDFromContext` or the SPA Notes & TODOs editor.
-- Echo's `16-morph-for-agents.md` and the skills pack.
+- Echo's `16-dorph-for-agents.md` and the skills pack.
 - Argon2, cursor pagination, a separate `set_todo_status` tool.
 
 ## Decisions
 
 ### 1. SHA-256 of the full token, constant-time compare
 
-The secret is 32 random bytes. A fast hash is enough. `golang.org/x/crypto` is already in the module for bcrypt; we still do not add argon2. Store `hex(sha256(token))`. Never log the token. Format `morph_pat_<id>_<secret>` where `id` is 16 hex chars.
+The secret is 32 random bytes. A fast hash is enough. `golang.org/x/crypto` is already in the module for bcrypt; we still do not add argon2. Store `hex(sha256(token))`. Never log the token. Format `dorph_pat_<id>_<secret>` where `id` is 16 hex chars.
 
 **Rejected:** argon2id (extra API, no gain on high-entropy secrets). Hashing only the secret suffix (a leaked id would still need the secret; hashing the whole string is one compare).
 
 ### 2. PAT path skips JWT_SECRET; JWT path unchanged
 
-`CheckStartup` / `IdentityFromEnv` / `RecheckFromEnv` branch on the `morph_pat_` prefix. PAT verify opens the same SQLite file and reads `agent_token`. JWT still refuses an empty or default secret. A session JWT is treated as `notes:read` and `notes:write`. Tests that build `Identity` with empty scopes keep that implicit notes access so existing `NewServer` tests do not all grow scope lists.
+`CheckStartup` / `IdentityFromEnv` / `RecheckFromEnv` branch on the `dorph_pat_` prefix. PAT verify opens the same SQLite file and reads `agent_token`. JWT still refuses an empty or default secret. A session JWT is treated as `notes:read` and `notes:write`. Tests that build `Identity` with empty scopes keep that implicit notes access so existing `NewServer` tests do not all grow scope lists.
 
 **Rejected:** dropping JWT support this phase. The plan keeps it behind a flag; keeping it working is the flag.
 
@@ -66,4 +66,4 @@ Idempotency lives in `note_idempotency(owner_user_id, idempotency_key, kind, sou
 
 ## Migration Plan
 
-API `ensureTranSQLiteSchema` adds tables and columns. Existing CaseTask rows get an owner once. Rollback is drop-the-binary; leftover columns are unused. morph-mcp never migrates. Deploy the API first, or run it once locally, then launch morph-mcp against that file.
+API `ensureTranSQLiteSchema` adds tables and columns. Existing CaseTask rows get an owner once. Rollback is drop-the-binary; leftover columns are unused. dorph-mcp never migrates. Deploy the API first, or run it once locally, then launch dorph-mcp against that file.

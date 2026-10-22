@@ -9,7 +9,7 @@ const repoRoot = path.resolve(__dirname, '../..')
 
 // https://vite.dev/config/
 const backendProxy = {
-  // Legacy messaging routes — served by Morph stub (UsersPanel removed). Must precede `/api` (FormsX backend).
+  // Legacy messaging routes — served by Dorph stub (UsersPanel removed). Must precede `/api` (FormsX backend).
   '/api/messages': { target: 'http://127.0.0.1:9090', changeOrigin: true },
   '/api': { target: 'http://localhost:29909', changeOrigin: true },
   '/uploads': { target: 'http://localhost:29909', changeOrigin: true },

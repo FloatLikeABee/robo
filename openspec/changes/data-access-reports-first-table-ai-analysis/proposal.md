@@ -1,6 +1,6 @@
 ## Why
 
-In MorphUtils **Data Access**, the header lists Data tables before Data reports. Operators want reports first. Data tables also have no way to run an AI analysis of a table’s contents and keep the result as readable markdown they can download.
+In DorphUtils **Data Access**, the header lists Data tables before Data reports. Operators want reports first. Data tables also have no way to run an AI analysis of a table’s contents and keep the result as readable markdown they can download.
 
 ## What Changes
 
@@ -23,5 +23,5 @@ In MorphUtils **Data Access**, the header lists Data tables before Data reports.
 ## Impact
 
 - Data Access frontend (`SharpReport/frontend`): `Sidebar.svelte` nav order; Data tables list + table detail; modal + markdown render + download.
-- Data Access API (`SharpReport/backend`): new authenticated analyze-table endpoint (not the existing file-to-table `/data-tables/analyze`). Morph AI key already used elsewhere in this service.
-- MorphUtils iframe is unchanged (`VITE_DATAX_URL`); SSO stays Morph AI cookie. No Event Logs / Content Maker / MorphNotes changes.
+- Data Access API (`SharpReport/backend`): new authenticated analyze-table endpoint (not the existing file-to-table `/data-tables/analyze`). Dorph AI key already used elsewhere in this service.
+- DorphUtils iframe is unchanged (`VITE_DATAX_URL`); SSO stays Dorph AI cookie. No Event Logs / Content Maker / DorphNotes changes.

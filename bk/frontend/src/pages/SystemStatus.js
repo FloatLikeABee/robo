@@ -306,7 +306,7 @@ const SystemStatus = () => {
                 icon={<CollectionIcon />}
               >
                 <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                  MorphTools
+                  DorphTools
                 </Typography>
                 <Typography variant="h6">
                   {status?.rag_collections?.length || 0} collections
@@ -449,10 +449,10 @@ const SystemStatus = () => {
               <Card sx={{ mb: 3, boxShadow: 2 }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom>
-                    MorphTools permissions
+                    DorphTools permissions
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    These options control whether MorphTools is allowed to read/write files on the host
+                    These options control whether DorphTools is allowed to read/write files on the host
                     system and execute system commands. Enable with caution.
                   </Typography>
                   <FormControlLabel

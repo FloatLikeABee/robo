@@ -16,7 +16,7 @@ function Home() {
     <div className="shell">
       <div className="card">
         <h1>Invite Signup</h1>
-        <p className="sub">Get Morph login credentials with an invitation code.</p>
+        <p className="sub">Get Dorph login credentials with an invitation code.</p>
         <div className="nav">
           <Link to="/redeem">Redeem a code</Link>
           <Link to="/admin">Admin</Link>
@@ -60,7 +60,7 @@ function RedeemPage() {
             <span style={{ marginTop: '0.75rem' }}>Password</span>
             <strong>{creds.password}</strong>
             <p className="sub" style={{ marginTop: '1rem' }}>
-              Sign in on <a href="http://localhost:3031">Morph AI</a> with these credentials.
+              Sign in on <a href="http://localhost:3031">Dorph AI</a> with these credentials.
             </p>
           </div>
         ) : (
@@ -149,7 +149,7 @@ function AdminPage() {
       <div className="shell">
         <div className="card">
           <h1>Admin</h1>
-          <p className="sub">Sign in with your Morph admin account to create invitation codes.</p>
+          <p className="sub">Sign in with your Dorph admin account to create invitation codes.</p>
           {error ? <p className="error">{error}</p> : null}
           <form onSubmit={(e) => void onLogin(e)}>
             <label htmlFor="email">Email or username</label>
@@ -184,7 +184,7 @@ function AdminPage() {
     <div className="shell">
       <div className="card">
         <h1>Invitation codes</h1>
-        <p className="sub">Create a code and share it with someone who needs a Morph login.</p>
+        <p className="sub">Create a code and share it with someone who needs a Dorph login.</p>
         {error ? <p className="error">{error}</p> : null}
         {newCode ? (
           <div className="creds">

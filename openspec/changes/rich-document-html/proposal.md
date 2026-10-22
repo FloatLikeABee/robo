@@ -13,7 +13,7 @@ Generated timelines, stories, research, and case-task pages render as one dark c
 
 ### New Capabilities
 
-- `document-visual-html`: Generated MorphNotes documents use expressive blocks and charts instead of a single plain prose column.
+- `document-visual-html`: Generated DorphNotes documents use expressive blocks and charts instead of a single plain prose column.
 
 ### Modified Capabilities
 

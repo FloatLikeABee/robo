@@ -18,7 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/robo/docextract"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const (
@@ -167,7 +167,7 @@ func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 
 	if h.AI == nil || !h.AI.Configured() {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "AI is not configured — set MORPH_AI_API_KEY to extract Events & Info from sources",
+			"error": "AI is not configured — set DORPH_AI_API_KEY to extract Events & Info from sources",
 		})
 		return
 	}
@@ -178,7 +178,7 @@ func (h *Handler) IngestEventInfoAI(c *gin.Context) {
 		corpus,
 	)
 
-	reply, err := h.AI.ChatCompletion(ctx, []morphai.Message{
+	reply, err := h.AI.ChatCompletion(ctx, []dorphai.Message{
 		{Role: "system", Content: eventInfoAIIngestSystem},
 		{Role: "user", Content: userPrompt},
 	})
@@ -428,7 +428,7 @@ func extractJSONArrayOrObject(s string) (string, bool) {
 			}
 		}
 	}
-	return morphai.ExtractJSONObject(s)
+	return dorphai.ExtractJSONObject(s)
 }
 
 func parseEventIngestDrafts(raw string) ([]eventInfoIngestDraft, error) {

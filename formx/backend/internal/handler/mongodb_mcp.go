@@ -17,7 +17,7 @@ type mongoMCPCallRequest struct {
 	Args map[string]interface{} `json:"args"`
 }
 
-// FormsXMongoMCPTools describes Badger-backed document tools for MorphAI and other MCP-style clients.
+// FormsXMongoMCPTools describes Badger-backed document tools for DorphAI and other MCP-style clients.
 func (h *Handler) FormsXMongoMCPTools(c *gin.Context) {
 	base := "/api/v1/ai/mongodb-mcp"
 	c.JSON(http.StatusOK, gin.H{

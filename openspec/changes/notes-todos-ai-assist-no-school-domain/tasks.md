@@ -1,7 +1,7 @@
 ## 1. Prompts
 
 - [x] 1.1 Rewrite `textAssistGenerateTodoPrompt` and `textAssistGenerateNotePrompt`: lead with the user’s title, body-only output, no school/transportation persona or leftover examples
-- [x] 1.2 Rewrite `textAssistTaskChainStepPrompt` to the same domain-neutral frame (no “school transportation / MorphData-style operations”)
+- [x] 1.2 Rewrite `textAssistTaskChainStepPrompt` to the same domain-neutral frame (no “school transportation / DorphData-style operations”)
 
 ## 2. Frontend
 

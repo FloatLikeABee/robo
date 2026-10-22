@@ -1,14 +1,14 @@
 ## Context
 
-See proposal.md for why. The current reply path is one shared sentence, `morphai.VisualFirstInstructions` in `pkg/morphai/context.go`: "Visual-first: short caption, then a mermaid diagram…". It is concatenated into Morph chat (`managementToolInstructions`), tool follow-ups, note and TODO text assist, case-task drafts, research compose, the Event Logs assistant, and the Content Maker assistant. There is no response post-processor that adds diagrams. `ExtractJSONObject` only treats a reply as a tool call when it parses as a management call; the invented version JSON in Ge's screenshot is model output, shown as-is.
+See proposal.md for why. The current reply path is one shared sentence, `dorphai.VisualFirstInstructions` in `pkg/dorphai/context.go`: "Visual-first: short caption, then a mermaid diagram…". It is concatenated into Dorph chat (`managementToolInstructions`), tool follow-ups, note and TODO text assist, case-task drafts, research compose, the Event Logs assistant, and the Content Maker assistant. There is no response post-processor that adds diagrams. `ExtractJSONObject` only treats a reply as a tool call when it parses as a management call; the invented version JSON in Ge's screenshot is model output, shown as-is.
 
-A second push is always-on. `appendAlwaysOnAgentSkills` injects Research, Design, and Graphs on every Morph chat. Graphs' body is that same visual-first sentence. Research says "Diagram first". Seeded skill bodies in Badger win over the code constant, so editing only the constant would not change an existing local database.
+A second push is always-on. `appendAlwaysOnAgentSkills` injects Research, Design, and Graphs on every Dorph chat. Graphs' body is that same visual-first sentence. Research says "Diagram first". Seeded skill bodies in Badger win over the code constant, so editing only the constant would not change an existing local database.
 
 The management prompt also tells the model to answer records as `**Label:**` fields and to emit a lone JSON tool call. A small model applies that pattern to "what model are you using".
 
-The workspace regression is `7f6547e` (after Agent notes #139). It removed `workspaceOpen`, the header show/hide control, and `.app--workspace-collapsed`, and it made `initialWorkspaceOpen()` always return true. Tab order flipped from Notes & TODOs then Context & Knowledge to the reverse. `openspec/specs/morph-phone-chat/spec.md` still requires the phone pane to start closed. The Agent notes modal is a separate overlay and stays.
+The workspace regression is `7f6547e` (after Agent notes #139). It removed `workspaceOpen`, the header show/hide control, and `.app--workspace-collapsed`, and it made `initialWorkspaceOpen()` always return true. Tab order flipped from Notes & TODOs then Context & Knowledge to the reverse. `openspec/specs/dorph-phone-chat/spec.md` still requires the phone pane to start closed. The Agent notes modal is a separate overlay and stays.
 
-Generated HTML shares `morph/internal/htmldoc` (Georgia, one sky-blue accent, one purple). Big notes still have a light-theme branch. Case-task preview JS and Project `build_project_html` copy the same serif rules. The form HTML prompt asks for dark grey plus a single orange.
+Generated HTML shares `dorph/internal/htmldoc` (Georgia, one sky-blue accent, one purple). Big notes still have a light-theme branch. Case-task preview JS and Project `build_project_html` copy the same serif rules. The form HTML prompt asks for dark grey plus a single orange.
 
 ## Goals / Non-Goals
 
@@ -17,7 +17,7 @@ Generated HTML shares `morph/internal/htmldoc` (Georgia, one sky-blue accent, on
 - One short reply-shape instruction at the shared constant, plus a one-line model identity fact taken from the resolved provider and model.
 - Stop Graphs from being injected on every chat, including when an old visual-first body is stored.
 - Restore the pane open/close behaviour and tab order from the parent of `7f6547e`.
-- One dark sans multi-accent document theme, used by every Morph HTML renderer and by prompts that ask a model to write HTML.
+- One dark sans multi-accent document theme, used by every Dorph HTML renderer and by prompts that ask a model to write HTML.
 
 **Non-Goals:**
 
@@ -39,7 +39,7 @@ Alternative: strip diagrams in a post-processor. Rejected. That would delete a d
 
 ### 2. Put the real provider and model in the prompt
 
-Add `ModelIdentityInstructions(provider, model string)` in `pkg/morphai`. Morph chat (`chatWithManagementTools` and `GenerateChatResponseWithAgent`) prefixes it. The values come from `Client` resolution even when the API key is missing, so a configured Ollama model is named and an empty resolution says unknown. The instruction forbids invented versions and dates. Note assist and the satellite assistants get the reply-shape text only.
+Add `ModelIdentityInstructions(provider, model string)` in `pkg/dorphai`. Dorph chat (`chatWithManagementTools` and `GenerateChatResponseWithAgent`) prefixes it. The values come from `Client` resolution even when the API key is missing, so a configured Ollama model is named and an empty resolution says unknown. The instruction forbids invented versions and dates. Note assist and the satellite assistants get the reply-shape text only.
 
 Alternative: answer identity questions in Go before calling the model. Rejected. It misses paraphrases ("which LLM is this") and does not fix the rest of the reply shape.
 
@@ -72,7 +72,7 @@ Alternative: a shared CSS file imported by Rust. Rejected. Project HTML is a for
 
 ## Migration Plan
 
-Code and tests only. Restart Morph (API and the frontend dev server or a frontend rebuild) to see it. No data migration and no deploy change. Rollback is reverting the commit.
+Code and tests only. Restart Dorph (API and the frontend dev server or a frontend rebuild) to see it. No data migration and no deploy change. Rollback is reverting the commit.
 
 ## Open Questions
 

@@ -1,6 +1,6 @@
 ---
 name: session-lessons
-description: Applies durable lessons distilled from prior sessions (product names, UX preferences, failed approaches, verification gaps). Use before implementing MorphAI, Morph Utils, SheetX, ComposerX, Data Access, or DataX changes, and whenever a past correction, redo, or naming preference might apply.
+description: Applies durable lessons distilled from prior sessions (product names, UX preferences, failed approaches, verification gaps). Use before implementing DorphAI, Dorph Utils, SheetX, ComposerX, Data Access, or DataX changes, and whenever a past correction, redo, or naming preference might apply.
 ---
 
 # Session Lessons

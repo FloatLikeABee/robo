@@ -11,8 +11,8 @@ See proposal.md — Why. SharpReport API already reads `SHARPREPORT_PORT` in `co
 
 **Non-Goals:**
 
-- Changing auth, data-tables handlers, MorphUtils iframe URL (`VITE_DATAX_URL` stays 5178).
-- Syncing `SHARPREPORT_BASE_URL` (Morph’s server-to-server Data Access URL is a separate mismatch).
+- Changing auth, data-tables handlers, DorphUtils iframe URL (`VITE_DATAX_URL` stays 5178).
+- Syncing `SHARPREPORT_BASE_URL` (Dorph’s server-to-server Data Access URL is a separate mismatch).
 - Binding Vite to IPv4 vs IPv6.
 
 ## Decisions
@@ -23,7 +23,7 @@ See proposal.md — Why. SharpReport API already reads `SHARPREPORT_PORT` in `co
 - **Why:** Local `.env` already uses 3888; resetting the API to 3050 would fight that override and still leave the next port change broken.
 - **Alternative:** Set `SHARPREPORT_PORT=3050` only. Rejected — the UI would stay hardcoded and drift again.
 
-### 2. Keep `/api/messages` on Morph `:9090`
+### 2. Keep `/api/messages` on Dorph `:9090`
 
 - Unchanged. Only `/api`, `/public`, `/metabase` use the SharpReport origin.
 
@@ -34,7 +34,7 @@ See proposal.md — Why. SharpReport API already reads `SHARPREPORT_PORT` in `co
 ## Risks / Trade-offs
 
 - [Vite already running] → Restart `sharpreport-ui` after the proxy change; env is read at config load.
-- [`SHARPREPORT_BASE_URL` still 3050] → Morph calling Data Access API directly can still miss. Out of scope; operators can align that env later.
+- [`SHARPREPORT_BASE_URL` still 3050] → Dorph calling Data Access API directly can still miss. Out of scope; operators can align that env later.
 - [Invalid port string] → Fall back to 3050 if parse fails.
 
 ## Migration Plan

@@ -1,6 +1,6 @@
 ## Context
 
-Notes & TODOs AI assist is one `POST /api/tran/text-assist` call. The prompt includes `morphai.ReplyShapeInstructions` ("Answer the question in plain language"), so a title that looks like a request is answered as chat. The notes MCP app is a closed HTML document at `ui://morph/notes` that calls tools through the host bridge (`postMessage` `tools/call`). morph-mcp is one verified session, does not open Badger, and does not write a note except through `create_note`. Private `/api/tran/` routes already require a Morph JWT. See proposal.md for why the one-shot path is the bug.
+Notes & TODOs AI assist is one `POST /api/tran/text-assist` call. The prompt includes `dorphai.ReplyShapeInstructions` ("Answer the question in plain language"), so a title that looks like a request is answered as chat. The notes MCP app is a closed HTML document at `ui://dorph/notes` that calls tools through the host bridge (`postMessage` `tools/call`). dorph-mcp is one verified session, does not open Badger, and does not write a note except through `create_note`. Private `/api/tran/` routes already require a Dorph JWT. See proposal.md for why the one-shot path is the bug.
 
 ## Goals / Non-Goals
 
@@ -14,7 +14,7 @@ Notes & TODOs AI assist is one `POST /api/tran/text-assist` call. The prompt inc
 **Non-Goals:**
 
 - Big notes, timelines, research, stories, and task-chain steps. Those generators stay on their own routes.
-- Persisting the interview. Restarting the API or morph-mcp drops open grills.
+- Persisting the interview. Restarting the API or dorph-mcp drops open grills.
 - Auto-saving the SPA note on confirm. Confirm fills the editor. Create and Save stay where they are.
 - Changing Render, images, or `text-assist` for task-chain steps.
 
@@ -44,14 +44,14 @@ A stop phrase is the whole answer ("enough", "write it now"), not a sentence tha
 
 ### 3. One HTML document, two hosts
 
-`morph/grill` embeds `app.html`. morph-mcp serves it at `ui://morph/grill`. `GET /api/tran/grill/ui` returns the same bytes to the signed-in SPA. The modal fetches that HTML with the bearer client and sets the iframe `srcDoc`. A raw iframe navigation would not attach the Authorization header. The modal answers the app bridge:
+`dorph/grill` embeds `app.html`. dorph-mcp serves it at `ui://dorph/grill`. `GET /api/tran/grill/ui` returns the same bytes to the signed-in SPA. The modal fetches that HTML with the bearer client and sets the iframe `srcDoc`. A raw iframe navigation would not attach the Authorization header. The modal answers the app bridge:
 
 - `ui/initialize` gets a host result.
 - `tools/call` `note_grill` is `POST /api/tran/grill` for the SPA, and the real tool for an MCP host.
 - After initialize, the SPA sends a host-context message with kind, title, and description so the title is not put in a URL.
 - On review, the SPA shows the draft in the page and enables Use this on the dialog. That button inserts the draft from the last grill result, not a string the page invents. The page does not call `create_note` on the SPA surface. An MCP host shows Save note only after the draft is on screen, and that button calls `create_note`.
 
-The page uses `textContent`, a closed content security policy, and the dark Arial palette from `morph/internal/htmldoc` (background `#070b14`, accents cyan, violet, and mint).
+The page uses `textContent`, a closed content security policy, and the dark Arial palette from `dorph/internal/htmldoc` (background `#070b14`, accents cyan, violet, and mint).
 
 **Alternative rejected:** a second React conversation. It would drift from the MCP page, which is the UI the issue asks to embed.
 
@@ -59,7 +59,7 @@ The page uses `textContent`, a closed content security policy, and the dark Aria
 
 The API store keys sessions by `auth_user_id` from the JWT middleware. It does not use `tranUserIDFromContext`, which can fall through to user id 1. A missing user id is 401 and does not call the model. Another user's id is 404 with no draft.
 
-morph-mcp keeps its own store inside the process, keyed by the token subject. `note_grill` is not read-only. It does not open SQLite. `create_note` is unchanged, including the `[morph-mcp]` marker.
+dorph-mcp keeps its own store inside the process, keyed by the token subject. `note_grill` is not read-only. It does not open SQLite. `create_note` is unchanged, including the `[dorph-mcp]` marker.
 
 A process holds at most 32 grills per user and drops the oldest. That ceiling is in-memory and per process. A shared store would be a table; this interview does not need to survive a restart.
 
@@ -67,14 +67,14 @@ A process holds at most 32 grills per user and drops the oldest. That ceiling is
 
 ### 5. Tests do not call Ollama
 
-The completer is an argument. Tests pass a function. The default completer is the existing Morph AI client. Prompt builders, the cap, the parser, the chatty-draft replacement, and the owner check are pure tests. The MCP test reads `ui://morph/grill` and drives `note_grill` with the fake completer. The SPA test drives the host bridge and checks that confirm inserts and cancel does not.
+The completer is an argument. Tests pass a function. The default completer is the existing Dorph AI client. Prompt builders, the cap, the parser, the chatty-draft replacement, and the owner check are pure tests. The MCP test reads `ui://dorph/grill` and drives `note_grill` with the fake completer. The SPA test drives the host bridge and checks that confirm inserts and cancel does not.
 
 ## Risks / Trade-offs
 
 - [In-memory grills vanish on restart] → The modal is short. The operator starts again. No partial note is saved.
-- [API and morph-mcp do not share grill ids] → Each client interviews on its own process. That matches how notes tools already split HTTP from stdio.
+- [API and dorph-mcp do not share grill ids] → Each client interviews on its own process. That matches how notes tools already split HTTP from stdio.
 - [Fallback prose is plain] → It is body text about the title and the answers, which is the bug we are fixing. The operator can edit after confirm.
-- [Spec used to say the only MCP resource is the notes app] → This change adds `ui://morph/grill`. Module tools that already exist stay listed by inclusion, not by a new exclusive count.
+- [Spec used to say the only MCP resource is the notes app] → This change adds `ui://dorph/grill`. Module tools that already exist stay listed by inclusion, not by a new exclusive count.
 - [iframe bridge is the SPA integration] → Cancel stays outside the iframe so a failed script can still dismiss the modal.
 
 ## Migration Plan

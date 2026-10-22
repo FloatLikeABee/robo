@@ -7,7 +7,7 @@
 
 - [x] 2.1 Store helpers: create (hash, default scopes, 90-day expiry), list, revoke, lookup by id. Never persist the plaintext. Constant-time compare.
 - [x] 2.2 HTTP `POST/GET/DELETE /api/agent-tokens` on a session JWT. Tests: create returns the secret once, list is owner-scoped, revoke of another user's id is not found, missing bearer is 401.
-- [x] 2.3 morph-mcp PAT path: `IdentityFromEnv` / `CheckStartup` / `RecheckFromEnv` accept `morph_pat_` without `JWT_SECRET`. Revoked, expired, and deleted-user tokens fail the next call. JWT path still refuses an empty or default secret. `whoami` includes scopes. Tests cover PAT start, revoke, expiry, and `forbidden_scope` on create.
+- [x] 2.3 dorph-mcp PAT path: `IdentityFromEnv` / `CheckStartup` / `RecheckFromEnv` accept `dorph_pat_` without `JWT_SECRET`. Revoked, expired, and deleted-user tokens fail the next call. JWT path still refuses an empty or default secret. `whoami` includes scopes. Tests cover PAT start, revoke, expiry, and `forbidden_scope` on create.
 
 ## 3. Owner-scoped stick and task
 
@@ -25,5 +25,5 @@
 
 ## 6. Docs and module check
 
-- [x] 6.1 Update `docs/agents/14-morph-mcp.md` and `morph/cmd/morph-mcp/README.md` with PAT curl, scopes, unified tools, and a PAT `mcp.json` that has no `JWT_SECRET`. Do not edit `16-morph-for-agents.md` or the skills pack.
-- [x] 6.2 `cd morph && go vet ./... && go test ./...` exits 0. Morph frontend tests still pass (no SPA change expected).
+- [x] 6.1 Update `docs/agents/14-dorph-mcp.md` and `dorph/cmd/dorph-mcp/README.md` with PAT curl, scopes, unified tools, and a PAT `mcp.json` that has no `JWT_SECRET`. Do not edit `16-dorph-for-agents.md` or the skills pack.
+- [x] 6.2 `cd dorph && go vet ./... && go test ./...` exits 0. Dorph frontend tests still pass (no SPA change expected).

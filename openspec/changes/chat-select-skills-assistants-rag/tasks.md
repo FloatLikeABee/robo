@@ -12,7 +12,7 @@
 
 ## 3. RAG picker
 
-- [x] 3.1 List RAG collection names from the AI tools API through a Morph route
+- [x] 3.1 List RAG collection names from the AI tools API through a Dorph route
 - [x] 3.2 Add a composer RAG picker, same pattern as skills, with multiple checks and clear
 - [x] 3.3 On send, retrieve the checked collections and include the snippets, including when no assistant is selected
 - [x] 3.4 When an assistant with its own collections is also selected, retrieve both sets and keep the existing snippet caps

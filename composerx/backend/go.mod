@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/robo/assistmd v0.0.0
-	github.com/robo/morphai v0.0.0
+	github.com/robo/dorphai v0.0.0
 	github.com/robo/repoenv v0.0.0
 	github.com/robo/webresearch v0.0.0
 	github.com/sashabaranov/go-openai v1.41.2
@@ -64,7 +64,7 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/robo/morphai => ../../pkg/morphai
+replace github.com/robo/dorphai => ../../pkg/dorphai
 
 replace github.com/robo/assistmd => ../../pkg/assistmd
 

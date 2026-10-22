@@ -41,7 +41,7 @@ class HelpService:
             "- Dialogues / Conversations: Structured multi-turn AI workflows.",
             "- Flows: Chain resources (agent/db/request/dialogue) into automation steps.",
             "- System: Monitor status and manage system settings.",
-            "- Model Context Protocol is not part of AI tools. The platform MCP server is morph/cmd/morph-mcp.",
+            "- Model Context Protocol is not part of AI tools. The platform MCP server is dorph/cmd/dorph-mcp.",
             "",
             "## Key Concepts",
             "- RAG collections are knowledge bases used during retrieval.",

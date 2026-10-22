@@ -17,10 +17,10 @@
 
 ### Modified Capabilities
 
-- `morph-agent-notes`: The human view is a modal over chat, not a standalone page. Deep links and logged-out handling follow that view. List, detail, and ownership requirements stay.
+- `dorph-agent-notes`: The human view is a modal over chat, not a standalone page. Deep links and logged-out handling follow that view. List, detail, and ownership requirements stay.
 
 ## Impact
 
-- `morph/frontend`: `SkoolAiChat.js`, `appRouter.js`, the Agent notes page and its test, `App.css`.
-- Docs that name `/agent-notes` as the human list (`docs/agents/14-morph-mcp.md`).
-- No Go handlers, no MorphUtils, no Render.
+- `dorph/frontend`: `SkoolAiChat.js`, `appRouter.js`, the Agent notes page and its test, `App.css`.
+- Docs that name `/agent-notes` as the human list (`docs/agents/14-dorph-mcp.md`).
+- No Go handlers, no DorphUtils, no Render.

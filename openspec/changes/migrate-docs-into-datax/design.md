@@ -1,8 +1,8 @@
 ## Context
 
-See proposal.md for motivation. Docs today is Academi (`academi/`), embedded as Morph Utils module `docs`. DataX is SharpReport (`SharpReport/`) with Data access (databases, data tables, CSV/JSON import) and a global assistant drawer. ComposerX already publishes HTML pages with optional AI over sources. Docs Board is a community feed (`community` screen) with optional file analysis — product wants ComposerX-like publish instead.
+See proposal.md for motivation. Docs today is Academi (`academi/`), embedded as Dorph Utils module `docs`. DataX is SharpReport (`SharpReport/`) with Data access (databases, data tables, CSV/JSON import) and a global assistant drawer. ComposerX already publishes HTML pages with optional AI over sources. Docs Board is a community feed (`community` screen) with optional file analysis — product wants ComposerX-like publish instead.
 
-Constraints: shared UsersPanel auth; Morph Utils iframe embeds; keep DataX tabular import unchanged; prefer reusing Academi APIs via proxy first if faster than full rewrite.
+Constraints: shared UsersPanel auth; Dorph Utils iframe embeds; keep DataX tabular import unchanged; prefer reusing Academi APIs via proxy first if faster than full rewrite.
 
 ## Goals / Non-Goals
 
@@ -11,7 +11,7 @@ Constraints: shared UsersPanel auth; Morph Utils iframe embeds; keep DataX tabul
 - Two-pane Docs AI (sessions left, chat right).
 - Clear split: Docs content files (PDF/TXT) vs DataX data files (CSV/JSON).
 - Board → HTML publish with optional analysis prompt.
-- Remove standalone Docs from Morph Utils primary nav.
+- Remove standalone Docs from Dorph Utils primary nav.
 
 **Non-Goals:**
 - Merging Docs content documents into DataX data-table rows.
@@ -21,7 +21,7 @@ Constraints: shared UsersPanel auth; Morph Utils iframe embeds; keep DataX tabul
 
 ## Decisions
 
-### 1. Host Docs UI in SharpReport (DataX), not Morph Utils iframe of Academi
+### 1. Host Docs UI in SharpReport (DataX), not Dorph Utils iframe of Academi
 - **Choice:** Add DataX routes/nav for Docs (e.g. `/docs`, `/docs/ai`, `/docs/library`, `/docs/publish`) implemented in SharpReport frontend; call Academi or new DataX backends as needed.
 - **Why:** One Data access product surface; Utils drops a module.
 - **Alternatives:** Keep Academi iframe inside DataX (weaker IA); only redirect Utils Docs URL to Academi (fails “into Data access”).
@@ -59,7 +59,7 @@ Constraints: shared UsersPanel auth; Morph Utils iframe embeds; keep DataX tabul
 
 1. Ship DataX Docs nav + proxied library/AI two-pane UI.
 2. Ship publish HTML + optional analysis; retire Board as primary UX.
-3. Remove Docs from Morph Utils; redirect legacy paths.
+3. Remove Docs from Dorph Utils; redirect legacy paths.
 4. Follow-up: native Docs storage in DataX; archive Academi service when unused.
 
 ## Open Questions

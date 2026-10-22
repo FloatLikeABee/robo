@@ -1,18 +1,18 @@
-# CI for the Morph platform monorepo.
+# CI for the Dorph platform monorepo.
 #
 # Check names are a required-check contract. Do not rename them without
 # updating branch protection and the platform-ci spec:
-#   Go / Morph API
+#   Go / Dorph API
 #   Go / Event Logs
 #   Go / Content Maker
-#   Go / morphai
-#   Morph frontend
+#   Go / dorphai
+#   Dorph frontend
 #
 # Modules are independent (no go.work). Each Go job reads its own go.mod
 # for the toolchain version. Every check runs on every pull request and
-# push to main (no path filters): replace directives mean a pkg/morphai
-# edit can break the apps. MORPH_AI_API_KEY is unset; tests must pass
-# without an AI provider.
+# push to main (no path filters): replace directives mean a pkg/dorphai
+# edit can break the apps. DORPH_AI_API_KEY and MORPH_AI_API_KEY are
+# unset; tests must pass without an AI provider.
 #
 # Actions are pinned by commit SHA. The tag is only a comment.
 name: CI
@@ -39,19 +39,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Morph API
-            dir: morph
-            cache-deps: morph/go.sum
+          - name: Dorph API
+            dir: dorph
+            cache-deps: dorph/go.sum
           - name: Event Logs
             dir: formx/backend
             cache-deps: formx/backend/go.sum
           - name: Content Maker
             dir: composerx/backend
             cache-deps: composerx/backend/go.sum
-          - name: morphai
-            dir: pkg/morphai
+          - name: dorphai
+            dir: pkg/dorphai
             # No third-party requirements, so there is no go.sum.
-            cache-deps: pkg/morphai/go.mod
+            cache-deps: pkg/dorphai/go.mod
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,21 +63,21 @@ jobs:
       - name: Vet and test
         working-directory: ${{ matrix.dir }}
         run: |
-          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
-          if [ -n "${MORPH_AI_API_KEY+x}" ]; then
-            echo "MORPH_AI_API_KEY must be unset in CI" >&2
+          unset DORPH_AI_API_KEY MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          if [ -n "${DORPH_AI_API_KEY+x}" ] || [ -n "${MORPH_AI_API_KEY+x}" ]; then
+            echo "DORPH_AI_API_KEY and MORPH_AI_API_KEY must be unset in CI" >&2
             exit 1
           fi
           go vet ./...
           go test ./...
 
-  morph-frontend:
-    name: Morph frontend
+  dorph-frontend:
+    name: Dorph frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: morph/frontend
+        working-directory: dorph/frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -89,14 +89,14 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: morph/frontend/package-lock.json
+          cache-dependency-path: dorph/frontend/package-lock.json
       - name: Install
         run: npm ci
       - name: Unit tests
         run: |
-          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          unset DORPH_AI_API_KEY MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
           CI=true npm test -- --watchAll=false
       - name: Production build
         run: |
-          unset MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
+          unset DORPH_AI_API_KEY MORPH_AI_API_KEY GEMINI_API_KEY TRAN_OPENAI_API_KEY OPENAI_API_KEY
           CI=true npm run build

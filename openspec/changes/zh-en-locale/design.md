@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md for why. There is no locale layer today. Morph AI and MorphNotes are one CRA. MorphTools, Event Logs, Content Maker, and Project are separate frontends loaded in iframes. Cookies are not port-specific, but production hosts are separate, so a cookie cannot be the contract. Product UIs stay dark. Chat is Morph AI only.
+See proposal.md for why. There is no locale layer today. Dorph AI and DorphNotes are one CRA. DorphTools, Event Logs, Content Maker, and Project are separate frontends loaded in iframes. Cookies are not port-specific, but production hosts are separate, so a cookie cannot be the contract. Product UIs stay dark. Chat is Dorph AI only.
 
 ## Goals / Non-Goals
 
@@ -13,7 +13,7 @@ See proposal.md for why. There is no locale layer today. Morph AI and MorphNotes
 **Non-Goals:**
 
 - A translation library, a user-table column, or Traditional Chinese.
-- Translating MorphUtils, Data Access, invite signup, or stored content.
+- Translating DorphUtils, Data Access, invite signup, or stored content.
 - A light/dark control beside the language control.
 
 ## Decisions
@@ -26,11 +26,11 @@ Each in-scope frontend gets the same rules: read a saved `en` | `zh`, otherwise 
 
 **Alternative considered:** One cookie on `localhost`. It would sync local ports and still fail across production hosts. Query plus a message works in both places.
 
-### 2. Morph AI is the source of truth when a module is embedded
+### 2. Dorph AI is the source of truth when a module is embedded
 
-Save the choice in `localStorage` under `morph-locale` on that origin. MorphNotes reads the same key because it is the same origin.
+Save the choice in `localStorage` under `dorph-locale` on that origin. DorphNotes reads the same key because it is the same origin.
 
-Cross-origin iframes get `lang=en` or `lang=zh` on the existing embed URL, next to the session token. When the operator switches, the parent posts `{ type: 'morph-locale', lang }` to the frame and sends it again when the frame loads. A frame that is opened on its own, with no `lang` and no saved choice, detects for itself. A `lang` query wins over that frame’s own saved choice so the parent stays in charge.
+Cross-origin iframes get `lang=en` or `lang=zh` on the existing embed URL, next to the session token. When the operator switches, the parent posts `{ type: 'dorph-locale', lang }` to the frame and sends it again when the frame loads. A frame that is opened on its own, with no `lang` and no saved choice, detects for itself. A `lang` query wins over that frame’s own saved choice so the parent stays in charge.
 
 **Why not reload the iframe:** A reload drops the operator’s place inside the module. A message updates chrome in place.
 

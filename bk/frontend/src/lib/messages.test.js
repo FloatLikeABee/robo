@@ -6,5 +6,5 @@ test('every english catalog key has simplified chinese', () => {
     expect(en[key].trim()).not.toBe('');
     expect(zh[key].trim()).not.toBe('');
   }
-  expect(zh.morphTools).toBe('MorphTools');
+  expect(zh.dorphTools).toBe('DorphTools');
 });

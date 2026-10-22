@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md — Why. `POST /api/tran/text-assist` builds a single user prompt in `morph/handlers/tran_text_assist.go`. `generate_todo` / `generate_note` still say “for a transportation / school operations staff member”; empty generate even suggests “route change, parent communication, vehicle check”. `task_chain_step` still says “school transportation / MorphData-style operations”. Notes & TODOs `AI assist` already sends `seed: title` for generate; improve currently sends body only (no title).
+See proposal.md — Why. `POST /api/tran/text-assist` builds a single user prompt in `dorph/handlers/tran_text_assist.go`. `generate_todo` / `generate_note` still say “for a transportation / school operations staff member”; empty generate even suggests “route change, parent communication, vehicle check”. `task_chain_step` still says “school transportation / DorphData-style operations”. Notes & TODOs `AI assist` already sends `seed: title` for generate; improve currently sends body only (no title).
 
 ## Goals / Non-Goals
 
@@ -12,7 +12,7 @@ See proposal.md — Why. `POST /api/tran/text-assist` builds a single user promp
 
 **Non-Goals:**
 
-- Rewriting Morph AI chat, generic-data analysis, or seeded demo data that still mention transportation.
+- Rewriting Dorph AI chat, generic-data analysis, or seeded demo data that still mention transportation.
 - Changing which button is AI assist, or auto-saving the item.
 - Calling a live model in CI.
 
@@ -32,7 +32,7 @@ See proposal.md — Why. `POST /api/tran/text-assist` builds a single user promp
 
 ### 3. Generate fills body only; do not emit a competing title line
 
-- **Choice:** Instruct: actionable checklist or short paragraphs for the given title; do not output a different title; Morph keeps the user’s title field.
+- **Choice:** Instruct: actionable checklist or short paragraphs for the given title; do not output a different title; Dorph keeps the user’s title field.
 - **Why:** Today the todo prompt asks for “one clear title line, then bullets”, so the model can replace the topic in that first line.
 - **Alternative:** Overwrite the title from the model. Rejected — user already typed the title.
 
@@ -44,7 +44,7 @@ See proposal.md — Why. `POST /api/tran/text-assist` builds a single user promp
 
 ### 5. Guard with string tests, not a live LLM
 
-- **Choice:** Same-package tests: generated prompts MUST contain the seed; MUST NOT contain leftover phrases (`transportation / school operations`, `school transportation`, `staff member`, `route change, parent communication, vehicle check`, `MorphData-style operations` as the domain frame).
+- **Choice:** Same-package tests: generated prompts MUST contain the seed; MUST NOT contain leftover phrases (`transportation / school operations`, `school transportation`, `staff member`, `route change, parent communication, vehicle check`, `DorphData-style operations` as the domain frame).
 - **Why:** Deterministic; catches regressions if someone pastes old copy back.
 - **Alternative:** Snapshot a live DashScope reply for “make money on AI stock”. Flaky and needs keys.
 
@@ -56,7 +56,7 @@ See proposal.md — Why. `POST /api/tran/text-assist` builds a single user promp
 
 ## Migration Plan
 
-- Deploy Morph API with new prompt strings. No schema or client version bump.
+- Deploy Dorph API with new prompt strings. No schema or client version bump.
 - Rollback: revert `tran_text_assist.go` (and the improve `seed` line).
 
 ## Open Questions

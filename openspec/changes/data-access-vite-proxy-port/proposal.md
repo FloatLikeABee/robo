@@ -1,6 +1,6 @@
 ## Why
 
-Data Access in MorphUtils shows HTTP 500 on `/api/v1/auth/me` and `/api/v1/data-tables` when `SHARPREPORT_PORT` is not 3050. The API listens on that env port; the SvelteKit Vite proxy and SSR fetch rewrite stay hardcoded to 3050, so the UI talks to a dead port. Operators already set `SHARPREPORT_PORT=3888` locally; the tables page still looks like an app error.
+Data Access in DorphUtils shows HTTP 500 on `/api/v1/auth/me` and `/api/v1/data-tables` when `SHARPREPORT_PORT` is not 3050. The API listens on that env port; the SvelteKit Vite proxy and SSR fetch rewrite stay hardcoded to 3050, so the UI talks to a dead port. Operators already set `SHARPREPORT_PORT=3888` locally; the tables page still looks like an app error.
 
 ## What Changes
 
@@ -24,4 +24,4 @@ Data Access in MorphUtils shows HTTP 500 on `/api/v1/auth/me` and `/api/v1/data-
 - `SharpReport/frontend/vite.config.ts`, `SharpReport/frontend/src/hooks.server.ts`
 - `start-all.sh` `service_url` for `sharpreport-api`
 - Root `.env.example` comment that Vite/start-all follow `SHARPREPORT_PORT`
-- MorphUtils Data Access iframe (`VITE_DATAX_URL` remains 5178; only the API hop changes)
+- DorphUtils Data Access iframe (`VITE_DATAX_URL` remains 5178; only the API hop changes)

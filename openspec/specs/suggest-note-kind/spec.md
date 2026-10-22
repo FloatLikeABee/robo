@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Map a user's ask to a Morph note kind with a reason and a grill flag, using deterministic rules so an agent can pick a store without calling a model.
+Map a user's ask to a Dorph note kind with a reason and a grill flag, using deterministic rules so an agent can pick a store without calling a model.
 
 ## Requirements
 

@@ -5,12 +5,12 @@ Keeps the root README and launcher aligned with the apps that still exist, and d
 ## ADDED Requirements
 
 ### Requirement: README lists only remaining products
-The root README MUST describe only folders and products that exist in the repo: Morph AI / MorphNotes (`morph/`), MorphUtils (`morph-utils/` with Event Logs, Content Maker, Data Access, Project), FormsX/Event Logs (`formx/`), Content Maker (`composerx/`), Project (`morph-engi/`), Data Access (`SharpReport/`), AI tools (`bk/`). It MUST NOT present Booki, Academi, UsersPanel, or `morph-broadcast` as current apps. User-facing names MUST stay MorphNotes, MorphUtils, Event Logs, Content Maker, Data Access, Project, AI tools.
+The root README MUST describe only folders and products that exist in the repo: Dorph AI / DorphNotes (`dorph/`), DorphUtils (`dorph-utils/` with Event Logs, Content Maker, Data Access, Project), FormsX/Event Logs (`formx/`), Content Maker (`composerx/`), Project (`dorph-engi/`), Data Access (`SharpReport/`), AI tools (`bk/`). It MUST NOT present Booki, Academi, UsersPanel, or `dorph-broadcast` as current apps. User-facing names MUST stay DorphNotes, DorphUtils, Event Logs, Content Maker, Data Access, Project, AI tools.
 
 #### Scenario: README has no removed-app table rows
 - **WHEN** an operator opens the root README project-folders table
-- **THEN** they do not see Booki, Academi, UsersPanel, or morph-broadcast as live folders
-- **AND** they see Morph AI / MorphNotes and MorphUtils with the current module names
+- **THEN** they do not see Booki, Academi, UsersPanel, or dorph-broadcast as live folders
+- **AND** they see Dorph AI / DorphNotes and DorphUtils with the current module names
 
 ### Requirement: Launcher names match remaining services
 `start-all.sh` MUST NOT default-start services whose app folders are missing (Booki, Academi). Status, list, and help MUST not advertise those as part of the default stack.

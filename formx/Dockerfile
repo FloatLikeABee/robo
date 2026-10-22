@@ -1,7 +1,7 @@
 # Event Logs API + UI. Build context is the repo root (pkg/ replace directives).
 # No secret build args. Runtime secrets come from the environment only.
 # formx/Dockerfile.dockerignore filters this build. The root .dockerignore
-# still excludes formx from the Morph image.
+# still excludes formx from the Dorph image.
 
 FROM node:22-bookworm-slim AS ui
 WORKDIR /src

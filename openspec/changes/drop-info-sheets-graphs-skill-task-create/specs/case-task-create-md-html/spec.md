@@ -1,12 +1,12 @@
 ## Purpose
 
-Simplifies creating a MorphNotes task to prompt or upload generate, a title, start and end times, and a markdown plus HTML document.
+Simplifies creating a DorphNotes task to prompt or upload generate, a title, start and end times, and a markdown plus HTML document.
 
 ## ADDED Requirements
 
 ### Requirement: Create form is generate, title, and times
 
-When creating a MorphNotes task, the operator MUST see: generate from prompt, generate from upload (or both), title, start date/time, and end date/time. The create form MUST NOT show description, map area, JSON detail editor, or attachments.
+When creating a DorphNotes task, the operator MUST see: generate from prompt, generate from upload (or both), title, start date/time, and end date/time. The create form MUST NOT show description, map area, JSON detail editor, or attachments.
 
 #### Scenario: New task dialog
 

@@ -17,7 +17,7 @@ Agent notes: [`docs/agents/05-composerx.md`](../../docs/agents/05-composerx.md).
 | `COMPOSERX_BADGER_PATH` | `./data/composerx_badger` |
 | `TRAN_FILE_STORAGE_PATH` | `./storage` |
 | `PORT` / `COMPOSERX_PORT` | `8043` |
-| `USERS_PANEL_BASE_URL` | `http://127.0.0.1:9090` (Morph auth) |
+| `USERS_PANEL_BASE_URL` | `http://127.0.0.1:9090` (Dorph auth) |
 
 Column names such as `content_mongo_id` are leftover. `main` opens SQLite + Badger.
 
@@ -27,11 +27,11 @@ cp ../../.env.example ../../.env
 
 ## AI
 
-Default DashScope / Qwen via [`pkg/morphai`](../../pkg/morphai). The same client can select a named provider; see that README.
+Default DashScope / Qwen via [`pkg/dorphai`](../../pkg/dorphai). The same client can select a named provider; see that README.
 
 ```bash
-MORPH_AI_API_KEY=sk-your-dashscope-key
-MORPH_AI_MODEL=qwen3-max
+DORPH_AI_API_KEY=sk-your-dashscope-key
+DORPH_AI_MODEL=qwen3-max
 ```
 
 Optional reference-library embeddings (separate key):
@@ -40,9 +40,9 @@ Optional reference-library embeddings (separate key):
 TRAN_OPENAI_API_KEY=sk-...
 ```
 
-Optional JSON: `ai.config.example.json` → `ai.config.json` (`TRAN_AI_CONFIG_PATH`). `MORPH_AI_*` env wins over JSON.
+Optional JSON: `ai.config.example.json` → `ai.config.json` (`TRAN_AI_CONFIG_PATH`). `DORPH_AI_*` env wins over JSON.
 
-Platform chat is **Morph AI**. Leftover endpoints: `POST /ai/assistant/chat`, `POST /ai/composer-chat`, `POST /ai/reference-docs/upload`.
+Platform chat is **Dorph AI**. Leftover endpoints: `POST /ai/assistant/chat`, `POST /ai/composer-chat`, `POST /ai/reference-docs/upload`.
 
 ## Run
 
@@ -68,7 +68,7 @@ docker build -t composerx:local -f composerx/Dockerfile .
 docker run --rm -p 127.0.0.1:8043:8043 composerx:local
 ```
 
-`GET /health` returns HTTP 200 and `"status":"ok"` without Morph or MorphUtils. `GET /` is the UI. Other API routes need an `Authorization` bearer that Morph accepts at `USERS_PANEL_BASE_URL`. `X-User-Role` and `X-User-Permissions` are not a session. The image sets `VITE_API_BASE` empty so the UI calls that same origin. A checkout `npm run build` without that variable still targets `http://localhost:8043`.
+`GET /health` returns HTTP 200 and `"status":"ok"` without Dorph or DorphUtils. `GET /` is the UI. Other API routes need an `Authorization` bearer that Dorph accepts at `USERS_PANEL_BASE_URL`. `X-User-Role` and `X-User-Permissions` are not a session. The image sets `VITE_API_BASE` empty so the UI calls that same origin. A checkout `npm run build` without that variable still targets `http://localhost:8043`.
 
 `docker compose -f composerx/docker-compose.yml up --build` uses `composerx/deploy/.env.production` when that file exists (copy from `composerx/deploy/.env.production.example`). Data is the named volume at `/data`.
 
@@ -78,12 +78,12 @@ docker run --rm -p 127.0.0.1:8043:8043 composerx:local
 | `COMPOSERX_SQLITE_PATH` | `/data/composerx.sqlite` |
 | `COMPOSERX_BADGER_PATH` | `/data/composerx_badger` |
 | `TRAN_FILE_STORAGE_PATH` | `/data/storage` |
-| `USERS_PANEL_BASE_URL` | unset in the image; code default `http://127.0.0.1:9090` is only for a checkout. On Render set `https://<morph public host>`. It is not a secret. |
-| `MORPH_AI_API_KEY` | empty. Chat stays limited until set. |
+| `USERS_PANEL_BASE_URL` | unset in the image; code default `http://127.0.0.1:9090` is only for a checkout. On Render set `https://<dorph public host>`. It is not a secret. |
+| `DORPH_AI_API_KEY` | empty. Chat stays limited until set. |
 | `TRAN_OPENAI_API_KEY` | empty. Embeddings stay off until set. |
 
 Do not pass keys as `docker build` arguments. `sh composerx/deploy/check-container-contract.sh` checks the image contract without a daemon.
 
 ## Render
 
-The product owner syncs `render.yaml` in project `prj-dahc33dbedkc73a1v8n0`. The service is `composerx`. Secrets and the Morph origin are dashboard prompts. See [`deploy/README.md`](../../deploy/README.md). The placeholder is `https://<composerx public host>`. Set `VITE_COMPOSERX_URL` on `morph-utils` as a prompt with no value in git. Do not set it on `composerx`. This repo does not call Render. `GET /health` returns HTTP 200 without calling MorphUtils. `USERS_PANEL_BASE_URL` is `https://<morph public host>` and is not a secret. `MORPH_AI_API_KEY` and `TRAN_OPENAI_API_KEY` stay optional with no sample secret.
+The product owner syncs `render.yaml` in project `prj-dahc33dbedkc73a1v8n0`. The service is `composerx`. Secrets and the Dorph origin are dashboard prompts. See [`deploy/README.md`](../../deploy/README.md). The placeholder is `https://<composerx public host>`. Set `VITE_COMPOSERX_URL` on `dorph-utils` as a prompt with no value in git. Do not set it on `composerx`. This repo does not call Render. `GET /health` returns HTTP 200 without calling DorphUtils. `USERS_PANEL_BASE_URL` is `https://<dorph public host>` and is not a secret. `DORPH_AI_API_KEY` and `TRAN_OPENAI_API_KEY` stay optional with no sample secret.

@@ -1,11 +1,11 @@
 ---
 name: html-anything
-description: Morph's base HTML skill. Use when producing HTML or markdown that Morph will render as HTML (notes, grill drafts, generated documents, form pages).
+description: Dorph's base HTML skill. Use when producing HTML or markdown that Dorph will render as HTML (notes, grill drafts, generated documents, form pages).
 ---
 
 # html-anything
 
-Morph's HTML base skill, vendored from nexu-io/html-anything (Apache-2.0). Files: `skills/vendor/html-anything/`. Playbook: `docs/agents/16-morph-for-agents.md`.
+Dorph's HTML base skill, vendored from nexu-io/html-anything (Apache-2.0). Files: `skills/vendor/html-anything/`. Playbook: `docs/agents/16-dorph-for-agents.md`.
 
 Keep the format the caller asked for. HTML pages are self-contained. Note and grill drafts stay body text.
 

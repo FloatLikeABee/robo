@@ -76,7 +76,7 @@ Keep `parseModelJSON`. After fence strip, walk every balanced `{...}` (not only 
 
 ## Migration Plan
 
-Code and tests only. Restart Morph to pick up prompts. Rollback is revert.
+Code and tests only. Restart Dorph to pick up prompts. Rollback is revert.
 
 ## Open Questions
 

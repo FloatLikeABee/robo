@@ -1,15 +1,15 @@
 ## Purpose
 
-Lets a signed-in Morph user mint, list, and revoke hashed personal access tokens so an outside agent can call morph-mcp without putting `JWT_SECRET` in the client environment.
+Lets a signed-in Dorph user mint, list, and revoke hashed personal access tokens so an outside agent can call dorph-mcp without putting `JWT_SECRET` in the client environment.
 
 ## ADDED Requirements
 
 ### Requirement: Session user can create a personal access token
-`POST /api/agent-tokens` MUST require a Morph session JWT. It MUST accept a name and optional scopes and expiry days. When scopes are omitted, the token MUST receive `notes:read`, `notes:write`, and `pool:read`. `pool:publish` and `admin:pool` MUST NOT be granted unless the caller asked for them. The plaintext token MUST be returned once, MUST start with `morph_pat_`, and MUST NOT be stored. The store MUST keep only a hash of the token. The default expiry MUST be 90 days.
+`POST /api/agent-tokens` MUST require a Dorph session JWT. It MUST accept a name and optional scopes and expiry days. When scopes are omitted, the token MUST receive `notes:read`, `notes:write`, and `pool:read`. `pool:publish` and `admin:pool` MUST NOT be granted unless the caller asked for them. The plaintext token MUST be returned once, MUST start with `dorph_pat_`, and MUST NOT be stored. The store MUST keep only a hash of the token. The default expiry MUST be 90 days.
 
 #### Scenario: Create returns the secret once
 - **WHEN** a signed-in user posts a token name
-- **THEN** the response includes a `morph_pat_` token, an id, the scopes, and an expiry
+- **THEN** the response includes a `dorph_pat_` token, an id, the scopes, and an expiry
 - **AND** a later list of that user's tokens does not include the plaintext token
 - **AND** the stored value is not the plaintext token
 
@@ -30,8 +30,8 @@ Lets a signed-in Morph user mint, list, and revoke hashed personal access tokens
 - **THEN** the response is not found
 - **AND** B's token stays usable
 
-### Requirement: morph-mcp accepts a PAT without a client JWT secret
-When `MORPH_MCP_TOKEN` is a live personal access token, startup MUST succeed without `JWT_SECRET` in the environment. The process MUST resolve the token subject from the hashed row and MUST confirm that subject still exists in `plat_users`. A revoked, expired, or deleted-user token MUST fail startup or the next tool call. The error MUST NOT contain the token text.
+### Requirement: dorph-mcp accepts a PAT without a client JWT secret
+When `DORPH_MCP_TOKEN` is a live personal access token, startup MUST succeed without `JWT_SECRET` in the environment. The process MUST resolve the token subject from the hashed row and MUST confirm that subject still exists in `plat_users`. A revoked, expired, or deleted-user token MUST fail startup or the next tool call. The error MUST NOT contain the token text.
 
 #### Scenario: PAT starts without JWT_SECRET
 - **WHEN** the process starts with a live PAT and no `JWT_SECRET`

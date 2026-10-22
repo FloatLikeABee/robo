@@ -5,7 +5,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "vercel-build": "npm ci --prefix morph-engi/frontend && VITE_STORAGE=local npm run build --prefix morph-engi/frontend",
+    "vercel-build": "npm ci --prefix dorph-engi/frontend && VITE_STORAGE=local npm run build --prefix dorph-engi/frontend",
     "netlify-build": "sh scripts/netlify-build.sh"
   }
 }

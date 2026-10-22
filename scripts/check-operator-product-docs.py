@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check operator docs against the live MorphNotes nav, Research, and Invite Signup.
+"""Check operator docs against the live DorphNotes nav, Research, and Invite Signup.
 
 Invariants are the ones in openspec/changes/catch-docs-up-product-ia/design.md
 (decision 6). The script reads the Invite Signup port from the Vite config and
@@ -18,29 +18,29 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = [
     ROOT / "README.md",
     ROOT / "docs/agents/00-architecture-overview.md",
-    ROOT / "docs/agents/03-morph.md",
+    ROOT / "docs/agents/03-dorph.md",
     ROOT / "docs/agents/12-build-deploy.md",
-    ROOT / "morph/README.md",
+    ROOT / "dorph/README.md",
 ]
 
 NAV_DOCS = [
     ROOT / "README.md",
     ROOT / "docs/agents/00-architecture-overview.md",
-    ROOT / "docs/agents/03-morph.md",
-    ROOT / "morph/README.md",
+    ROOT / "docs/agents/03-dorph.md",
+    ROOT / "dorph/README.md",
 ]
 
 NAV_LABELS = ("Tasks", "Timelines", "Big notes", "Research", "Generic data")
 
-MORPH_ROUTES = (
-    "/morphdata/case-tasks",
-    "/morphdata/timelines",
-    "/morphdata/big-notes",
-    "/morphdata/research",
-    "/morphdata/generic-data",
+DORPH_ROUTES = (
+    "/dorphdata/case-tasks",
+    "/dorphdata/timelines",
+    "/dorphdata/big-notes",
+    "/dorphdata/research",
+    "/dorphdata/generic-data",
 )
 
-FORBIDDEN = ("Settings → Users", "/morphdata/configuration/users")
+FORBIDDEN = ("Settings → Users", "/dorphdata/configuration/users")
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 TICK_RE = re.compile(r"`([^`\n]+)`")
@@ -100,10 +100,10 @@ def check_tokens(errors: list[str], port: str) -> None:
         for label in NAV_LABELS:
             if label not in text:
                 errors.append(f"{rel} missing nav label {label!r}")
-    morph = texts[ROOT / "docs/agents/03-morph.md"]
-    rel = "docs/agents/03-morph.md"
+    dorph = texts[ROOT / "docs/agents/03-dorph.md"]
+    rel = "docs/agents/03-dorph.md"
     for token in (
-        *MORPH_ROUTES,
+        *DORPH_ROUTES,
         "POST /api/invite/redeem",
         "POST /api/admin/invite-codes",
         "POST /api/tran/research/:id/publish",
@@ -113,13 +113,13 @@ def check_tokens(errors: list[str], port: str) -> None:
         "A new job runs five verified online rounds",
         "`/redeem`",
         "`/admin`",
-        "`/morphdata/settings` and `/morphdata/configuration` redirect to `/morphdata/generic-data`",
+        "`/dorphdata/settings` and `/dorphdata/configuration` redirect to `/dorphdata/generic-data`",
         "invite-signup-ui",
         url,
     ):
-        if token not in morph:
+        if token not in dorph:
             errors.append(f"{rel} missing {token!r}")
-    if "Files workspace" in morph:
+    if "Files workspace" in dorph:
         errors.append(f"{rel} still describes a Files workspace")
     for path in (ROOT / "README.md", ROOT / "docs/agents/12-build-deploy.md"):
         text = texts[path]

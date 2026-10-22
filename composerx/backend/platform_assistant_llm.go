@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const tranMailAssistantInstructions = `You are ComposerX AI, an expert assistant for markdown content, templates, and published pages.
@@ -42,10 +42,10 @@ Tools:
 After each TOOL_RESULT, summarize in clear markdown. For content suggestions, use markdown when helpful.
 If no tool is needed, reply in markdown only (not JSON). Do not invent ids.
 
-` + morphai.VisualFirstInstructions
+` + dorphai.VisualFirstInstructions
 
 const tranMailToolMaxRounds = 8
-const tranMailMaxToolResultRunes = morphai.DefaultToolResultMaxRunes
+const tranMailMaxToolResultRunes = dorphai.DefaultToolResultMaxRunes
 
 type tranMailToolCall struct {
 	Tool string                 `json:"tool"`
@@ -54,7 +54,7 @@ type tranMailToolCall struct {
 
 func (a *App) chatWithTranMailLLM(ctx context.Context, c *gin.Context, req platformAssistantRequest, lastUser string) (string, any, error) {
 	if a.ai == nil || !a.ai.Configured() {
-		return "", nil, fmt.Errorf("MorphAI not configured")
+		return "", nil, fmt.Errorf("DorphAI not configured")
 	}
 
 	first := tranMailAssistantInstructions
@@ -66,7 +66,7 @@ func (a *App) chatWithTranMailLLM(ctx context.Context, c *gin.Context, req platf
 	}
 	first += "\n\nLatest user message:\n" + lastUser
 
-	messages := []morphai.Message{{Role: "user", Content: first}}
+	messages := []dorphai.Message{{Role: "user", Content: first}}
 	var lastRecord any
 
 	for round := 0; round < tranMailToolMaxRounds; round++ {
@@ -79,7 +79,7 @@ func (a *App) chatWithTranMailLLM(ctx context.Context, c *gin.Context, req platf
 			return "", nil, fmt.Errorf("empty model response")
 		}
 
-		obj, ok := morphai.ExtractJSONObject(reply)
+		obj, ok := dorphai.ExtractJSONObject(reply)
 		if !ok {
 			return reply, lastRecord, nil
 		}
@@ -97,11 +97,11 @@ func (a *App) chatWithTranMailLLM(ctx context.Context, c *gin.Context, req platf
 		if execErr != nil {
 			toolMsg += " error=" + execErr.Error()
 		} else {
-			toolMsg += "\n" + morphai.TruncateRunes(result, tranMailMaxToolResultRunes)
+			toolMsg += "\n" + dorphai.TruncateRunes(result, tranMailMaxToolResultRunes)
 		}
 
-		followUp := morphai.ToolFollowUpPrompt(toolMsg)
-		messages = append(messages, morphai.Message{Role: "user", Content: followUp})
+		followUp := dorphai.ToolFollowUpPrompt(toolMsg)
+		messages = append(messages, dorphai.Message{Role: "user", Content: followUp})
 	}
 
 	return "I hit the tool limit while gathering data. Please narrow your question or try again.", lastRecord, nil
@@ -122,7 +122,7 @@ func (a *App) respondPlatformGeneralAssistant(c *gin.Context, req platformAssist
 		}
 	}
 	c.JSON(http.StatusOK, platformAssistantResponse{
-		AssistantMessage: "I can help with **ComposerX**: templates, saved content, reference docs, and writing support.\n\nTry:\n- `list templates`\n- `create template name: …`\n\nSet `MORPH_AI_API_KEY` to enable the full LLM assistant.",
+		AssistantMessage: "I can help with **ComposerX**: templates, saved content, reference docs, and writing support.\n\nTry:\n- `list templates`\n- `create template name: …`\n\nSet `DORPH_AI_API_KEY` to enable the full LLM assistant.",
 		Intent:           "general",
 		State:            req.State,
 		Completed:        true,
@@ -131,8 +131,8 @@ func (a *App) respondPlatformGeneralAssistant(c *gin.Context, req platformAssist
 
 func formatPlatformHistory(messages []platformAssistantMessage) string {
 	start := 0
-	if len(messages) > morphai.DefaultHistoryMaxMessages {
-		start = len(messages) - morphai.DefaultHistoryMaxMessages
+	if len(messages) > dorphai.DefaultHistoryMaxMessages {
+		start = len(messages) - dorphai.DefaultHistoryMaxMessages
 	}
 	var b strings.Builder
 	for _, m := range messages[start:] {
@@ -140,7 +140,7 @@ func formatPlatformHistory(messages []platformAssistantMessage) string {
 		if role != "user" && role != "assistant" {
 			continue
 		}
-		content := morphai.TruncateHistoryContent(m.Content, morphai.DefaultHistoryMaxRunes)
+		content := dorphai.TruncateHistoryContent(m.Content, dorphai.DefaultHistoryMaxRunes)
 		if content == "" {
 			continue
 		}

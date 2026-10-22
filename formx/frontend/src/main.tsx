@@ -5,7 +5,7 @@ import App from './App.tsx'
 import { setAuthToken } from './lib/api'
 import { installLocaleListener } from './lib/locale'
 
-/** MorphUtils / Morph AI handoff: ?userspanel_token=… → shared session cookie. */
+/** DorphUtils / Dorph AI handoff: ?userspanel_token=… → shared session cookie. */
 function consumePlatformTokenFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search)

@@ -1,34 +1,34 @@
 ## Context
 
-See proposal.md for why. The gate is `AuthzMiddleware` in `morph/handlers/authz_middleware.go`. `resolveUserScope` decodes `Authorization: Bearer` when `TranMySQL` is set and the token is non-empty. If that token fails, it returns no session and does not read headers. If the token is missing, or `TranMySQL` is nil, it accepts `X-User-ID` and treats `X-User-Role` / `X-User-Roles` containing `admin` as an admin. `applyAuthScope` then writes `X-User-ID`, `X-User-Email`, and `X-User-Role` for handlers that still read those names.
+See proposal.md for why. The gate is `AuthzMiddleware` in `dorph/handlers/authz_middleware.go`. `resolveUserScope` decodes `Authorization: Bearer` when `TranMySQL` is set and the token is non-empty. If that token fails, it returns no session and does not read headers. If the token is missing, or `TranMySQL` is nil, it accepts `X-User-ID` and treats `X-User-Role` / `X-User-Roles` containing `admin` as an admin. `applyAuthScope` then writes `X-User-ID`, `X-User-Email`, and `X-User-Role` for handlers that still read those names.
 
-The Morph SPA (`tranClient.js`, `morphSession.js`) sends `Authorization: Bearer` from the `userspanel_session_token` cookie. It does not send `X-User-*`. The API never reads that cookie itself. `execManagementAPI` in `morph/handlers/internal_api.go` copies `Authorization` and also sets `X-User-ID`, defaulting to `admin` when the header is empty, then copies `X-User-Role`, `X-User-Roles`, and `X-User-Permissions`.
+The Dorph SPA (`tranClient.js`, `dorphSession.js`) sends `Authorization: Bearer` from the `userspanel_session_token` cookie. It does not send `X-User-*`. The API never reads that cookie itself. `execManagementAPI` in `dorph/handlers/internal_api.go` copies `Authorization` and also sets `X-User-ID`, defaulting to `admin` when the header is empty, then copies `X-User-Role`, `X-User-Roles`, and `X-User-Permissions`.
 
-A repo search for `X-User-ID`, `X-User-Role`, `X-User-Email`, `X-User-Roles`, and `X-User-Permissions` found one sender toward Morph: `execManagementAPI`. SheetX (`formx`) and Content Maker (`composerx`) read those headers on their own servers and, when a bearer token is present, resolve the role from Morph with `Authorization`. Data Access stamps `x-user-*` on its own request after a Morph session lookup. Project, AI tools, invite-signup, and the Morph SPA do not send the headers to Morph. Handler unit tests that call `CreateUserNoteTodo` directly set `X-User-ID` and do not mount `AuthzMiddleware`.
+A repo search for `X-User-ID`, `X-User-Role`, `X-User-Email`, `X-User-Roles`, and `X-User-Permissions` found one sender toward Dorph: `execManagementAPI`. SheetX (`formx`) and Content Maker (`composerx`) read those headers on their own servers and, when a bearer token is present, resolve the role from Dorph with `Authorization`. Data Access stamps `x-user-*` on its own request after a Dorph session lookup. Project, AI tools, invite-signup, and the Dorph SPA do not send the headers to Dorph. Handler unit tests that call `CreateUserNoteTodo` directly set `X-User-ID` and do not mount `AuthzMiddleware`.
 
-CORS in `morph/main.go` aborts `OPTIONS` with 204 before auth and sets `Access-Control-Allow-Headers: *`. `isSafeMethod` is only GET and HEAD, so `OPTIONS` would be treated as an authenticated method if it reached the middleware. `isPublicMorphRead` trims slashes on the slug, so `research//slug` and `research/slug/` match a published page. Gin decodes `%2F` into `URL.Path` (`UseRawPath` is false). Query strings are not part of `URL.Path`.
+CORS in `dorph/main.go` aborts `OPTIONS` with 204 before auth and sets `Access-Control-Allow-Headers: *`. `isSafeMethod` is only GET and HEAD, so `OPTIONS` would be treated as an authenticated method if it reached the middleware. `isPublicDorphRead` trims slashes on the slug, so `research//slug` and `research/slug/` match a published page. Gin decodes `%2F` into `URL.Path` (`UseRawPath` is false). Query strings are not part of `URL.Path`.
 
-PR #70 (issue #24, not merged) edits Morph startup and `morph/auth/jwt.go`. This change does not edit `morph/auth/jwt.go` or `morph/config`. `morph/main.go` changes stay in the CORS helper and the `r.Use` CORS registration.
+PR #70 (issue #24, not merged) edits Dorph startup and `dorph/auth/jwt.go`. This change does not edit `dorph/auth/jwt.go` or `dorph/config`. `dorph/main.go` changes stay in the CORS helper and the `r.Use` CORS registration.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- No request is a session unless `Authorization` carries a valid Morph JWT for an existing `plat_users` row.
+- No request is a session unless `Authorization` carries a valid Dorph JWT for an existing `plat_users` row.
 - Client identity headers cannot select the user or the role, with or without a token.
 - The management tool loop proves it forwarded the exact `Authorization` value.
 - Published pages require exactly `{kind}/{slug}`.
 - `OPTIONS` is not 401. CORS names the headers the SPA sends.
-- Dev docs describe the removal. Local `./start-all.sh start morph` stays the same.
+- Dev docs describe the removal. Local `./start-all.sh start dorph` stays the same.
 
 **Non-Goals:**
 
 - Requiring a session on anonymous GET/HEAD (#69), including `?user_id=` on `tranUserIDFromContext`.
 - Renaming `userspanel_session_token`, teaching the API to read that cookie, or changing SPA login redirects.
-- `/api/graph/health` schema work and the MorphNotes sign-in prompt.
+- `/api/graph/health` schema work and the DorphNotes sign-in prompt.
 - A shared-secret or `X-Internal-Token` for service calls.
-- Changing SheetX, Content Maker, or Data Access auth. They do not authenticate to Morph with these headers.
-- Wiring `morph-mcp` to this function. The stdio server must not open SQLite. It already verifies claims with `auth.DecodeToken`.
+- Changing SheetX, Content Maker, or Data Access auth. They do not authenticate to Dorph with these headers.
+- Wiring `dorph-mcp` to this function. The stdio server must not open SQLite. It already verifies claims with `auth.DecodeToken`.
 
 ## Decisions
 
@@ -54,13 +54,13 @@ Anonymous GET/HEAD still reach those handlers (#69). After the strip, a client-s
 
 ### 3. Published paths are one kind and one slug
 
-`isPublicMorphRead` accepts only `GET` and `HEAD` of `/api/tran/public/{kind}/{slug}` where `kind` is exactly `big-notes`, `timelines`, or `research`, and `slug` has no `/` and is not empty, `.`, or `..`. No `Trim` of extra slashes. Case-sensitive. `%2F` is rejected because the decoded path has an extra segment. A query string is not part of `URL.Path`, so it does not affect the match. Shapes that fail the allowlist and still reach the middleware under `/api/tran/public/` are 401 rather than an open read.
+`isPublicDorphRead` accepts only `GET` and `HEAD` of `/api/tran/public/{kind}/{slug}` where `kind` is exactly `big-notes`, `timelines`, or `research`, and `slug` has no `/` and is not empty, `.`, or `..`. No `Trim` of extra slashes. Case-sensitive. `%2F` is rejected because the decoded path has an extra segment. A query string is not part of `URL.Path`, so it does not affect the match. Shapes that fail the allowlist and still reach the middleware under `/api/tran/public/` are 401 rather than an open read.
 
 Gin checks trailing-slash redirects before the handler chain. `GET /api/tran/public/research/:slug/` therefore 301s to the exact slug and never enters `AuthzMiddleware`. That redirect is not the published HTML. Turning off `RedirectTrailingSlash` would change every other route, and `main.go` edits stay in the CORS block, so the redirect stays. The helper still rejects the slashed path, which is what a caller would see if the redirect were disabled.
 
 ### 4. OPTIONS pass-through and an explicit CORS list
 
-`AuthzMiddleware` returns `c.Next()` for `OPTIONS` before the session check. CORS in `main.go` still answers preflight with 204; the pass-through is the second safeguard if that abort is reordered. `Access-Control-Allow-Headers` becomes `Authorization, Content-Type, Accept`. Those are the headers the Morph SPA sets. `X-User-*` is not on the list. `Access-Control-Allow-Origin` behavior is unchanged.
+`AuthzMiddleware` returns `c.Next()` for `OPTIONS` before the session check. CORS in `main.go` still answers preflight with 204; the pass-through is the second safeguard if that abort is reordered. `Access-Control-Allow-Headers` becomes `Authorization, Content-Type, Accept`. Those are the headers the Dorph SPA sets. `X-User-*` is not on the list. `Access-Control-Allow-Origin` behavior is unchanged.
 
 ### 5. Tests assert the behavior the review called out
 
@@ -72,7 +72,7 @@ Gin checks trailing-slash redirects before the handler chain. `GET /api/tran/pub
 
 ### 6. Docs state the removal
 
-`docs/agents/01-auth-flow.md` currently says the headers still satisfy the session check. Replace that with the removal. `morph/README.md` and `docs/agents/03-morph.md` already say writes require a JWT; add that identity headers are not a session and that chat and admin require a JWT too, so those sentences stay true. Swagger comments on chat must not tell clients to send `X-User-ID`.
+`docs/agents/01-auth-flow.md` currently says the headers still satisfy the session check. Replace that with the removal. `dorph/README.md` and `docs/agents/03-dorph.md` already say writes require a JWT; add that identity headers are not a session and that chat and admin require a JWT too, so those sentences stay true. Swagger comments on chat must not tell clients to send `X-User-ID`.
 
 ## Risks / Trade-offs
 
@@ -85,7 +85,7 @@ Gin checks trailing-slash redirects before the handler chain. `GET /api/tran/pub
 
 ## Migration Plan
 
-Deploy the Morph API binary. Clients of protected routes send `Authorization: Bearer <Morph JWT>`. No database migration. No new env var. `./start-all.sh start morph` and the default login are unchanged.
+Deploy the Dorph API binary. Clients of protected routes send `Authorization: Bearer <Dorph JWT>`. No database migration. No new env var. `./start-all.sh start dorph` and the default login are unchanged.
 
 ## Open Questions
 

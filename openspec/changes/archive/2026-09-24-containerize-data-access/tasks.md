@@ -1,6 +1,6 @@
 ## 1. Listen port, database path, and health
 
-- [x] 1.1 Add failing tests for `SHARPREPORT_PORT` over `PORT`, an absolute `sqlite:///data/datapulse.db` path, and `GET /health` plus `GET /ready` returning `{"status":"ok"}` without a Morph call.
+- [x] 1.1 Add failing tests for `SHARPREPORT_PORT` over `PORT`, an absolute `sqlite:///data/datapulse.db` path, and `GET /health` plus `GET /ready` returning `{"status":"ok"}` without a Dorph call.
 - [x] 1.2 Make those tests pass. Keep the debug `GET /` redirect when the UI directory is unset. Do not change `start-all.sh` ports.
 
 ## 2. Production UI in the API process
@@ -15,8 +15,8 @@
 
 ## 4. Blueprint and docs
 
-- [x] 4.1 Append the `sharpreport` service to `render.yaml`. Keep `morph` and `morph-utils`. Pin ports, disk, and empty prompts. Do not set `VITE_DATAX_URL`.
-- [x] 4.2 Update the MorphUtils contract so `sharpreport` is required and extra sibling services are allowed. Document build/runtime env, the Morph auth base URL, the volume, and `https://<sharpreport public host>` in `deploy/README.md`, `SharpReport/README.md`, `docs/agents/07-rust-apps.md`, and `docs/agents/12-build-deploy.md`. Run the Data Access contract from the existing image workflow without a new check name.
+- [x] 4.1 Append the `sharpreport` service to `render.yaml`. Keep `dorph` and `dorph-utils`. Pin ports, disk, and empty prompts. Do not set `VITE_DATAX_URL`.
+- [x] 4.2 Update the DorphUtils contract so `sharpreport` is required and extra sibling services are allowed. Document build/runtime env, the Dorph auth base URL, the volume, and `https://<sharpreport public host>` in `deploy/README.md`, `SharpReport/README.md`, `docs/agents/07-rust-apps.md`, and `docs/agents/12-build-deploy.md`. Run the Data Access contract from the existing image workflow without a new check name.
 
 ## 5. Verify
 

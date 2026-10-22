@@ -45,7 +45,7 @@ type assistantChatResponse struct {
 var spacePattern = regexp.MustCompile(`\s+`)
 var objectIDHexPattern = regexp.MustCompile(`\b[0-9a-f]{24}\b|\b[0-9a-f]{32}\b`)
 
-// AssistantChat provides a MorphAI-compatible starter assistant for FormsX.
+// AssistantChat provides a DorphAI-compatible starter assistant for FormsX.
 // It can answer general questions and safely run create flows for forms
 // by collecting required fields through a clarification loop, and read Events & Info.
 func (h *Handler) AssistantChat(c *gin.Context) {
@@ -84,7 +84,7 @@ func (h *Handler) AssistantChat(c *gin.Context) {
 		return
 	}
 
-	// When MorphAI is configured, use the LLM + tools for almost everything.
+	// When DorphAI is configured, use the LLM + tools for almost everything.
 	if h.AI != nil && h.AI.Configured() {
 		h.respondGeneralAssistant(c, req, lastUser)
 		return
@@ -184,7 +184,7 @@ func (h *Handler) respondGeneralAssistant(c *gin.Context, req assistantChatReque
 		}
 		c.JSON(http.StatusOK, assistantChatResponse{
 			AssistantMessage: fmt.Sprintf(
-				"The AI assistant could not reach the model:\n\n**%s**\n\nCheck `MORPH_AI_BASE_URL`, `MORPH_AI_MODEL`, and your API key in `formx/backend/.env`, then restart the backend (`./start-all.sh restart formx-api`).",
+				"The AI assistant could not reach the model:\n\n**%s**\n\nCheck `DORPH_AI_BASE_URL`, `DORPH_AI_MODEL`, and your API key in `formx/backend/.env`, then restart the backend (`./start-all.sh restart formx-api`).",
 				err.Error(),
 			),
 			Intent:    "general",
@@ -194,7 +194,7 @@ func (h *Handler) respondGeneralAssistant(c *gin.Context, req assistantChatReque
 		return
 	}
 	c.JSON(http.StatusOK, assistantChatResponse{
-		AssistantMessage: "I can help with **FormsX**: forms, Events & Info, and create flows.\n\nTry:\n- `list forms`\n- `list events`\n- `create form name: … slug: …`\n- `create event title: … time: …`\n\nSet `MORPH_AI_API_KEY` to enable the full LLM assistant.",
+		AssistantMessage: "I can help with **FormsX**: forms, Events & Info, and create flows.\n\nTry:\n- `list forms`\n- `list events`\n- `create form name: … slug: …`\n- `create event title: … time: …`\n\nSet `DORPH_AI_API_KEY` to enable the full LLM assistant.",
 		Intent:           "general",
 		State:            assistantConversation{Intent: "general", Fields: map[string]string{}},
 		Completed:        true,

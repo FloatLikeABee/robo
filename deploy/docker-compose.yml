@@ -1,23 +1,23 @@
-# Morph API + Morph AI UI. From the repo root:
+# Dorph API + Dorph AI UI. From the repo root:
 #   cp deploy/.env.production.example deploy/.env.production
 #   docker compose -f deploy/docker-compose.yml up --build
 # Caddy is profile "tls" only (issue #53). It does not start by default.
 
 services:
-  morph:
+  dorph:
     build:
       context: ..
       dockerfile: Dockerfile
       args:
         # Shell or deploy/.env only. env_file is runtime and CRA already inlined this.
-        REACT_APP_MORPH_UTILS_URL: ${REACT_APP_MORPH_UTILS_URL:-}
-    image: morph:local
+        REACT_APP_DORPH_UTILS_URL: ${REACT_APP_DORPH_UTILS_URL:-}
+    image: dorph:local
     env_file:
       - .env.production
     ports:
-      - "${MORPH_PUBLISH_PORT:-9090}:9090"
+      - "${DORPH_PUBLISH_PORT:-9090}:9090"
     volumes:
-      - morph-data:/data
+      - dorph-data:/data
     restart: unless-stopped
 
   caddy:
@@ -25,7 +25,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      morph:
+      dorph:
         condition: service_healthy
     ports:
       - "80:80"
@@ -36,6 +36,6 @@ services:
       - caddy-config:/config
 
 volumes:
-  morph-data:
+  dorph-data:
   caddy-data:
   caddy-config:

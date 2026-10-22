@@ -360,7 +360,7 @@
       const msg = err?.message || 'Login failed'
       if (err instanceof TypeError && /fetch|network|load failed/i.test(msg)) {
         const target = API_BASE || `${window.location.origin} (Vite proxy → :8043)`
-        loginError = `Cannot reach TranMail API (${target}). Start the backend on port 8043 and Morph (auth) on :9090.`
+        loginError = `Cannot reach TranMail API (${target}). Start the backend on port 8043 and Dorph (auth) on :9090.`
       } else {
         loginError = msg
       }

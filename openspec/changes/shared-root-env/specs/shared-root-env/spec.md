@@ -1,6 +1,6 @@
 ## Purpose
 
-Gives every Morph platform app one local environment file so shared secrets and URLs are set once and applied everywhere.
+Gives every Dorph platform app one local environment file so shared secrets and URLs are set once and applied everywhere.
 
 ## ADDED Requirements
 
@@ -9,11 +9,11 @@ Local development MUST read configuration from one gitignored file at the reposi
 
 #### Scenario: Copy once
 - **WHEN** an operator copies the root environment example to a root `.env` and fills secrets
-- **THEN** Morph, Event Logs / FormsX, Content Maker, Booki, Project / Morph Engi, Data Access, SharpReport, and other `start-all.sh` services can start without creating per-app `.env` files
+- **THEN** Dorph, Event Logs / FormsX, Content Maker, Booki, Project / Dorph Engi, Data Access, SharpReport, and other `start-all.sh` services can start without creating per-app `.env` files
 
 #### Scenario: Shared AI key
-- **WHEN** `MORPH_AI_API_KEY` is set in the root `.env`
-- **THEN** every app that uses Morph AI MUST see that key
+- **WHEN** `DORPH_AI_API_KEY` is set in the root `.env`
+- **THEN** every app that uses Dorph AI MUST see that key
 - **AND** an empty or missing per-app `.env` MUST NOT clear or replace that key
 
 ### Requirement: Launcher loads only the root file
@@ -24,8 +24,8 @@ Local development MUST read configuration from one gitignored file at the reposi
 - **THEN** that service process receives the new value
 
 #### Scenario: Nested empty file ignored
-- **WHEN** a leftover `formx/backend/.env` (or similar) exists with `MORPH_AI_API_KEY` empty
-- **AND** the root `.env` has a non-empty `MORPH_AI_API_KEY`
+- **WHEN** a leftover `formx/backend/.env` (or similar) exists with `DORPH_AI_API_KEY` empty
+- **AND** the root `.env` has a non-empty `DORPH_AI_API_KEY`
 - **THEN** the FormsX process MUST use the root value
 
 ### Requirement: Direct process start still finds the root file
@@ -47,9 +47,9 @@ Deployed environments MUST keep using the existing single production env file. T
 - **THEN** production configuration continues to come from that file (or the host’s env), not from a developer’s local root `.env`
 
 ### Requirement: Template documents all keys
-The committed root example file MUST list shared keys (`MORPH_AI_*`, Morph auth URL, JWT) and app-specific keys (ports, sqlite/badger paths, public URLs) in one place. Per-app example files MUST point operators to that root template instead of duplicating the full key list.
+The committed root example file MUST list shared keys (`DORPH_AI_*`, Dorph auth URL, JWT) and app-specific keys (ports, sqlite/badger paths, public URLs) in one place. Per-app example files MUST point operators to that root template instead of duplicating the full key list.
 
 #### Scenario: New clone
 - **WHEN** a developer opens the root environment example
-- **THEN** they can see which keys are required for Morph AI and auth
+- **THEN** they can see which keys are required for Dorph AI and auth
 - **AND** they can see per-app path and port keys without opening every app folder

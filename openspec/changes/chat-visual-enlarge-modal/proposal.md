@@ -6,7 +6,7 @@ Visual-first chat now draws mermaid diagrams, pixel grids, and generated images 
 
 - Clicking a graph, chart, diagram, pixel grid, or image in an in-stack assistant chat opens a dark in-app modal with an enlarged copy.
 - Escape, backdrop click, and a close control dismiss the modal. Focus is trapped while it is open.
-- Cover Morph AI chat first, then the same behavior in Event Logs and Content Maker assistant markdown.
+- Cover Dorph AI chat first, then the same behavior in Event Logs and Content Maker assistant markdown.
 - Invalid mermaid source (fallback text) is not treated as an image. Document HTML/markdown previews, Data Access ECharts reports, and email HTML are out of scope.
 
 ## Capabilities
@@ -21,8 +21,8 @@ Visual-first chat now draws mermaid diagrams, pixel grids, and generated images 
 
 ## Impact
 
-- Morph AI: `MermaidBlock`, `PixelGridBlock`, generated `chat-generated-image`, markdown `<img>` in `ChatMarkdown` / `VisualMarkdown`
+- Dorph AI: `MermaidBlock`, `PixelGridBlock`, generated `chat-generated-image`, markdown `<img>` in `ChatMarkdown` / `VisualMarkdown`
 - Event Logs assistant `VisualMarkdown` (formx)
 - Content Maker `AssistantMarkdown` (composerx)
-- Dark overlay pattern similar to Morph AI `SkillsModal` (not browser-native dialogs)
+- Dark overlay pattern similar to Dorph AI `SkillsModal` (not browser-native dialogs)
 - No API, database, or new chart library

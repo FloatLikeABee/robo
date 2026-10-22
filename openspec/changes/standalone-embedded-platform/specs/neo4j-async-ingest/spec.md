@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines asynchronous mirroring of durable uploads and content writes into Neo4j so Morph AI can retrieve platform knowledge without blocking product APIs on graph availability.
+Defines asynchronous mirroring of durable uploads and content writes into Neo4j so Dorph AI can retrieve platform knowledge without blocking product APIs on graph availability.
 
 ## ADDED Requirements
 
@@ -13,7 +13,7 @@ The platform SHALL enqueue an asynchronous Neo4j ingest job when durable content
 
 #### Scenario: Ingest eventually upserts graph content
 - **WHEN** an ingest job runs successfully for an uploaded or updated durable item
-- **THEN** Neo4j SHALL contain a corresponding node/relationship representation usable by Morph AI retrieval paths for that item type
+- **THEN** Neo4j SHALL contain a corresponding node/relationship representation usable by Dorph AI retrieval paths for that item type
 
 ### Requirement: Retry and observability for ingest
 The platform SHALL retry failed Neo4j ingest jobs with bounded backoff and SHALL expose enough status for operators to detect stuck or failed syncs (logs and/or an admin-visible queue/status surface).
@@ -23,7 +23,7 @@ The platform SHALL retry failed Neo4j ingest jobs with bounded backoff and SHALL
 - **THEN** the system SHALL retry according to the configured policy until success or a terminal failure state is recorded
 
 ### Requirement: Scope of mirrored content
-Anything the product treats as a durable user or operator upload into Morph AI / Morph Data / Utils / skills stores SHALL be included in the async Neo4j mirror path unless explicitly marked ephemeral.
+Anything the product treats as a durable user or operator upload into Dorph AI / Dorph Data / Utils / skills stores SHALL be included in the async Neo4j mirror path unless explicitly marked ephemeral.
 
 #### Scenario: Skill upload is mirrored
 - **WHEN** a user uploads a skill into the AI skills store

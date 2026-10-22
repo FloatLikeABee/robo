@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// EnqueueGraphSync writes a best-effort outbox row for Morph GraphRAG sync.
+// EnqueueGraphSync writes a best-effort outbox row for Dorph GraphRAG sync.
 func (r *FormRepo) EnqueueGraphSync(ctx context.Context, source, entityType, entityID, op string) {
 	if r == nil || r.db == nil {
 		return

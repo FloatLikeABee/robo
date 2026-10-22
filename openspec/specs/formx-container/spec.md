@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Packages Event Logs (API and UI) as one image so an operator can run it, keep its data on a single volume, and supply secrets only through the environment. Health does not depend on MorphUtils or the other embeds.
+Packages Event Logs (API and UI) as one image so an operator can run it, keep its data on a single volume, and supply secrets only through the environment. Health does not depend on DorphUtils or the other embeds.
 
 ## Requirements
 
 ### Requirement: One image serves the Event Logs API and UI
-The repository MUST provide a container image that contains the Event Logs API binary and the production build of the Event Logs UI. That image MUST be the only application process for this capability. The process MUST listen on all interfaces on `SERVER_PORT`, which the container entrypoint MUST set from `PORT` (default 29909). `GET /health` MUST return HTTP 200 and a JSON body with `"status": "healthy"` without calling Morph, MorphUtils, or any sibling embed. When the UI build is present, `GET /events-info` MUST return the UI document. Requests under `/api/` MUST NOT be answered with that document.
+The repository MUST provide a container image that contains the Event Logs API binary and the production build of the Event Logs UI. That image MUST be the only application process for this capability. The process MUST listen on all interfaces on `SERVER_PORT`, which the container entrypoint MUST set from `PORT` (default 29909). `GET /health` MUST return HTTP 200 and a JSON body with `"status": "healthy"` without calling Dorph, DorphUtils, or any sibling embed. When the UI build is present, `GET /events-info` MUST return the UI document. Requests under `/api/` MUST NOT be answered with that document.
 
-#### Scenario: Health does not call MorphUtils
-- **WHEN** the image is running and MorphUtils is not running
+#### Scenario: Health does not call DorphUtils
+- **WHEN** the image is running and DorphUtils is not running
 - **THEN** `GET /health` returns HTTP 200
 - **AND** the body reports status healthy
 
@@ -28,7 +28,7 @@ The image MUST default the SQLite file, the Badger directory, and the uploads di
 - **AND** the listener stays on `SERVER_PORT` (default 29909) even if `PORT` is 9090
 
 ### Requirement: Secrets come from the environment only
-The image build MUST NOT copy `.env` files or accept secrets as build arguments. A committed example MUST list variable names and MUST NOT contain a usable JWT, password, or API key. The root Morph image context MUST still exclude the `formx` tree.
+The image build MUST NOT copy `.env` files or accept secrets as build arguments. A committed example MUST list variable names and MUST NOT contain a usable JWT, password, or API key. The root Dorph image context MUST still exclude the `formx` tree.
 
 #### Scenario: Example env has no real secret
 - **WHEN** a reviewer reads the committed Event Logs env example

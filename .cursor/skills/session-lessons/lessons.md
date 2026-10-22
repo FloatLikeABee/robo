@@ -2,142 +2,148 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-10-22 — Every first-party Morph name is Dorph
+
+- Trigger: Morph, MorphAI, Morph Notes, MorphNotes, MorphUtils, morph-engi, morph-utils, morph-notes, any identifier with morph
+- Rule: Every first-party name containing morph becomes dorph (Dorph Notes / DorphNotes / dorph-notes, DorphUtils, dorph-engi). Only genuine third-party names (isomorphic, polymorphic, remyoudompheng) and MORPH_* / REACT_APP_MORPH_* / VITE_MORPH_* env fallback reads stay.
+- Source: [Dorph rebrand](current)
+
 ## 2026-10-13 — Published contents has no View button
 
 - Trigger: Content Maker Published contents table, View next to Remove
 - Rule: The Published contents list has Remove (and Open for public pages). Do not add a View button or a draft-HTML modal on that table.
 - Source: [Drop published View](current)
 
-## 2026-10-13 — Morph AI header has no MorphUtils chip
+## 2026-10-13 — Dorph AI header has no DorphUtils chip
 
-- Trigger: MorphUtils header button, Morph AI app chips, MorphNotes vs MorphUtils
-- Rule: Do not put a MorphUtils chip on the Morph AI header. MorphNotes is the in-app entry (Event Logs, Content Maker, Project live there). Leave the MorphUtils tree in the repo; do not launch it from Morph chrome.
-- Source: [Drop MorphUtils chip](current)
+- Trigger: DorphUtils header button, Dorph AI app chips, DorphNotes vs DorphUtils
+- Rule: Do not put a DorphUtils chip on the Dorph AI header. DorphNotes is the in-app entry (Event Logs, Content Maker, Project live there). Leave the DorphUtils tree in the repo; do not launch it from Dorph chrome.
+- Source: [Drop DorphUtils chip](current)
 
 ## 2026-10-13 — Local Ollama HTML E2E leftovers
 
-- Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, morph_guide outline, generated `.meta`, Qwen fenced/non-JSON replies, backtick JSON, Ollama timeout, grill hex table
+- Trigger: html-anything, big-note JSON parse, grill CSS, grill letter, dorph_guide outline, generated `.meta`, Qwen fenced/non-JSON replies, backtick JSON, Ollama timeout, grill hex table
 - Rule: Unwrap backtick JSON values; never store a raw envelope; empty title uses the idea. Repair newlines and missing commas. Generate waits >90s and returns a retry error on deadline. Count real `##` headings (not `###`); scaffold if still thin. Grill write is colour-free markdown; hex tables are stripped; `#111827` cards are CSS. Compact skill stays ≤512 tokens and off the grill prompt.
 - Source: [issue 155](https://github.com/FloatLikeABee/robo/issues/155)
 
 ## 2026-10-06 — Product UI stays English
 
-- Trigger: locale switch, browser language detection, Chinese/English chrome, `morph-locale`
+- Trigger: locale switch, browser language detection, Chinese/English chrome, `dorph-locale`
 - Rule: Keep the product UI in English. Do not show a language control and do not follow the browser language. A saved locale must not change the interface.
 - Source: [Hide locale switch](979da257-11ee-420e-83b3-650b2d163537)
 
 ## 2026-09-24 — Event Logs identity headers are not a session
 
 - Trigger: formx/composerx `X-User-Role` / `X-User-Permissions`, or a client-supplied auth base URL
-- Rule: Protected API routes require a bearer Morph accepts at the configured USERS_PANEL_BASE_URL. Strip client identity headers first. Headers alone, including a fake Morph base URL, must never grant a role.
+- Rule: Protected API routes require a bearer Dorph accepts at the configured USERS_PANEL_BASE_URL. Strip client identity headers first. Headers alone, including a fake Dorph base URL, must never grant a role.
 - Source: [Lens Event Logs auth](current)
 
 ## 2026-09-24 — Content Maker identity headers are not a session
 
 - Trigger: Content Maker `requireTranmailAccess`, `X-User-Role` / `X-User-Permissions` on `/templates`
-- Rule: A Morph-validated `Authorization` bearer is the only session. Strip client identity headers. Header-only admin is 401. Call Morph `/api/auth/user` and `/api/auth/permissions`; do not decode the JWT in this process.
+- Rule: A Dorph-validated `Authorization` bearer is the only session. Strip client identity headers. Header-only admin is 401. Call Dorph `/api/auth/user` and `/api/auth/permissions`; do not decode the JWT in this process.
 - Source: [PR 118 Lens](current)
 
 ## 2026-09-24 — Empty embed origin must not become a relative path
 
-- Trigger: MorphUtils Event Logs `embedUrl` when `VITE_SHEETX_URL` / the resolved origin is empty
+- Trigger: DorphUtils Event Logs `embedUrl` when `VITE_SHEETX_URL` / the resolved origin is empty
 - Rule: Append `/events-info` only when the origin is non-empty. `` `${origin}/events-info` `` on `''` is the truthy path `/events-info`, and the shell iframes its own SPA. Leave `embedUrl` empty so the iframe is not mounted.
-- Source: [containerize MorphUtils review](current)
+- Source: [containerize DorphUtils review](current)
 
 ## 2026-09-24 — Dockerfile HEALTHCHECK `$$` is the shell PID
 
 - Trigger: Dockerfile `HEALTHCHECK` or other shell-form `CMD` using `$$` so a `$` reaches the shell
 - Rule: `$$` is a Compose escape, not a Dockerfile one. Shell-form `HEALTHCHECK` is `/bin/sh -c`, so `$$PORT` requests `<pid>PORT`. Use `${PORT}` and let sh expand the runtime port. `deploy/check-container-contract.sh` rejects `$$` in the Dockerfile.
-- Source: [containerize Morph](current)
+- Source: [containerize Dorph](current)
 
-## 2026-09-24 — morphai env copies are snapshots
+## 2026-09-24 — dorphai env copies are snapshots
 
-- Trigger: `LoadFromEnv` then a named provider; `MORPH_AI_BASE_URL`, compatible `MORPH_AI_API_URL`, or a key that rotated after load
+- Trigger: `LoadFromEnv` then a named provider; `DORPH_AI_BASE_URL`, compatible `DORPH_AI_API_URL`, or a key that rotated after load
 - Rule: Snapshot the key and base URL at load. The empty-provider path is the only sender. A named provider drops a field that still equals its snapshot and uses that provider's own env or default. Do not re-read legacy env to decide whether the field is caller-set. A base or key written on `Config` or the call is kept.
-- Source: [morphai re-check base provenance](current)
+- Source: [dorphai re-check base provenance](current)
 
-## 2026-09-22 — Morph AI has no Files workspace
+## 2026-09-22 — Dorph AI has no Files workspace
 
-- Trigger: Morph AI agent shell Files tab, Open folder, recents, local-folder pins, composer Files chip, IndexedDB `morphai-files-workspace`
-- Rule: Morph AI has no Files workspace. Context & Knowledge is the file/knowledge surface (HybridContext + Knowledge Library). Notes & TODOs stay. Do not restore a folder picker, recents, or pin-from-folder.
-- Source: [morphai-drop-files-workspace](current)
+- Trigger: Dorph AI agent shell Files tab, Open folder, recents, local-folder pins, composer Files chip, IndexedDB `dorphai-files-workspace`
+- Rule: Dorph AI has no Files workspace. Context & Knowledge is the file/knowledge surface (HybridContext + Knowledge Library). Notes & TODOs stay. Do not restore a folder picker, recents, or pin-from-folder.
+- Source: [dorphai-drop-files-workspace](current)
 
 ## 2026-09-10 — Chat enlarge modal must fill the viewport
 
-- Trigger: mermaid, pixel art, or images opening in the Morph AI / Event Logs / Content Maker enlarge overlay
+- Trigger: mermaid, pixel art, or images opening in the Dorph AI / Event Logs / Content Maker enlarge overlay
 - Rule: The overlay is a near-full viewport stage. Clone mermaid SVG without its bubble `width`/`height` so it scales to fit (`viewBox` + contain). Do not keep `width: auto` on the intrinsic pixel size — that leaves diagrams tiny.
 - Source: [chat-visual-enlarge-modal](current)
 
-## 2026-09-05 — MorphUtils Data Access down hint
+## 2026-09-05 — DorphUtils Data Access down hint
 
-- Trigger: MorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
-- Rule: MorphUtils probes `VITE_DATAX_URL` (`no-cors` fetch). If down, show an in-shell hint (`./start-all.sh start sharpreport-ui`; `start morph-utils` also starts Data Access API+UI) and do not mount the iframe. Refused still means `sharpreport-ui` is down — keep Vite `server.host: true`. API on `SHARPREPORT_PORT` can be up while 5178 is dead.
-- Source: [fix-morphutils-project-data-access](current)
+- Trigger: DorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
+- Rule: DorphUtils probes `VITE_DATAX_URL` (`no-cors` fetch). If down, show an in-shell hint (`./start-all.sh start sharpreport-ui`; `start dorph-utils` also starts Data Access API+UI) and do not mount the iframe. Refused still means `sharpreport-ui` is down — keep Vite `server.host: true`. API on `SHARPREPORT_PORT` can be up while 5178 is dead.
+- Source: [fix-dorphutils-project-data-access](current)
 
-## 2026-09-02 — Morph AI webpack missing workspace modules
+## 2026-09-02 — Dorph AI webpack missing workspace modules
 
 - Trigger: CRA `Can't resolve` `AiToolsWorkspaceDrawer`, `agentContext`, `AgentWorkspace`, `appliedAssistantChannel`, `ExtractJsonFromTextDialog`
-- Rule: Those modules must exist as tracked `.js` files under `morph/frontend/src/` matching the extensionless imports in `SkoolAiChat.js` / `AdminDataGrid.js`. Do not leave them untracked `.jsx`. There is no `filesWorkspaceStore` / `AgentFilesTab` — do not restore them. Compile Morph AI after git sync.
+- Rule: Those modules must exist as tracked `.js` files under `dorph/frontend/src/` matching the extensionless imports in `SkoolAiChat.js` / `AdminDataGrid.js`. Do not leave them untracked `.jsx`. There is no `filesWorkspaceStore` / `AgentFilesTab` — do not restore them. Compile Dorph AI after git sync.
 - Source: [webpack missing modules](current)
 
-## 2026-08-31 — MorphUtils /datax connection refused
+## 2026-08-31 — DorphUtils /datax connection refused
 
-- Trigger: MorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
-- Rule: See 2026-09-05 MorphUtils Data Access down hint (probe + start `sharpreport-ui`). Do not treat a down UI as a MorphUtils path/router bug.
+- Trigger: DorphUtils `localhost:3040/datax` iframe “localhost refused to connect”
+- Rule: See 2026-09-05 DorphUtils Data Access down hint (probe + start `sharpreport-ui`). Do not treat a down UI as a DorphUtils path/router bug.
 - Source: [datax refused](current)
 
 ## 2026-08-30 — Dark only, no theme switch
 
-- Trigger: light/dark toggle, theme switch, Morph AI / MorphNotes / MorphUtils chrome
+- Trigger: light/dark toggle, theme switch, Dorph AI / DorphNotes / DorphUtils chrome
 - Rule: Product UIs stay dark. Do not add a light/dark switch. Ignore stored light preferences and force dark.
 - Source: [dark-only](current)
 
 ## 2026-08-30 — Data Access 5178 empty 500s
 
-- Trigger: MorphUtils Data tables, `GET /api/v1/auth/me` or `/data-tables` 500 with empty body
+- Trigger: DorphUtils Data tables, `GET /api/v1/auth/me` or `/data-tables` 500 with empty body
 - Rule: Vite/SSR must proxy to `SHARPREPORT_PORT` (not hardcoded 3050). Empty 500 on 5178 means the proxy target is down, not a tables/auth handler bug.
 - Source: [data-access-vite-proxy-port](current)
 
-## 2026-08-30 — MorphUtils product name
+## 2026-08-30 — DorphUtils product name
 
 - Trigger: sidebar, title bars, Apps menu, landing, login copy for the Utils shell
-- Rule: User-facing name is MorphUtils (no space), same compound style as MorphNotes. Do not write "Morph Utils".
-- Source: [MorphUtils naming](current)
+- Rule: User-facing name is DorphUtils (no space), same compound style as DorphNotes. Do not write "Dorph Utils".
+- Source: [DorphUtils naming](current)
 
-## 2026-08-30 — Data Access uses Morph AI session
+## 2026-08-30 — Data Access uses Dorph AI session
 
 - Trigger: Data Access / DataX login, “Sign in with your platform account”, iframe SSO
-- Rule: Reuse the Morph AI JWT (`userspanel_session_token` / `userspanel_token`). Do not show a second credential form. Do not clear the shared cookie when Data Access `/auth/me` is down or returns 502 — only a real 401 invalidates the session.
-- Source: [Data Access Morph SSO](current)
+- Rule: Reuse the Dorph AI JWT (`userspanel_session_token` / `userspanel_token`). Do not show a second credential form. Do not clear the shared cookie when Data Access `/auth/me` is down or returns 502 — only a real 401 invalidates the session.
+- Source: [Data Access Dorph SSO](current)
 
 ## 2026-09-19 — Event Logs has no Info Sheets tab
 
-- Trigger: Event Logs header tabs, MorphUtils Event Logs description, `/survey-bot`
+- Trigger: Event Logs header tabs, DorphUtils Event Logs description, `/survey-bot`
 - Rule: Event Logs is Events & Info only. Do not restore an Info Sheets / AI Surveys tab. Old `/survey-bot` paths redirect to `/events-info`.
 - Source: [drop-info-sheets-graphs-skill-task-create](current)
 
-## 2026-08-27 — Morph Utils Event Logs / Info Sheets
+## 2026-08-27 — Dorph Utils Event Logs / Info Sheets
 
-- Trigger: sidebar, title bars, browser titles, landing Utils list in Morph Utils and SheetX
+- Trigger: sidebar, title bars, browser titles, landing Utils list in Dorph Utils and SheetX
 - Rule: Module is Event Logs (not Survey Maker / SurveyX / SurveysX). Embed and default route `/events-info`. Keep id `sheetx`. Info Sheets tab is removed (see 2026-09-19).
-- Source: [morphutils-event-logs-info-sheets](b61bf1f4-55f9-46bb-9ee0-3f82db385107)
+- Source: [dorphutils-event-logs-info-sheets](b61bf1f4-55f9-46bb-9ee0-3f82db385107)
 
-## 2026-08-17 — Verify Morph UI before claiming done
+## 2026-08-17 — Verify Dorph UI before claiming done
 
-- Trigger: Morph frontend or Morph Utils/SheetX layout changes
-- Rule: Do not claim complete until the touched UI compiles. `await` only inside `async` functions. Event Logs / MorphUtils `Layout` must compile without `@robo/platform-chat` (that package is gone; Morph AI is the system chat).
-- Source: [MorphAI session extract](b61bf1f4-55f9-46bb-9ee0-3f82db385107)
+- Trigger: Dorph frontend or Dorph Utils/SheetX layout changes
+- Rule: Do not claim complete until the touched UI compiles. `await` only inside `async` functions. Event Logs / DorphUtils `Layout` must compile without `@robo/platform-chat` (that package is gone; Dorph AI is the system chat).
+- Source: [DorphAI session extract](b61bf1f4-55f9-46bb-9ee0-3f82db385107)
 
-## 2026-08-09 — Morph Utils product labels
+## 2026-08-09 — Dorph Utils product labels
 
-- Trigger: sidebar, title bars, login copy, browser titles in Morph Utils and embedded apps
+- Trigger: sidebar, title bars, login copy, browser titles in Dorph Utils and embedded apps
 - Rule: User-facing names are Event Logs (not Survey Maker/SurveyX/SurveysX), Content Maker (not ComposerX), Data Access (not DataX), Project, Docs. No subtitle or email under the app title.
 - Source: [Utils branding renames](816ba854-be27-42b0-aed3-b430e3fd1f5b)
 
-## 2026-08-03 — Morph Utils navigation scope
+## 2026-08-03 — Dorph Utils navigation scope
 
-- Trigger: "left side menu" / tabs in Morph Utils
-- Rule: Keep the outer Morph Utils left nav. Convert each **module app's** inner left menu to header tabs. Do not replace the outer shell nav.
+- Trigger: "left side menu" / tabs in Dorph Utils
+- Rule: Keep the outer Dorph Utils left nav. Convert each **module app's** inner left menu to header tabs. Do not replace the outer shell nav.
 - Source: [Utils inner tabs correction](816ba854-be27-42b0-aed3-b430e3fd1f5b)
 
 ## 2026-06-10 — Form page names stay empty

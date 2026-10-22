@@ -1,6 +1,6 @@
 ## Context
 
-See proposal. Pool is MCP-only. morph-mcp still does not run migrations or import `idongivaflyinfa/db`.
+See proposal. Pool is MCP-only. dorph-mcp still does not run migrations or import `idongivaflyinfa/db`.
 
 ## Goals / Non-Goals
 
@@ -12,7 +12,7 @@ See proposal. Pool is MCP-only. morph-mcp still does not run migrations or impor
 
 ### 1. Snapshot share, confirm_token in memory
 
-`preview_share` copies title/body, strips `[morph-mcp]` / `source: morph-mcp`, scans, and stores a 5-minute token in process. `share_note` requires that token. Stdio is one process; a restart drops unused tokens.
+`preview_share` copies title/body, strips `[dorph-mcp]` / `source: dorph-mcp`, scans, and stores a 5-minute token in process. `share_note` requires that token. Stdio is one process; a restart drops unused tokens.
 
 **Rejected:** persisting preview rows (extra table for a 5-minute token).
 

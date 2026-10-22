@@ -5,8 +5,8 @@
 
 ## 2. Operator docs
 
-- [x] 2.1 Update `docs/agents/03-morph.md`: drawer nav table, settings/configuration redirect, Research publish paths and five-round new jobs, Invite Signup redeem/admin flows, agent workspace tabs, AI tools drawer, `/api/admin/users` kept as an API
-- [x] 2.2 Update `morph/README.md` and `README.md` so MorphNotes names the five drawer modules and Invite Signup is a folder, URL, and `invite-signup-ui` service
+- [x] 2.1 Update `docs/agents/03-dorph.md`: drawer nav table, settings/configuration redirect, Research publish paths and five-round new jobs, Invite Signup redeem/admin flows, agent workspace tabs, AI tools drawer, `/api/admin/users` kept as an API
+- [x] 2.2 Update `dorph/README.md` and `README.md` so DorphNotes names the five drawer modules and Invite Signup is a folder, URL, and `invite-signup-ui` service
 - [x] 2.3 Update `docs/agents/00-architecture-overview.md` with the five modules and Invite Signup on the map, tech table, port map, and names table
 - [x] 2.4 Update only the opening services sentence and the service table in `docs/agents/12-build-deploy.md` to include `invite-signup` / `invite-signup-ui` with an empty API and alias
 

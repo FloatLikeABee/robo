@@ -6,16 +6,16 @@ Lets people enlarge diagrams, charts, pixel art, and images that appear in assis
 
 ### Requirement: Click chat visual opens enlarge modal
 
-When a mermaid diagram, chart, pixel-art grid, generated picture, or markdown image is shown in Morph AI, Event Logs, or Content Maker chat, the user MUST be able to activate it (click or keyboard) to open a dark in-app modal that shows an enlarged copy of that visual. The conversation MUST remain in place behind the modal. Invalid mermaid fallback text MUST NOT open the modal.
+When a mermaid diagram, chart, pixel-art grid, generated picture, or markdown image is shown in Dorph AI, Event Logs, or Content Maker chat, the user MUST be able to activate it (click or keyboard) to open a dark in-app modal that shows an enlarged copy of that visual. The conversation MUST remain in place behind the modal. Invalid mermaid fallback text MUST NOT open the modal.
 
-#### Scenario: Enlarge mermaid in Morph AI
+#### Scenario: Enlarge mermaid in Dorph AI
 
-- **WHEN** an assistant message in Morph AI contains a rendered mermaid diagram and the user clicks it
+- **WHEN** an assistant message in Dorph AI contains a rendered mermaid diagram and the user clicks it
 - **THEN** a dark modal opens with a larger copy of that diagram
 
 #### Scenario: Enlarge pixel grid and generated image
 
-- **WHEN** a Morph AI message shows a rendered pixel grid or a generated image and the user clicks it
+- **WHEN** a Dorph AI message shows a rendered pixel grid or a generated image and the user clicks it
 - **THEN** a dark modal opens with a larger copy of that visual
 
 #### Scenario: Enlarge mermaid in other in-stack chats

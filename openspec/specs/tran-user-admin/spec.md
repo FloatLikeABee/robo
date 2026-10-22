@@ -7,7 +7,7 @@ Stop a signed-in non-admin from creating, rewriting, or deactivating Tran users,
 ## Requirements
 
 ### Requirement: Tran user create, update, and delete require a platform admin
-`POST /api/tran/users`, `PUT /api/tran/users/:id`, and `DELETE /api/tran/users/:id` MUST return 401 when the request has no Morph session. They MUST return 403 when the session belongs to a non-admin. They MUST succeed when the session belongs to a platform admin.
+`POST /api/tran/users`, `PUT /api/tran/users/:id`, and `DELETE /api/tran/users/:id` MUST return 401 when the request has no Dorph session. They MUST return 403 when the session belongs to a non-admin. They MUST succeed when the session belongs to a platform admin.
 
 Platform admin MUST be the role on the server-side user record for the verified session, using the same check as `/api/admin/users`. The check MUST re-read that record. It MUST NOT treat a client header (`X-User-Role` or any other identity header), a request body field, the Tran `User.Administrator` column, or a JWT role claim by itself as admin. An empty user id MUST be 401 and MUST NOT be treated as admin.
 
@@ -101,7 +101,7 @@ A non-admin MUST NOT be able to point another Tran user's email at their own log
 - **AND** A's resolved Tran user id is A's id
 
 ### Requirement: Profile form does not edit email
-The Morph profile form MUST show the account email as read-only and MUST NOT submit a replacement email when the user saves the rest of the profile.
+The Dorph profile form MUST show the account email as read-only and MUST NOT submit a replacement email when the user saves the rest of the profile.
 
 #### Scenario: Saving the profile leaves email unchanged
 - **WHEN** a user saves the profile form after the email control is present

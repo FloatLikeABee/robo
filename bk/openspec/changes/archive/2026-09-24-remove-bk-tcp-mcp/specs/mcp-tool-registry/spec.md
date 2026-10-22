@@ -6,7 +6,7 @@
 The system MUST maintain a single tool registry that holds every available tool regardless of source (built-in, custom, or external MCP host).
 
 **Reason**: AI tools never had a real unified tool registry wired to a compliant MCP server. The TCP listener and host-tool placeholders are being deleted, not finished. The live spec heading for this block is blank (`### Requirement:`); match this removal by the sentence above.
-**Migration**: Do not call BK for tools/list or tools/call. Protocol MCP is `morph/cmd/morph-mcp`.
+**Migration**: Do not call BK for tools/list or tools/call. Protocol MCP is `dorph/cmd/dorph-mcp`.
 
 #### Scenario: Registry is not a BK capability
 - **WHEN** an operator looks for a BK tool registry that merges built-in, custom, and external MCP host tools
@@ -16,7 +16,7 @@ The system MUST maintain a single tool registry that holds every available tool 
 Tools MUST be discoverable by both the internal agent runtime and external MCP clients through a common list interface.
 
 **Reason**: There is no BK MCP client surface. Agent runtime tool binding through this registry was never the live assistant path. The live spec heading for this block is blank; match this removal by the sentence above.
-**Migration**: Assistants run without this registry. MCP clients connect to `morph/cmd/morph-mcp`.
+**Migration**: Assistants run without this registry. MCP clients connect to `dorph/cmd/dorph-mcp`.
 
 #### Scenario: No BK tools/list
 - **WHEN** a client sends a tools/list message to AI tools
@@ -35,7 +35,7 @@ Tool invocation MUST accept a structured arguments dict and route to the correct
 ## ADDED Requirements
 
 ### Requirement: No BK TCP MCP
-AI tools MUST NOT start a length-prefixed TCP server, MUST NOT expose `/mcp/start` or `/mcp/hosts`, and MUST NOT advertise that surface as the Model Context Protocol. The platform MCP server is the Morph Go program `morph/cmd/morph-mcp`.
+AI tools MUST NOT start a length-prefixed TCP server, MUST NOT expose `/mcp/start` or `/mcp/hosts`, and MUST NOT advertise that surface as the Model Context Protocol. The platform MCP server is the Dorph Go program `dorph/cmd/dorph-mcp`.
 
 #### Scenario: API startup
 - **WHEN** the AI tools API process starts
@@ -45,4 +45,4 @@ AI tools MUST NOT start a length-prefixed TCP server, MUST NOT expose `/mcp/star
 #### Scenario: Operator docs
 - **WHEN** an operator reads the AI tools docs that used to describe a BK MCP server
 - **THEN** those docs do not claim that server works
-- **AND** they name `morph/cmd/morph-mcp` as the protocol server
+- **AND** they name `dorph/cmd/dorph-mcp` as the protocol server

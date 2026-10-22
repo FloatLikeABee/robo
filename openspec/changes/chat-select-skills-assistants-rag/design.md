@@ -34,7 +34,7 @@ Reuse the skills popover: a composer button, a small menu, a badge for the count
 
 ### 3. Chat-selected RAG is its own list
 
-Add a Morph route that lists RAG collection names from the AI tools API. The send includes those names. The handler queries them with the existing RAG query helper and appends snippets, including when no assistant is selected. If an assistant is also selected, query the assistant’s collections and the checked ones, and keep the existing snippet cap.
+Add a Dorph route that lists RAG collection names from the AI tools API. The send includes those names. The handler queries them with the existing RAG query helper and appends snippets, including when no assistant is selected. If an assistant is also selected, query the assistant’s collections and the checked ones, and keep the existing snippet cap.
 
 **Why not only the assistant’s RAG:** The operator asked to pick RAG in the chat the way they pick skills. An assistant’s collections stay attached to that assistant. The picker is the extra, explicit set.
 

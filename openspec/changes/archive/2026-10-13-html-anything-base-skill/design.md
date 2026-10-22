@@ -2,14 +2,14 @@
 
 ## Context
 
-See proposal.md for why. html-anything (`nexu-io/html-anything`) is Apache-2.0. Vendoring is allowed if we keep the LICENSE and attribution. The repo has no root `SKILL.md`; the reusable skill is `SHARED_DESIGN_DIRECTIVES` in `next/src/lib/templates/shared.ts` plus 75 template skills. Morph already has Ge's dark Arial multi-accent theme in `htmldoc` and form-HTML prompts (`openspec/specs/morph-generated-document-theme`). Prompt assembly for replies lives in `pkg/morphai`. HTML-producing callers are note text assist, `documentShapePrompt` (timelines / research / stories), `BuildFormHTMLPrompt`, and grill `WritePrompt`. Agents read `.cursor/skills/`, `docs/agents/16-morph-for-agents.md`, and the embedded `morph/mcp/agent_guide.md` (those two files must stay byte-identical).
+See proposal.md for why. html-anything (`nexu-io/html-anything`) is Apache-2.0. Vendoring is allowed if we keep the LICENSE and attribution. The repo has no root `SKILL.md`; the reusable skill is `SHARED_DESIGN_DIRECTIVES` in `next/src/lib/templates/shared.ts` plus 75 template skills. Dorph already has Ge's dark Arial multi-accent theme in `htmldoc` and form-HTML prompts (`openspec/specs/dorph-generated-document-theme`). Prompt assembly for replies lives in `pkg/dorphai`. HTML-producing callers are note text assist, `documentShapePrompt` (timelines / research / stories), `BuildFormHTMLPrompt`, and grill `WritePrompt`. Agents read `.cursor/skills/`, `docs/agents/16-dorph-for-agents.md`, and the embedded `dorph/mcp/agent_guide.md` (those two files must stay byte-identical).
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- One vendor tree with LICENSE, attribution, full Morph-facing SKILL.md, and the upstream shared directives.
-- One compact injection string from `pkg/morphai` that every HTML-producing path prepends.
+- One vendor tree with LICENSE, attribution, full Dorph-facing SKILL.md, and the upstream shared directives.
+- One compact injection string from `pkg/dorphai` that every HTML-producing path prepends.
 - Ge overlay wins on font and palette.
 - 512-token budget test on the injected text.
 - Agents can find the skill in the pack and chapter 16.
@@ -17,9 +17,9 @@ See proposal.md for why. html-anything (`nexu-io/html-anything`) is Apache-2.0. 
 **Non-Goals:**
 
 - Vendoring the Next.js app, the 75 templates, or screenshots.
-- Injecting the full SKILL.md into ordinary Morph chat.
+- Injecting the full SKILL.md into ordinary Dorph chat.
 - Changing `htmldoc` CSS (already dark sans).
-- A new MCP tool or a `morph_guide` topic (writing section is enough).
+- A new MCP tool or a `dorph_guide` topic (writing section is enough).
 - Render, deploy, or Files workspace work.
 
 ## Self-grill (Superpowers)
@@ -30,19 +30,19 @@ Three alternatives were grilled before locking the approach. Recommendation is A
 
 1. **Vendor the whole html-anything repo (or all 75 skills).** Complete, but tens of thousands of lines and unused Next/e2e code. Local Ollama cannot load it. Rejected.
 2. **Git submodule of `nexu-io/html-anything`.** Tracks upstream, but CI, shallow clones, and Windows checkouts get worse, and we still would not inject the submodule. Rejected.
-3. **Vendor LICENSE + shared directives + a Morph SKILL.md + a condensed file.** Smallest tree that keeps attribution and gives Morph a base skill. **Chosen.**
+3. **Vendor LICENSE + shared directives + a Dorph SKILL.md + a condensed file.** Smallest tree that keeps attribution and gives Dorph a base skill. **Chosen.**
 
 ### B. When to inject
 
-1. **Always, on every chat turn.** One call site, but it burns Ollama context on "what model are you" and tool loops. Conflicts with `morph-chat-reply-shape`. Rejected.
+1. **Always, on every chat turn.** One call site, but it burns Ollama context on "what model are you" and tool loops. Conflicts with `dorph-chat-reply-shape`. Rejected.
 2. **Per HTML-producing path, via one helper.** Note AI, generated HTML/MD, form HTML, grill write, plus pack/docs for agents. **Chosen.** Matches the issue list and keeps chat short.
 3. **On demand only (picker / MCP resource).** Smallest prompts, but a forgotten caller ships unstyled HTML. The issue requires every named path. Rejected as the only mechanism; the pack still exists for agents.
 
 ### C. How the compact text is stored
 
-1. **Source file under `skills/vendor/html-anything/condensed.md`, copied/embedded in `pkg/morphai`, test that they match.** Same pattern as `16` vs `agent_guide.md`. **Chosen.**
+1. **Source file under `skills/vendor/html-anything/condensed.md`, copied/embedded in `pkg/dorphai`, test that they match.** Same pattern as `16` vs `agent_guide.md`. **Chosen.**
 2. **Go string constant only.** Fewer files, but agents and LICENSE tree would drift from what the model sees. Rejected.
-3. **Read the vendor file at runtime from disk.** Breaks when cwd is not the repo (Morph binary, tests, Render). Rejected.
+3. **Read the vendor file at runtime from disk.** Breaks when cwd is not the repo (Dorph binary, tests, Render). Rejected.
 
 ## Decisions
 
@@ -52,7 +52,7 @@ Apache-2.0 §2 and §4 allow reproduction of source form with the license and at
 
 ### 2. Condensed injection API
 
-`pkg/morphai` exports `HTMLSkillTokenBudget = 512`, `EstimateTokens` (runes/4 rounding up), `HTMLSkillInstructions()`, and `WithHTMLSkill(prompt)`. The injected text is condensed directives plus Ge overlay. It tells the model to keep the format the caller asked for (HTML document vs note/markdown body). Callers:
+`pkg/dorphai` exports `HTMLSkillTokenBudget = 512`, `EstimateTokens` (runes/4 rounding up), `HTMLSkillInstructions()`, and `WithHTMLSkill(prompt)`. The injected text is condensed directives plus Ge overlay. It tells the model to keep the format the caller asked for (HTML document vs note/markdown body). Callers:
 
 - `textAssistGenerateNotePrompt`
 - `documentShapePrompt` (timelines, research, big notes)
@@ -67,7 +67,7 @@ Overlay text (wins): `Arial, "Helvetica Neue", Helvetica, sans-serif`; backgroun
 
 ### 4. Agent exposure
 
-Add `.cursor/skills/html-anything/SKILL.md` (short, points at vendor path and chapter 16). Mention html-anything in the Morph notes skill and in `docs/agents/16` section 5 (writing). Copy 16 onto `morph/mcp/agent_guide.md`. Do not add a new initialize paragraph (2000-character cap).
+Add `.cursor/skills/html-anything/SKILL.md` (short, points at vendor path and chapter 16). Mention html-anything in the Dorph notes skill and in `docs/agents/16` section 5 (writing). Copy 16 onto `dorph/mcp/agent_guide.md`. Do not add a new initialize paragraph (2000-character cap).
 
 ## Risks / Trade-offs
 
@@ -78,7 +78,7 @@ Add `.cursor/skills/html-anything/SKILL.md` (short, points at vendor path and ch
 
 ## Migration Plan
 
-Code and tests only. Restart Morph to pick up prompts. Rollback is revert. No data migration.
+Code and tests only. Restart Dorph to pick up prompts. Rollback is revert. No data migration.
 
 ## Open Questions
 

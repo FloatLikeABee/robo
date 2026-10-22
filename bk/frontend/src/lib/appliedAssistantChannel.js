@@ -1,10 +1,10 @@
-const CHANNEL_NAME = 'morph-ai-applied-assistant';
+const CHANNEL_NAME = 'dorph-ai-applied-assistant';
 
 export const APPLIED_ASSISTANT_MSG = {
-  APPLY: 'morph-ai:apply-assistant',
-  DISMISS: 'morph-ai:dismiss-assistant',
-  REQUEST: 'morph-ai:request-applied-assistant',
-  STATE: 'morph-ai:applied-assistant-state',
+  APPLY: 'dorph-ai:apply-assistant',
+  DISMISS: 'dorph-ai:dismiss-assistant',
+  REQUEST: 'dorph-ai:request-applied-assistant',
+  STATE: 'dorph-ai:applied-assistant-state',
 };
 
 export function isFramedInParent() {
@@ -15,7 +15,7 @@ export function isFramedInParent() {
   }
 }
 
-export function morphTargetOrigin() {
+export function dorphTargetOrigin() {
   try {
     if (document.referrer) return new URL(document.referrer).origin;
   } catch {
@@ -75,9 +75,9 @@ export function subscribeAppliedAssistantChannel(handler) {
   };
 }
 
-export function postToMorph(payload) {
+export function postToDorph(payload) {
   postAppliedAssistantChannel(payload);
-  const origin = morphTargetOrigin();
+  const origin = dorphTargetOrigin();
   if (isFramedInParent()) {
     try {
       window.parent.postMessage(payload, origin);
@@ -94,14 +94,14 @@ export function postToMorph(payload) {
   }
 }
 
-function isStateFromMorph(event) {
+function isStateFromDorph(event) {
   if (event.source === window) return false;
-  const origin = morphTargetOrigin();
+  const origin = dorphTargetOrigin();
   if (origin === '*') return true;
   return event.origin === origin;
 }
 
-/** Resolves with the assistant (or null) when Morph replies with matching state; undefined on timeout. */
+/** Resolves with the assistant (or null) when Dorph replies with matching state; undefined on timeout. */
 export function waitForAppliedState(predicate, timeoutMs = 900) {
   return new Promise((resolve) => {
     let settled = false;
@@ -119,7 +119,7 @@ export function waitForAppliedState(predicate, timeoutMs = 900) {
       if (predicate(parsed.assistant)) finish(parsed.assistant);
     };
     const onWindow = (event) => {
-      if (!isStateFromMorph(event)) return;
+      if (!isStateFromDorph(event)) return;
       consider(event.data);
     };
     window.addEventListener('message', onWindow);

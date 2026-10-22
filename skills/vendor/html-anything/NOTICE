@@ -4,9 +4,9 @@ https://github.com/nexu-io/html-anything
 Copyright contributors to nexu-io/html-anything.
 
 This tree vendors the html-anything HTML skill (shared design directives
-and Morph-facing SKILL.md) under the Apache License, Version 2.0.
+and Dorph-facing SKILL.md) under the Apache License, Version 2.0.
 See LICENSE in this directory.
 
-Morph changes: condensed injection text for local Ollama, English
-Morph-facing SKILL.md, and Ge's Arial / futuristic-dark / multi-accent
+Dorph changes: condensed injection text for local Ollama, English
+Dorph-facing SKILL.md, and Ge's Arial / futuristic-dark / multi-accent
 overlay. The 75 template skills and Next.js app are not vendored.

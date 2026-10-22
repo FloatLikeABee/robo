@@ -6,8 +6,8 @@
 ## 2. Agent notes page
 
 - [x] 2.1 Add a failing frontend test: with no token, `/agent-notes` redirects to login and does not call the notes API; with a token, the list shows title, time, and status, the detail shows the body, and the empty state explains how agents post notes.
-- [x] 2.2 Add the protected `/agent-notes` page, phone and desktop styles (safe area, wrap, 44px back control), and a same-tab "Agent notes" entry in the Morph AI header menu.
+- [x] 2.2 Add the protected `/agent-notes` page, phone and desktop styles (safe area, wrap, 44px back control), and a same-tab "Agent notes" entry in the Dorph AI header menu.
 
 ## 3. Verification
 
-- [x] 3.1 Run `go build`, `go vet`, and `go test -race -count=1` in `morph`, and `CI=true npm test -- --watchAll=false` plus `CI=true npm run build` in `morph/frontend`.
+- [x] 3.1 Run `go build`, `go vet`, and `go test -race -count=1` in `dorph`, and `CI=true npm test -- --watchAll=false` plus `CI=true npm run build` in `dorph/frontend`.

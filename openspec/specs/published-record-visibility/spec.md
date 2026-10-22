@@ -2,7 +2,7 @@
 
 ## Purpose
 
-One published-or-not rule that HTTP public pages and in-process callers, including the read-only Morph MCP server, share so an unauthenticated caller cannot see a private record.
+One published-or-not rule that HTTP public pages and in-process callers, including the read-only Dorph MCP server, share so an unauthenticated caller cannot see a private record.
 
 ## Requirements
 

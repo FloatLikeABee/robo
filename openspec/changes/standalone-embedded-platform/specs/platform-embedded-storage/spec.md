@@ -1,22 +1,22 @@
 ## Purpose
 
-Defines the project-wide rule that Morph AI, Morph Data, Morph Utils, and AI tool backends persist only with embedded relational SQL, Badger document storage, and in-process cache—never requiring MySQL, MongoDB, or Redis at runtime.
+Defines the project-wide rule that Dorph AI, Dorph Data, Dorph Utils, and AI tool backends persist only with embedded relational SQL, Badger document storage, and in-process cache—never requiring MySQL, MongoDB, or Redis at runtime.
 
 ## ADDED Requirements
 
 ### Requirement: No networked MySQL Mongo Redis at boot
-Morph AI, Morph Data, Morph Utils backends, and AI tool services covered by this platform SHALL start and serve their APIs without requiring a running MySQL, MongoDB, or Redis server.
+Dorph AI, Dorph Data, Dorph Utils backends, and AI tool services covered by this platform SHALL start and serve their APIs without requiring a running MySQL, MongoDB, or Redis server.
 
 #### Scenario: Fresh machine without those servers
-- **WHEN** an operator starts Morph AI, Morph Data APIs, ComposerX, SheetX/FormsX, and other covered Utils/AI backends with embedded data paths configured and MySQL/Mongo/Redis stopped or absent
+- **WHEN** an operator starts Dorph AI, Dorph Data APIs, ComposerX, SheetX/FormsX, and other covered Utils/AI backends with embedded data paths configured and MySQL/Mongo/Redis stopped or absent
 - **THEN** each service SHALL open or create its embedded stores and SHALL NOT fail solely because MySQL, MongoDB, or Redis are unreachable
 
 #### Scenario: Decommission is the default
 - **WHEN** project documentation and default env examples are followed for local development
-- **THEN** they SHALL NOT instruct operators to install or start MySQL, MongoDB, or Redis as required dependencies for Morph AI, Morph Data, or Morph Utils
+- **THEN** they SHALL NOT instruct operators to install or start MySQL, MongoDB, or Redis as required dependencies for Dorph AI, Dorph Data, or Dorph Utils
 
 ### Requirement: Relational data in embedded SQL
-Each covered service that previously used MySQL for relational tables SHALL persist those tables in an embedded SQL database file (Go-native embedded relational store) owned by that service or a clearly shared Morph data directory.
+Each covered service that previously used MySQL for relational tables SHALL persist those tables in an embedded SQL database file (Go-native embedded relational store) owned by that service or a clearly shared Dorph data directory.
 
 #### Scenario: ComposerX publish history without MySQL
 - **WHEN** a client lists published pages through ComposerX after the storage swap
@@ -47,6 +47,6 @@ Covered services SHALL use in-process cache with TTL semantics for any behavior 
 ### Requirement: Stable product HTTP contracts
 Covered services SHALL keep existing HTTP request and response shapes for their primary CRUD and list endpoints unless a change is explicitly documented as breaking.
 
-#### Scenario: Morph Utils embeds keep working
-- **WHEN** Morph Utils embeds ComposerX or SheetX after the storage swap with a valid Morph AI session
+#### Scenario: Dorph Utils embeds keep working
+- **WHEN** Dorph Utils embeds ComposerX or SheetX after the storage swap with a valid Dorph AI session
 - **THEN** successful list/create/update responses SHALL remain JSON-compatible with the pre-migration clients without a mandatory frontend rewrite

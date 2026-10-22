@@ -1,7 +1,0 @@
----
-description: Morph notes for agents — load when creating, listing, sharing, or searching Morph notes
-globs:
-alwaysApply: false
----
-
-When the user wants a Morph note, todo, session log, review, share, or pool search, follow `docs/agents/16-morph-for-agents.md` and `.cursor/skills/morph-notes/SKILL.md`. Call `suggest_note_kind` if the kind is unclear. Never share without explicit human consent in this conversation. Do not POST /api/tran/notes-todos.

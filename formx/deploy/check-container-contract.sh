@@ -50,13 +50,13 @@ fi
 
 root_ignore="$repo/.dockerignore"
 if ! grep -E '^formx$' "$root_ignore" >/dev/null; then
-  fail "root .dockerignore must keep a formx line so the Morph context excludes Event Logs"
+  fail "root .dockerignore must keep a formx line so the Dorph context excludes Event Logs"
 fi
 
 example="$root/deploy/.env.production.example"
 [ -f "$example" ] || fail "missing deploy/.env.production.example"
 grep -q '^USERS_PANEL_BASE_URL=$' "$example" || fail "USERS_PANEL_BASE_URL must be empty in the example"
-grep -q '^MORPH_AI_API_KEY=$' "$example" || fail "MORPH_AI_API_KEY must be empty in the example"
+grep -q '^DORPH_AI_API_KEY=$' "$example" || fail "DORPH_AI_API_KEY must be empty in the example"
 grep -q '^SMTP_PASSWORD=$' "$example" || fail "SMTP_PASSWORD must be empty in the example"
 if grep -E 'sk-|admin123|change-me|password=' "$example" >/dev/null; then
   fail "example env contains a secret-like value"
@@ -100,9 +100,9 @@ if "generateValue:" in text:
 
 blocks = service_blocks(lines)
 names = [service_name(block) for block in blocks]
-if names != ["morph", "morph-utils", "formx", "composerx", "sharpreport", "morph-engi"]:
+if names != ["dorph", "dorph-utils", "formx", "composerx", "sharpreport", "dorph-engi"]:
     errors.append(
-        "service names must be morph, morph-utils, formx, composerx, sharpreport, morph-engi, got "
+        "service names must be dorph, dorph-utils, formx, composerx, sharpreport, dorph-engi, got "
         + ", ".join(names)
     )
 
@@ -170,7 +170,7 @@ else:
             errors.append("missing env " + key)
         elif "value: " + value not in body_env and 'value: "' + value + '"' not in body_env:
             errors.append(key + " must be " + value)
-    for key in ("USERS_PANEL_BASE_URL", "PUBLIC_FORM_BASE_URL", "MORPH_AI_API_KEY", "SMTP_PASSWORD"):
+    for key in ("USERS_PANEL_BASE_URL", "PUBLIC_FORM_BASE_URL", "DORPH_AI_API_KEY", "SMTP_PASSWORD"):
         body_env = "\n".join(env.get(key, []))
         if key not in env:
             errors.append("missing prompt " + key)
@@ -179,45 +179,45 @@ else:
             errors.append(key + " must set sync: false")
         if "value:" in body_env:
             errors.append(key + " must not have a value")
-    if "REACT_APP_MORPH_UTILS_URL" in env:
-        errors.append("formx must not set REACT_APP_MORPH_UTILS_URL")
+    if "REACT_APP_DORPH_UTILS_URL" in env:
+        errors.append("formx must not set REACT_APP_DORPH_UTILS_URL")
 
 for forbidden in ("VITE_SHEETX_URL", "VITE_FORMSX_URL"):
     if forbidden in env_map(formx or []):
         errors.append("formx must not set " + forbidden)
-utils_env = env_map(by_name.get("morph-utils") or [])
+utils_env = env_map(by_name.get("dorph-utils") or [])
 for key in ("VITE_SHEETX_URL", "VITE_FORMSX_URL"):
     body_env = "\n".join(utils_env.get(key, []))
     if key not in utils_env:
-        errors.append("morph-utils missing prompt " + key)
+        errors.append("dorph-utils missing prompt " + key)
     elif "sync: false" not in body_env or "value:" in body_env:
-        errors.append(key + " must be an empty prompt on morph-utils")
+        errors.append(key + " must be an empty prompt on dorph-utils")
 
-morph = by_name.get("morph")
-if morph is None:
-    errors.append("missing morph service")
+dorph = by_name.get("dorph")
+if dorph is None:
+    errors.append("missing dorph service")
 else:
-    morph_env = env_map(morph)
-    port = "\n".join(morph_env.get("PORT", []))
+    dorph_env = env_map(dorph)
+    port = "\n".join(dorph_env.get("PORT", []))
     if 'value: "9090"' not in port:
-        errors.append("morph PORT must stay 9090")
-    if "formx/**" in "\n".join(morph):
-        errors.append("morph buildFilter must not gain formx/**")
+        errors.append("dorph PORT must stay 9090")
+    if "formx/**" in "\n".join(dorph):
+        errors.append("dorph buildFilter must not gain formx/**")
 
-utils = by_name.get("morph-utils")
+utils = by_name.get("dorph-utils")
 if utils is None:
-    errors.append("missing morph-utils service")
+    errors.append("missing dorph-utils service")
 else:
     utils_env = env_map(utils)
     port = "\n".join(utils_env.get("PORT", []))
     if 'value: "3040"' not in port:
-        errors.append("morph-utils PORT must stay 3040")
+        errors.append("dorph-utils PORT must stay 3040")
     if "disk:" in "\n".join(utils):
-        errors.append("morph-utils must not gain a disk")
+        errors.append("dorph-utils must not gain a disk")
 
 needles = (
     "prj-dahc33dbedkc73a1v8n0",
-    "https://<morph public host>",
+    "https://<dorph public host>",
     "https://<event-logs public host>",
     "USERS_PANEL_BASE_URL",
     "not a secret",
@@ -231,7 +231,7 @@ needles = (
     "formx-data",
     "single instance",
     "/health",
-    "MorphUtils",
+    "DorphUtils",
     "29909",
     "#114",
 )

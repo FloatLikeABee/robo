@@ -1,7 +1,7 @@
-# Survey Bot + Morph Knowledge GraphRAG Plan
+# Survey Bot + Dorph Knowledge GraphRAG Plan
 
 **Status:** Ready for implementation (awaiting approval)  
-**Depends on:** [`docs/MORPH_GRAPH_RAG_PLAN.md`](./MORPH_GRAPH_RAG_PLAN.md) (Neo4j, outbox, worker)  
+**Depends on:** [`docs/DORPH_GRAPH_RAG_PLAN.md`](./DORPH_GRAPH_RAG_PLAN.md) (Neo4j, outbox, worker)  
 **Decisions locked from product:**
 
 | # | Decision |
@@ -9,9 +9,9 @@
 | Survey answers | Stay visible in chat session **and** save as themed HTML |
 | Survey HTML | FormsX theme-consistent; new FormsX **Survey Bot** module to view |
 | Templates | Markdown templates; create/edit in module **with AI** |
-| AI access | MorphAI + FormsX assistant can fetch survey HTML/results |
-| Graph file uploads | **Morph only** (not FormsX/ComposerX) |
-| Graph entity sync | MorphData + FormsX + ComposerX (existing GraphRAG plan) + **daily sync** |
+| AI access | DorphAI + FormsX assistant can fetch survey HTML/results |
+| Graph file uploads | **Dorph only** (not FormsX/ComposerX) |
+| Graph entity sync | DorphData + FormsX + ComposerX (existing GraphRAG plan) + **daily sync** |
 
 ---
 
@@ -19,7 +19,7 @@
 
 ### Goal
 
-When a user message starts with or includes **“survey bot”**, FormsX MorphAI enters a guided interview: a **markdown template** drives which questions to ask and which answers to collect via chat vs **MCP-app HTML widgets** (e.g. gender `<select>`). Answers accumulate in session state; on completion a **themed HTML artifact** is saved and listed in a new FormsX module. If no suitable template exists, the AI offers to create one (web research + user decisions via MCP-app UI).
+When a user message starts with or includes **“survey bot”**, FormsX DorphAI enters a guided interview: a **markdown template** drives which questions to ask and which answers to collect via chat vs **MCP-app HTML widgets** (e.g. gender `<select>`). Answers accumulate in session state; on completion a **themed HTML artifact** is saved and listed in a new FormsX module. If no suitable template exists, the AI offers to create one (web research + user decisions via MCP-app UI).
 
 ### Trigger and state
 
@@ -82,7 +82,7 @@ Parser: `formx/backend/internal/surveybot/template.go` — YAML frontmatter + `#
 
 ### MCP-app HTML collection (chat UI)
 
-Extend MorphAI assistant response contract (FormsX + [`platform-chat`](../platform-chat/)):
+Extend DorphAI assistant response contract (FormsX + [`platform-chat`](../platform-chat/)):
 
 ```json
 {
@@ -168,14 +168,14 @@ API routes (FormsX):
 |--------|------|---------|
 | GET/POST | `/api/v1/survey-bot/templates` | List / create template |
 | GET/PUT/DELETE | `/api/v1/survey-bot/templates/:id` | CRUD |
-| POST | `/api/v1/survey-bot/templates/ai-draft` | Web-grounded MD draft (reuse `pkg/webresearch` + MorphAI) |
+| POST | `/api/v1/survey-bot/templates/ai-draft` | Web-grounded MD draft (reuse `pkg/webresearch` + DorphAI) |
 | GET | `/api/v1/survey-bot/results` | List results |
 | GET | `/api/v1/survey-bot/results/:id` | Metadata + HTML |
 | GET | `/api/v1/survey-bot/results/:id/html` | Raw HTML for iframe |
 
 Templates tab “Create with AI”: chat/panel similar to [`FormTemplateAIPanel.tsx`](../formx/frontend/src/components/FormTemplateAIPanel.tsx) — research → propose MD → user edits → save.
 
-### Assistant tools (FormsX + Morph proxy)
+### Assistant tools (FormsX + Dorph proxy)
 
 | Tool | Purpose |
 |------|---------|
@@ -187,9 +187,9 @@ Templates tab “Create with AI”: chat/panel similar to [`FormTemplateAIPanel.
 | `render_survey_result` | Finalize HTML + persist |
 | `list_survey_results` / `get_survey_result` | Fetch for display/Q&A |
 
-MorphData management chat: allowlist proxy to FormsX `/api/formsx/…/survey-bot/…` in [`internal_api.go`](../morph/handlers/internal_api.go) so MorphAI can fetch results too.
+DorphData management chat: allowlist proxy to FormsX `/api/formsx/…/survey-bot/…` in [`internal_api.go`](../dorph/handlers/internal_api.go) so DorphAI can fetch results too.
 
-Update [`AI_ASSISTANT_MORPHAI_CONTRACT.md`](../AI_ASSISTANT_MORPHAI_CONTRACT.md) with `ui_blocks` + `survey_bot` state.
+Update [`AI_ASSISTANT_DORPHAI_CONTRACT.md`](../AI_ASSISTANT_DORPHAI_CONTRACT.md) with `ui_blocks` + `survey_bot` state.
 
 ### Seed templates
 
@@ -197,35 +197,35 @@ Ship 2–3 starter MD files under `formx/backend/internal/surveybot/seeds/` (onb
 
 ---
 
-## Feature 2 — Morph-designated Knowledge GraphRAG
+## Feature 2 — Dorph-designated Knowledge GraphRAG
 
 ### Goal
 
-A **designated Neo4j GraphRAG** for MorphAI speed: sync platform entities (Morph + FormsX + ComposerX per existing plan) **every day**, plus a **Morph-only Knowledge Library** for uploaded `md|json|csv|pdf|txt` files that become graph `Chunk` nodes for all Morph assistant turns.
+A **designated Neo4j GraphRAG** for DorphAI speed: sync platform entities (Dorph + FormsX + ComposerX per existing plan) **every day**, plus a **Dorph-only Knowledge Library** for uploaded `md|json|csv|pdf|txt` files that become graph `Chunk` nodes for all Dorph assistant turns.
 
 ### Relationship to existing plan
 
-Implement [`MORPH_GRAPH_RAG_PLAN.md`](./MORPH_GRAPH_RAG_PLAN.md) with these additions:
+Implement [`DORPH_GRAPH_RAG_PLAN.md`](./DORPH_GRAPH_RAG_PLAN.md) with these additions:
 
 | Addition | Detail |
 |----------|--------|
-| Daily sync | `morphgraph-worker sync --daily` via cron/launchd (native, no Docker) — full reconcile + catch-up outbox |
-| Morph Knowledge Library | Durable uploads → Neo4j; **not** session HybridContext |
+| Daily sync | `dorphgraph-worker sync --daily` via cron/launchd (native, no Docker) — full reconcile + catch-up outbox |
+| Dorph Knowledge Library | Durable uploads → Neo4j; **not** session HybridContext |
 | Upload formats | `.md`, `.json`, `.csv`, `.pdf`, `.txt` |
-| Upload home | **Morph only** UI + API |
-| Assistants | Morph chat prefers `graph_search` first; FormsX/ComposerX use entity graph tools but **no** file-upload UI |
+| Upload home | **Dorph only** UI + API |
+| Assistants | Dorph chat prefers `graph_search` first; FormsX/ComposerX use entity graph tools but **no** file-upload UI |
 
-### Morph Knowledge Library
+### Dorph Knowledge Library
 
 ```text
-User uploads file in Morph
+User uploads file in Dorph
   → store on disk (/data/knowledge/…) + MySQL/Mongo metadata
-  → enqueue graph_sync_outbox (source=morph, type=knowledge_file)
+  → enqueue graph_sync_outbox (source=dorph, type=knowledge_file)
   → worker: extract text → chunk → embed → Chunk nodes DESCRIBES KnowledgeFile
-  → Morph AI graph_search retrieves alongside entity chunks
+  → Dorph AI graph_search retrieves alongside entity chunks
 ```
 
-API (Morph):
+API (Dorph):
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -235,7 +235,7 @@ API (Morph):
 | DELETE | `/api/knowledge/files/:id` | Delete + graph delete |
 | POST | `/api/graph/search` | Shared GraphRAG (entities + knowledge) |
 
-UI: new Morph panel **Knowledge** (or extend HybridContext area with tabs: Session context | Knowledge library). Session HybridContext stays temporary; Knowledge library persists and syncs to graph.
+UI: new Dorph panel **Knowledge** (or extend HybridContext area with tabs: Session context | Knowledge library). Session HybridContext stays temporary; Knowledge library persists and syncs to graph.
 
 Text extraction:
 
@@ -244,7 +244,7 @@ Text extraction:
 | md/txt | Raw |
 | json | Pretty-print / flatten keys |
 | csv | Header + row summaries (cap rows) |
-| pdf | Reuse ComposerX PDF path / existing Morph PDF reader if available |
+| pdf | Reuse ComposerX PDF path / existing Dorph PDF reader if available |
 
 ### Daily sync
 
@@ -252,7 +252,7 @@ Worker schedule (documented in DEPLOY-README + GraphRAG doc):
 
 ```bash
 # launchd / crontab example — 03:00 local
-morphgraph-worker sync --mode=daily --sources=morph,formsx,composerx,knowledge
+dorphgraph-worker sync --mode=daily --sources=dorph,formsx,composerx,knowledge
 ```
 
 Daily job:
@@ -262,7 +262,7 @@ Daily job:
 3. Re-embed knowledge files with `updated_at` changes.
 4. Emit metrics: lag, node counts, embed failures.
 
-### Morph assistant integration
+### Dorph assistant integration
 
 - System prompt: prefer `graph_search` for platform + knowledge questions.
 - Keep HybridContext for “this chat only” attachments.
@@ -285,22 +285,22 @@ Daily job:
 1. `platform-chat` render/submit for `select` / `confirm` / `multiselect`.
 2. FormsX nav + `SurveyBot.tsx` (Results + Templates + AI draft panel).
 3. Wire FormsX chat to show live answers in-session (state summary strip or markdown checklist).
-4. Morph proxy + tools to fetch survey results.
+4. Dorph proxy + tools to fetch survey results.
 
-### Phase C — GraphRAG foundation + Morph knowledge
+### Phase C — GraphRAG foundation + Dorph knowledge
 
-1. `pkg/morphgraph` + outbox + worker (from GraphRAG plan).
-2. Morph entity sync hooks + backfill.
-3. Knowledge Library API + Morph UI upload.
+1. `pkg/dorphgraph` + outbox + worker (from GraphRAG plan).
+2. Dorph entity sync hooks + backfill.
+3. Knowledge Library API + Dorph UI upload.
 4. Chunk/embed knowledge files into Neo4j.
-5. Morph `graph_search` in management chat.
+5. Dorph `graph_search` in management chat.
 
 ### Phase D — Daily sync + FormsX/ComposerX entity graph + harden
 
 1. Daily sync command + ops docs.
 2. FormsX + ComposerX entity mappers/hooks + assistant `graph_*` tools.
 3. Golden tests: Survey Bot happy path; knowledge upload → search; daily sync dry-run.
-4. Update MorphAI contract, fast-ops skill, DEPLOY-README (Neo4j + cron).
+4. Update DorphAI contract, fast-ops skill, DEPLOY-README (Neo4j + cron).
 
 ---
 
@@ -313,12 +313,12 @@ Daily job:
 3. Completion writes themed HTML; visible in FormsX Survey Bot module.
 4. No template → offer create → web draft → user confirms via MCP-app → template saved.
 5. Module can create/edit MD templates with AI.
-6. FormsX AI and MorphAI can list/get survey results via tools.
+6. FormsX AI and DorphAI can list/get survey results via tools.
 
 **GraphRAG / Knowledge**
 
-1. Neo4j receives Morph/FormsX/ComposerX entity sync + Morph knowledge files.
-2. Morph-only upload for md/json/csv/pdf/txt; searchable via `graph_search`.
+1. Neo4j receives Dorph/FormsX/ComposerX entity sync + Dorph knowledge files.
+2. Dorph-only upload for md/json/csv/pdf/txt; searchable via `graph_search`.
 3. Daily sync job documented and runnable.
 4. HybridContext remains session-scoped and separate from Knowledge Library.
 
@@ -332,9 +332,9 @@ Daily job:
 | Survey Bot package | `formx/backend/internal/surveybot/*` (new) |
 | FormsX UI | `App.tsx`, `Layout.tsx`, `pages/SurveyBot.tsx` (new) |
 | Chat widgets | `platform-chat/usePlatformChat.ts`, React/Svelte drawers |
-| Morph knowledge | `morph/handlers/knowledge_*.go` (new), frontend Knowledge panel |
-| Graph | `pkg/morphgraph/*`, `morphgraph-worker` (new, per GraphRAG plan) |
-| Docs | this file, `MORPH_GRAPH_RAG_PLAN.md`, contract, DEPLOY-README |
+| Dorph knowledge | `dorph/handlers/knowledge_*.go` (new), frontend Knowledge panel |
+| Graph | `pkg/dorphgraph/*`, `dorphgraph-worker` (new, per GraphRAG plan) |
+| Docs | this file, `DORPH_GRAPH_RAG_PLAN.md`, contract, DEPLOY-README |
 
 ---
 

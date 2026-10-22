@@ -1,6 +1,6 @@
 ## 1. README and one config
 
-- [x] 1.1 Rewrite root README folders, URLs, env, and AI-provider sections for remaining apps only (Morph AI / MorphNotes, MorphUtils modules, Event Logs, Content Maker, Data Access, Project, AI tools); document single root `.env`
+- [x] 1.1 Rewrite root README folders, URLs, env, and AI-provider sections for remaining apps only (Dorph AI / DorphNotes, DorphUtils modules, Event Logs, Content Maker, Data Access, Project, AI tools); document single root `.env`
 - [x] 1.2 Remove Booki and Academi from `start-all.sh` default services, aliases, install, and list
 
 ## 2. Delete platform-chat
@@ -13,9 +13,9 @@
 - [x] 3.1 Remove AI tools Video stories nav, page, routes, and frontend API helpers
 - [x] 3.2 Remove AI tools backend video-story routes and services (redirect or 404 `/video-stories`)
 
-## 4. Morph AI chrome
+## 4. Dorph AI chrome
 
-- [x] 4.1 Remove Morph AI header Notes & TODOs, Context & Knowledge, and Export session (JSON) buttons
+- [x] 4.1 Remove Dorph AI header Notes & TODOs, Context & Knowledge, and Export session (JSON) buttons
 - [x] 4.2 Remove AI tools Open in tab (including error-state new-tab link)
 
 ## 5. Skills editor
@@ -25,5 +25,5 @@
 
 ## 6. Verify
 
-- [x] 6.1 README/`start-all.sh list` match remaining apps; Event Logs has no platform-chat drawer; AI tools has no Video stories; Morph AI header and Skills layout match the specs
-- [x] 6.2 Browser: Morph AI header, Skills split + md + Improve with AI (draft only), AI tools drawer without Open in tab
+- [x] 6.1 README/`start-all.sh list` match remaining apps; Event Logs has no platform-chat drawer; AI tools has no Video stories; Dorph AI header and Skills layout match the specs
+- [x] 6.2 Browser: Dorph AI header, Skills split + md + Improve with AI (draft only), AI tools drawer without Open in tab

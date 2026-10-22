@@ -1,6 +1,6 @@
-# MorphTools (`bk/`)
+# DorphTools (`bk/`)
 
-Python FastAPI + React workbench for **Assistants**, **RAG**, **Documents**, and **System**. Morph AI can open this module. Folder stays `bk/`.
+Python FastAPI + React workbench for **Assistants**, **RAG**, **Documents**, and **System**. Dorph AI can open this module. Folder stays `bk/`.
 
 Agent notes: [`docs/agents/06-ai-tools.md`](../docs/agents/06-ai-tools.md).
 
@@ -32,12 +32,12 @@ cd frontend && npm start
 
 Python **3.11+**, Node 18+. Nested `bk/.env` is ignored; use the **repo-root** `.env`.
 
-Typical local keys (see `.env.example`): `API_PORT=8000`, Chroma persist directory, optional SMTP. Ollama is optional if you use local models; Morph AI chat itself uses DashScope via Morph.
+Typical local keys (see `.env.example`): `API_PORT=8000`, Chroma persist directory, optional SMTP. Ollama is optional if you use local models; Dorph AI chat itself uses DashScope via Dorph.
 
 ## Nav
 
 `/assistants`, `/rag`, `/documents`, `/status` (System).
 
-Platform chat stays in Morph AI (`:3031`). This app is the RAG/assistants workbench, not a second MorphUtils module.
+Platform chat stays in Dorph AI (`:3031`). This app is the RAG/assistants workbench, not a second DorphUtils module.
 
-AI tools does not speak the Model Context Protocol and does not listen on port 8196. The platform MCP server is [`morph/cmd/morph-mcp`](../docs/agents/14-morph-mcp.md).
+AI tools does not speak the Model Context Protocol and does not listen on port 8196. The platform MCP server is [`dorph/cmd/dorph-mcp`](../docs/agents/14-dorph-mcp.md).

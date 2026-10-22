@@ -1,6 +1,6 @@
 ## 1. Failing handler tests
 
-- [x] 1.1 Add `morph/handlers/tran_users_test.go` that mounts `AuthzMiddleware` and the user routes. Cover no-session 401, non-admin 403, and admin success for `POST /api/tran/users`, `PUT /api/tran/users/:id`, and `DELETE /api/tran/users/:id`.
+- [x] 1.1 Add `dorph/handlers/tran_users_test.go` that mounts `AuthzMiddleware` and the user routes. Cover no-session 401, non-admin 403, and admin success for `POST /api/tran/users`, `PUT /api/tran/users/:id`, and `DELETE /api/tran/users/:id`.
 - [x] 1.2 Cover self-promotion (`PUT` own id with `administrator` true is 403 and the flag stays false), a spoofed `X-User-Role` plus Tran `Administrator=1` still 403, and a demoted plat user whose old token still says admin is 403.
 - [x] 1.3 Cover `PUT /api/tran/users/me`: an email plus last name leaves email unchanged, an email-only body is 400 and writes nothing, and administrator/deactivated on `/me` do not stick.
 - [x] 1.4 Cover the takeover sequence (A cannot set B's email or deactivate A's row; A's resolved id stays A's) and ambiguous email/LoginID (409, no new row, notes id is neither match). Keep single-match, deactivated-duplicate, and no-match auto-create.
@@ -14,4 +14,4 @@
 
 ## 3. Verification
 
-- [x] 3.1 Run `go test` for the touched Morph packages and the Morph frontend production build. Confirm the new tests failed before the implementation and pass after it.
+- [x] 3.1 Run `go test` for the touched Dorph packages and the Dorph frontend production build. Confirm the new tests failed before the implementation and pass after it.

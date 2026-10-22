@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Gives Morph one vendored html-anything skill, with license and Ge style overlay, loaded in compact form on every HTML-producing AI path.
+Gives Dorph one vendored html-anything skill, with license and Ge style overlay, loaded in compact form on every HTML-producing AI path.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ The repository MUST keep html-anything skill text and needed assets under `skill
 - **AND** the notice names https://github.com/nexu-io/html-anything
 
 ### Requirement: Compact injection stays inside the Ollama budget
-The text Morph injects for this skill MUST be a condensed form plus Ge's style overlay. It MUST stay at or under 512 tokens, counted as Unicode runes divided by four rounding up.
+The text Dorph injects for this skill MUST be a condensed form plus Ge's style overlay. It MUST stay at or under 512 tokens, counted as Unicode runes divided by four rounding up.
 
 #### Scenario: Budget test
 - **WHEN** the compact injected skill text is measured
@@ -27,7 +27,7 @@ The text Morph injects for this skill MUST be a condensed form plus Ge's style o
 Note AI output, generated HTML or markdown, and agent-facing skill docs MUST include the compact html-anything skill and Ge overlay. Grill write is plain markdown and MUST NOT receive that skill. Ordinary chat that is not producing HTML MUST NOT receive the full vendor SKILL.md.
 
 #### Scenario: Note AI and generated documents
-- **WHEN** Morph builds a note-AI, generated HTML/MD, or form-HTML prompt
+- **WHEN** Dorph builds a note-AI, generated HTML/MD, or form-HTML prompt
 - **THEN** that prompt includes the compact skill text
 - **AND** it includes Ge's Arial, dark, multi-accent overlay
 
@@ -37,7 +37,7 @@ Note AI output, generated HTML or markdown, and agent-facing skill docs MUST inc
 - **AND** it asks for plain structured markdown with no colour codes
 
 #### Scenario: Ordinary chat stays compact
-- **WHEN** Morph builds a normal chat reply prompt that is not asking for HTML
+- **WHEN** Dorph builds a normal chat reply prompt that is not asking for HTML
 - **THEN** it does not append the full vendor SKILL.md
 
 ### Requirement: Compact skill uses hex colours only

@@ -1,8 +1,8 @@
 # Image build for Event Logs API + UI.
 #
 # This is not one of the five required check names. Those stay in ci.yml
-# (Go / Morph API, Go / Event Logs, Go / Content Maker, Go / morphai,
-# Morph frontend). Do not move this job into ci.yml.
+# (Go / Dorph API, Go / Event Logs, Go / Content Maker, Go / dorphai,
+# Dorph frontend). Do not move this job into ci.yml.
 name: Event Logs image
 
 on:

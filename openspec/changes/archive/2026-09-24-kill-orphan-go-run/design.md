@@ -7,7 +7,7 @@ Root cause, traced in the Go toolchain and reproduced:
 - `go run` (`cmd/go/internal/base.RunStdin`) starts the compiled binary with `exec.Command` and does not set a new process group.
 - The go command ignores only interrupt and SIGQUIT (`signal_unix.go`). SIGTERM kills `go run` and is not forwarded. The child is reparented and keeps the listen socket and the Badger flock on `./data/badger`.
 - Killing only the parent leaves the listener. Signaling the parent's process group removes it. The same parent/child split is how `cargo run` and `npm start` work.
-- On Darwin, Morph, Event Logs, and Content Maker APIs are already `go build` binaries (Badger `LC_UUID`). Linux still uses `go run`. npm and cargo fork on both.
+- On Darwin, Dorph, Event Logs, and Content Maker APIs are already `go build` binaries (Badger `LC_UUID`). Linux still uses `go run`. npm and cargo fork on both.
 
 Constraints: macOS bash 3.2, BSD `ps`/`lsof`, no `setsid` binary. Linux bash and GNU `ps`. Do not change command names. Do not kill unrelated services that still share a process group from an older launcher.
 
@@ -34,7 +34,7 @@ Before backgrounding, enable monitor mode (`set -m`) so the command's PID is the
 
 Stop sends SIGTERM to that group (`kill -TERM -PGID`), polls until the group is empty (about 5 seconds), then SIGKILL. Signal a group only when the recorded PID equals its PGID and that PGID is not the launcher's PGID.
 
-**Why this over a setsid helper as the primary path:** `set -m` is in bash 3.2. It does not need `setsid`, python, or perl. It was checked with a Go parent that forks a TCP listener: after the launcher exited, both processes were alive in that group; `kill -TERM -PGID` freed the port. The same check on Linux `./start-all.sh restart morph-api` showed `go run` and `/tmp/go-build…/exe/main` sharing one PGID, one listener on `:9090`, and no directory-lock line.
+**Why this over a setsid helper as the primary path:** `set -m` is in bash 3.2. It does not need `setsid`, python, or perl. It was checked with a Go parent that forks a TCP listener: after the launcher exited, both processes were alive in that group; `kill -TERM -PGID` freed the port. The same check on Linux `./start-all.sh restart dorph-api` showed `go run` and `/tmp/go-build…/exe/main` sharing one PGID, one listener on `:9090`, and no directory-lock line.
 
 **Rejected: `setsid(1)` or `python3 -c os.setsid` as the only start path.** `setsid(1)` forks when the caller is already a group leader, so the PID written to the pid file exits and the real server is untracked. `command -v python3` can succeed on macOS when `python3` is a Command Line Tools stub that does not run; exec'ing it would fail the service even though perl is present. A setsid helper remains only the fallback below.
 
@@ -72,7 +72,7 @@ Reviewer objections, checked against `start-all.sh` and a live `go run`:
 - A forking service (`go run`, npm, cargo) keeps children in the group unless the child calls `setsid`. Dev servers do not daemonize. A child that does is out of scope; the port backstop still kills the listener PID.
 - A port that stays in LISTEN after SIGKILL fails the stop instead of stacking a second Badger opener.
 - Group kill of a shared legacy PGID would take down siblings. The `pid == PGID` guard prevents that. A same-group orphan listener was killed by PID without killing the launcher (shell test).
-- IPv6 `*:9090` is what Morph binds. `lsof -nP -tiTCP:9090 -sTCP:LISTEN` sees it.
+- IPv6 `*:9090` is what Dorph binds. `lsof -nP -tiTCP:9090 -sTCP:LISTEN` sees it.
 - Ctrl+C in the foreground launcher only traps INT/TERM. Children in another group are not signaled by the keypress. The trap calls the same stop path. A service that ignores TERM costs a few seconds, then KILL.
 
 The `pid == PGID` rule, the HUP ignore, and the group-then-port wait are what let this survive those cases. No open choice left that would change the spec or the task list.
@@ -101,6 +101,6 @@ A review of the first process-group stop found three ways the stop path could si
 2. **Fail closed when the launcher's own PGID is empty.** Group-kill runs only when the recorded PID equals its PGID, that PGID is greater than 1, and it is different from a known launcher PGID. If the launcher cannot read its own PGID, it tree-kills the recorded PID and does not signal a group.
 3. **Group-kill only PIDs this launcher recorded.** `free_listening_port` used to call the recorded-pid group kill for every listener. An unrelated leader on a dev port would lose its whole group. Unrecorded listeners are tree-killed, with a warning that they were not started here.
 4. **The shell test must fail if group kill becomes a parent-only kill.** The fixture forks a listener and a non-listening child. The non-listening child is asserted dead after `kill_recorded_pid` and inside `restart_one`, before port cleanup runs. Port cleanup cannot mask a parent-only kill, because it does not see that child.
-5. **`restart morph-api` waits until `GET /health` succeeds** (about 90 seconds). Restart is not finished while the new process is still coming up, so a following status is one healthy Morph API.
+5. **`restart dorph-api` waits until `GET /health` succeeds** (about 90 seconds). Restart is not finished while the new process is still coming up, so a following status is one healthy Dorph API.
 6. **Service names match the whole field**, not a regular expression. `stop '.*'` does not select the last pid-file row. Unknown names are rejected before stop, start, restart, or logs.
 7. **Missing `lsof` warns on stderr**, once, and does not look like an empty listener list on stdout.

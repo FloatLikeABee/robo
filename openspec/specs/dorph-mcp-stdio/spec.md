@@ -1,0 +1,366 @@
+# dorph-mcp-stdio Specification
+
+## Purpose
+
+Let a local MCP client attach to Dorph over stdio, complete the handshake, see which Dorph user the server is acting as, and list, read, and create that user's own notes. An MCP Apps host can load the notes panel for those three actions. List and get open SQLite read-only. create_note writes through a separate connection on the same file. The process does not open Badger.
+
+## Requirements
+
+### Requirement: Stdio initialize
+The Dorph module MUST build a stdio server that speaks MCP JSON-RPC on stdin and stdout. An `initialize` request at protocol revision 2025-06-18 MUST return that revision, a serverInfo name and version, and server capabilities. The process MUST NOT listen on a network port. A newer protocol revision the server supports MAY be negotiated when the client requests it.
+
+#### Scenario: Initialize at 2025-06-18
+- **WHEN** a client sends `initialize` with protocol version 2025-06-18
+- **THEN** the response protocolVersion is 2025-06-18
+- **AND** serverInfo includes a non-empty name and version
+- **AND** capabilities include tools and resources
+
+#### Scenario: No network listener
+- **WHEN** the server process is running a stdio session
+- **THEN** it does not bind a TCP or UDP port for MCP
+
+### Requirement: Tools and the notes app resource
+The server MUST advertise the tools capability and the resources capability. `tools/list` MUST include `whoami`, `list_my_tasks`, `get_task`, `create_note`, `note_grill`, `suggest_note_kind`, and `dorph_guide`. `whoami`, `list_my_tasks`, `get_task`, `suggest_note_kind`, and `dorph_guide` MUST be marked read-only. `create_note` and `note_grill` MUST NOT be marked read-only. `resources/list` MUST succeed and MUST include the Dorph notes app at `ui://dorph/notes` and the Dorph grill app at `ui://dorph/grill`, each with MIME type `text/html;profile=mcp-app`, and the agent playbook at `dorph://guide`. The resources capability MUST NOT advertise `listChanged`. The server MUST NOT expose prompts, Engi project tools, or BK TCP tools.
+
+#### Scenario: Three read-only tools
+- **WHEN** a client calls `tools/list` after initialize
+- **THEN** the list includes `whoami`, `list_my_tasks`, `get_task`, `create_note`, `note_grill`, `suggest_note_kind`, and `dorph_guide`
+- **AND** `whoami`, `list_my_tasks`, `get_task`, `suggest_note_kind`, and `dorph_guide` are marked read-only
+- **AND** `create_note` and `note_grill` are not marked read-only
+
+#### Scenario: Resources list is the notes app
+- **WHEN** a client calls `resources/list` after initialize
+- **THEN** the call succeeds
+- **AND** the list includes `ui://dorph/notes`, `ui://dorph/grill`, and `dorph://guide`
+- **AND** each of the UI resources has MIME type `text/html;profile=mcp-app`
+- **AND** initialize capabilities do not set resources `listChanged` to true
+
+### Requirement: Whoami returns the verified Dorph user
+`whoami` MUST return the Dorph user id, email, username, and roles taken from the verified session token. The result MUST NOT include the token or a password.
+
+#### Scenario: Call whoami
+- **WHEN** a client calls `whoami` with a verified token for a known user
+- **THEN** the result id, email, username, and roles match that token's claims
+- **AND** the token string is absent from the result
+
+### Requirement: Identity fails closed
+The server MUST treat `DORPH_MCP_TOKEN` as either a Dorph session JWT or a personal access token. A JWT MUST be verified with `dorph/auth` the way the Dorph API does: HS256 signature against `JWT_SECRET`, `exp`, and in production the token-lifetime cap from #24. A PAT MUST be verified against the hashed `agent_token` row and MUST NOT require `JWT_SECRET` in the client environment. If the token is missing, invalid, expired, revoked, or has no subject, the process MUST exit non-zero before writing any MCP message, or the tool call MUST be an error, and the error MUST NOT contain the token text. A user id supplied without a valid token MUST NOT be accepted. If the token is a JWT and `JWT_SECRET` is empty or equal to the built-in development default the API substitutes when the variable is unset, the process MUST exit non-zero before writing any MCP message, and the error MUST NOT contain the secret. When `DORPH_ENV` is production and the token is a JWT, startup MUST also refuse a JWT secret that fails the API's production secret rules (length, placeholder, repeated character) and a `JWT_EXPIRY_HOURS` value the API would refuse, and MUST refuse a token whose lifetime exceeds the production maximum. An unrecognized `DORPH_ENV` MUST refuse startup. After the token verifies, the process MUST confirm the token subject still exists in `plat_users` and MUST exit non-zero when it does not. Each tool call MUST verify the token again, including revoke, expiry, and that the subject still exists in `plat_users`. A deleted user MUST fail the next tool call.
+
+#### Scenario: Missing token
+- **WHEN** the process starts without a token
+- **THEN** it exits non-zero
+- **AND** stdout is empty
+- **AND** stderr states that the token is required
+
+#### Scenario: Invalid token is not echoed
+- **WHEN** the process starts with a token that does not verify
+- **THEN** it exits non-zero
+- **AND** stdout is empty
+- **AND** stderr does not contain the token text
+
+#### Scenario: Development JWT secret is refused
+- **WHEN** the process starts with a JWT (not a PAT) and `JWT_SECRET` empty or set to the built-in development default
+- **THEN** it exits non-zero
+- **AND** stdout is empty
+- **AND** stderr names `JWT_SECRET` and does not include the secret value
+
+#### Scenario: Deleted user cannot start
+- **WHEN** the process starts with a token whose subject is not in `plat_users`
+- **THEN** it exits non-zero
+- **AND** stdout is empty
+
+#### Scenario: Expired token fails the tool call
+- **WHEN** a tool is called with a token that has expired since startup
+- **THEN** the tool result is an error
+- **AND** the error does not contain the token text
+
+#### Scenario: Production rejects a weak secret and a long-lived token
+- **WHEN** `DORPH_ENV` is production, the token is a JWT, and `JWT_SECRET` is shorter than the API minimum, a placeholder, or a repeated character, or the token's lifetime exceeds the production maximum
+- **THEN** the process exits non-zero before any MCP message
+- **AND** stderr does not contain the secret or the token
+
+#### Scenario: Deleted user fails the next call
+- **WHEN** a tool is called after the token subject has been removed from `plat_users`
+- **THEN** the tool result is an error
+- **AND** the error does not contain the token text
+
+### Requirement: Startup does not take the API's Badger lock
+The stdio process MUST NOT open the Dorph Badger directories. It MUST NOT call `db.NewTranSQL` and MUST NOT run schema migrations or set the SQLite journal mode. It MUST open `TRAN_SQLITE_PATH` read-only (`mode=ro` and `query_only`) for reads so a running `dorph-api` can keep that file in WAL mode. A write on that read-only connection MUST fail. `create_note` MUST write through a separate connection opened `mode=rw` on that same existing file, with a busy timeout, and MUST NOT create the database file or change the journal mode. A note that connection commits MUST be visible to the read-only connection.
+
+#### Scenario: Read-only connection rejects writes
+- **WHEN** the MCP read connection is open on a writable SQLite file
+- **THEN** an insert or schema change on that connection fails
+
+#### Scenario: Reader works beside a WAL writer
+- **WHEN** another connection holds the database in WAL mode and the MCP read connection reads it
+- **THEN** the read succeeds
+- **AND** the writer can still commit
+
+#### Scenario: Note writer does not migrate
+- **WHEN** `create_note` commits a note while another connection holds the file in WAL mode
+- **THEN** the journal mode is unchanged
+- **AND** the read-only connection can read the new note
+
+### Requirement: Logs stay off stdout
+Stdout MUST contain only MCP JSON-RPC messages. Diagnostic logs, including the resolved user id, MUST go to stderr. Stderr MUST NOT contain the session token.
+
+#### Scenario: Handshake bytes are JSON-RPC
+- **WHEN** a client completes initialize, tools/list, and whoami
+- **THEN** every non-empty stdout line is a JSON-RPC message
+- **AND** log text is on stderr
+- **AND** the token is on neither stream
+
+### Requirement: Cursor run instructions
+The repository MUST document how to build the stdio server and a Cursor `mcp.json` snippet that launches it with `DORPH_MCP_TOKEN`, `JWT_SECRET`, and `TRAN_SQLITE_PATH`. The doc MUST name `whoami`, `list_my_tasks`, `get_task`, and `create_note`, MUST state that the HTTP JSON tool catalogs are not MCP, and MUST explain how to connect this server to local Dorph at `http://localhost:3031/`, including how to obtain the session token. The documented examples MUST NOT contain a real token or secret.
+
+#### Scenario: Docs name the client config
+- **WHEN** an operator reads the MCP stdio doc
+- **THEN** it shows the build command and a Cursor `mcp.json` example including `TRAN_SQLITE_PATH`
+- **AND** it names `whoami`, `list_my_tasks`, `get_task`, and `create_note`
+- **AND** it states that the human UI is `http://localhost:3031/` and how to obtain the token
+- **AND** it states that `/ai/mcp-tools` style catalogs are not the Model Context Protocol
+
+### Requirement: List and get return only the caller's notes and todos
+`list_my_tasks` and `get_task` MUST read `user_note_todo` rows for the verified JWT subject only. Every such query MUST constrain the WHERE clause with that subject (`plat_users.id`), joined to an active Tran `User` (`Deactivated = 0`) on email. They MUST NOT use a request user id, an email claim as a substitute for the subject, an `X-User-ID` header, or a default user id, and they MUST NOT create a `User` row. The owner predicate MUST live in one function so it can later call the shared visibility helper from #69. `list_my_tasks` MUST accept optional `type` (`all`, `note`, or `todo`), optional `status` (`all`, `open`, or `done`), and optional `limit`. The default limit is 50 and the applied limit MUST NOT exceed 100. Each task object MUST include id, title, status (`open` or `done`), item type, and the text body stored in SQLite, plus deadline, created, and updated timestamps when present. `get_task` for an id the caller does not own, or that does not exist, MUST be a not-found tool error and MUST NOT say the row is forbidden or include the other user's title or body. DorphNotes `CaseTask` rows MUST NOT be returned.
+
+#### Scenario: List returns only mine
+- **WHEN** the database has notes or todos for the caller and for another user
+- **THEN** `list_my_tasks` returns only the caller's rows
+- **AND** the result does not include the other user's title or body
+
+#### Scenario: Get returns the caller's task
+- **WHEN** the caller requests `get_task` with their own `user_note_todo` id
+- **THEN** the result includes that row's id, title, status, and body
+
+#### Scenario: Get of another user's task is not found
+- **WHEN** the caller requests `get_task` with another user's `user_note_todo` id
+- **THEN** the tool result is not-found
+- **AND** the result does not include that row's title or body
+- **AND** the result does not say the call is forbidden
+
+#### Scenario: Limit is capped
+- **WHEN** the caller requests `list_my_tasks` with a limit above 100
+- **THEN** the number of returned rows is at most 100
+
+#### Scenario: Status filter keeps done rows out
+- **WHEN** the caller requests `list_my_tasks` with status `open`
+- **THEN** completed rows are absent
+
+### Requirement: Create note stores the caller's note
+`create_note` MUST insert one note owned by the active Tran user joined from the verified token subject on email, using the same owner predicate as list and get. The row MUST be item type `note`, open, and without a deadline. The tool result MUST include that note's id, title, item type, status, and body. A following `list_my_tasks` and `get_task` MUST return that same id and content. The tool MUST NOT call `ExposeRecord`, MUST NOT honor a request user id or identity header, and MUST NOT create a Tran user or use user id 1.
+
+#### Scenario: Create then list and get
+- **WHEN** a client with a valid session calls `create_note` with a title and body
+- **THEN** the result includes a new id, a title that contains the caller's title, and a body that contains the caller's body
+- **AND** `get_task` with that id returns the same content
+- **AND** `list_my_tasks` includes that id when the note fits in the requested page
+- **AND** the row is owned by that session's Tran user
+
+#### Scenario: No Tran user writes nothing
+- **WHEN** the token subject exists in `plat_users` but has no active Tran user
+- **THEN** `create_note` is an error
+- **AND** no note row is inserted
+- **AND** user id 1 does not gain a note
+
+#### Scenario: Another user cannot get the note
+- **WHEN** user A has created a note and user B calls `get_task` with that id
+- **THEN** the result is not-found
+- **AND** the result does not include A's title or body
+
+### Requirement: Agent notes are attributable
+A note created by `create_note` MUST store a title that starts with `[dorph-mcp]` and a body that starts with `source: dorph-mcp`, followed by the caller's text when they sent any. The marker MUST be visible in the stored fields list and get return. The tool MUST NOT add a database column.
+
+#### Scenario: Stored note shows the marker
+- **WHEN** a client creates a note with title "Shift report" and a body
+- **THEN** the stored title starts with `[dorph-mcp]` and contains "Shift report"
+- **AND** the stored body starts with `source: dorph-mcp` and contains the caller's body
+
+### Requirement: Create note fails closed
+`create_note` MUST verify the session token before writing. A missing, invalid, or expired token MUST be a tool error, or a non-zero process exit before any tool runs, and MUST NOT insert a row. The error MUST NOT contain the token text. An empty title and an empty body MUST NOT insert a row.
+
+#### Scenario: Invalid token writes nothing
+- **WHEN** `create_note` is invoked with a missing or invalid token
+- **THEN** the call fails
+- **AND** the note table is unchanged
+- **AND** the error does not contain the token
+
+#### Scenario: Empty note is rejected
+- **WHEN** the client omits both title and body
+- **THEN** `create_note` is an error
+- **AND** no row is inserted
+
+### Requirement: Create note limits input
+`create_note` MUST reject a caller title longer than 200 characters or a caller body longer than 32000 characters without inserting a row. A second call with the same title and body for the same user MUST return the existing note's id and MUST NOT insert another row. Errors MUST NOT include another user's title, body, or the token.
+
+#### Scenario: Overlong input writes nothing
+- **WHEN** the title or body exceeds its limit
+- **THEN** `create_note` is an error
+- **AND** no row is inserted
+
+#### Scenario: Same note is not duplicated
+- **WHEN** the client calls `create_note` twice with the same title and body
+- **THEN** both results return the same id
+- **AND** only one row exists for that text
+
+### Requirement: Note tools declare the Dorph notes app
+`list_my_tasks`, `get_task`, and `create_note` MUST each declare `_meta.ui.resourceUri` equal to `ui://dorph/notes`, with visibility that includes both the model and the app. `whoami` MUST NOT declare a UI resource. A client that does not render MCP Apps MUST still receive the same tool result it receives today: structured note data for those three tools, and the verified user for `whoami`. Calling a tool MUST NOT require the client to read the UI resource first.
+
+#### Scenario: Note tools point at the notes app
+- **WHEN** a client calls `tools/list` after initialize
+- **THEN** `list_my_tasks`, `get_task`, and `create_note` each have `_meta.ui.resourceUri` `ui://dorph/notes`
+- **AND** each of those tools is visible to the model and to the app
+- **AND** `whoami` has no UI resource URI
+
+#### Scenario: Plain tool result without an app host
+- **WHEN** a client calls `list_my_tasks`, `get_task`, or `create_note` and does not read the UI resource
+- **THEN** the result is the note data for that tool
+- **AND** the result is not an HTML document
+
+### Requirement: Notes app document is closed
+`resources/read` of `ui://dorph/notes` MUST return one content item whose MIME type is `text/html;profile=mcp-app` and whose text is a single HTML document. That document MUST NOT contain an external URL (`http:`, `https:`, or a protocol-relative URL). It MUST NOT contain an HTML-sink assignment (`innerHTML`, `insertAdjacentHTML`, `outerHTML`, or `document.write`). It MUST render note titles and bodies as text. It MUST include a content security policy that blocks external connections, frames, and objects. It MUST call `list_my_tasks`, `get_task`, and `create_note` by name through the host bridge (`tools/call`). The document MUST NOT contain a session token, a JWT secret, or `DORPH_MCP_TOKEN`. The resource metadata MUST NOT name an external connect, script, or frame origin.
+
+#### Scenario: Read the notes app
+- **WHEN** a client calls `resources/read` for `ui://dorph/notes`
+- **THEN** the content MIME type is `text/html;profile=mcp-app`
+- **AND** the HTML contains no external URL and no HTML-sink assignment
+- **AND** the HTML names `list_my_tasks`, `get_task`, and `create_note`
+- **AND** the HTML does not contain the session token
+
+### Requirement: MCP Apps extension is advertised
+The initialize result MUST include the extension `io.modelcontextprotocol/ui` with `mimeTypes` containing `text/html;profile=mcp-app`.
+
+#### Scenario: Extension is present
+- **WHEN** a client completes initialize
+- **THEN** server capabilities include extension `io.modelcontextprotocol/ui`
+- **AND** that extension lists MIME type `text/html;profile=mcp-app`
+
+### Requirement: Localhost MCP app attach steps
+The MCP stdio docs MUST explain how to launch this same binary for local Dorph at `http://localhost:3031/` from at least one client that renders MCP Apps, using `DORPH_MCP_TOKEN`, `JWT_SECRET`, and `TRAN_SQLITE_PATH`. The docs MUST say how to obtain the token from local Dorph login, MUST state that the notes app lists, opens, and creates notes, and MUST state that a client which does not render MCP Apps still receives the plain tool results. The documented examples MUST NOT contain a real token or secret.
+
+#### Scenario: Docs name an MCP Apps client and the plain-tools fallback
+- **WHEN** an operator reads the MCP stdio doc
+- **THEN** it shows a localhost launch config for an MCP-Apps-capable client with those three environment variables
+- **AND** it explains how to obtain the token from local Dorph login
+- **AND** it states that clients without MCP Apps still use the tool results
+
+### Requirement: Grill tool is session scoped
+`note_grill` MUST run only after the token verifies, as the verified session user. It MUST accept actions to start an interview from a title, record an answer, skip a question, and finish early. It MUST NOT take a user id. A grill id that is missing or belongs to another user MUST be reported as not found, and the error MUST NOT include the draft or say the row is forbidden. The tool MUST NOT write a Notes & TODOs row. Storing the note remains `create_note`. Calling the tool MUST NOT require the client to read the UI resource first, and the tool result MUST be structured grill state rather than an HTML document.
+
+#### Scenario: Start returns a question
+- **WHEN** a client calls `note_grill` to start with a non-empty title
+- **THEN** the result is grill state for that session user
+- **AND** the state includes a question about the title
+- **AND** the result is not an HTML document
+
+#### Scenario: Another user's grill id
+- **WHEN** a client asks for a grill id started for a different user
+- **THEN** the tool result is an error that the grill is not found
+- **AND** the error does not include the draft
+
+#### Scenario: Grill does not insert a note
+- **WHEN** a client starts a grill, answers, and finishes
+- **THEN** no Notes & TODOs row is written
+- **AND** `create_note` is still required to store the draft
+
+### Requirement: Grill tools declare the grill app
+`note_grill` MUST declare `_meta.ui.resourceUri` equal to `ui://dorph/grill`, with visibility that includes both the model and the app, and the same URI on the flat `_meta["ui/resourceUri"]` key. `whoami` MUST NOT declare a UI resource. `list_my_tasks`, `get_task`, and `create_note` MUST keep `_meta.ui.resourceUri` equal to `ui://dorph/notes`.
+
+#### Scenario: Grill tool points at the grill app
+- **WHEN** a client calls `tools/list` after initialize
+- **THEN** `note_grill` has `_meta.ui.resourceUri` `ui://dorph/grill`
+- **AND** that tool is visible to the model and to the app
+- **AND** `whoami` has no UI resource URI
+- **AND** `list_my_tasks`, `get_task`, and `create_note` still point at `ui://dorph/notes`
+
+### Requirement: Grill app HTML is closed
+`resources/read` of `ui://dorph/grill` MUST return one content item whose MIME type is `text/html;profile=mcp-app` and whose text is a single HTML document. That document MUST NOT contain an external URL (`http:`, `https:`, or a protocol-relative URL). It MUST NOT contain an HTML-sink assignment (`innerHTML`, `insertAdjacentHTML`, `outerHTML`, or `document.write`). It MUST include a content security policy that blocks external connections, frames, and objects. It MUST call `note_grill` by name through the host bridge (`tools/call`). It MUST use an Arial or equivalent sans-serif font stack on a dark background with light text. The document MUST NOT contain a session token, a JWT secret, or `DORPH_MCP_TOKEN`. The resource metadata MUST NOT name an external connect, script, or frame origin.
+
+#### Scenario: Read the grill app
+- **WHEN** a client calls `resources/read` for `ui://dorph/grill`
+- **THEN** the content MIME type is `text/html;profile=mcp-app`
+- **AND** the HTML names `note_grill` and `tools/call`
+- **AND** the HTML uses Arial or an equivalent sans-serif stack and a dark background
+- **AND** the HTML contains no external URL, no HTML-sink assignment, and no session token
+
+### Requirement: Unified notes tools take a kind
+The server MUST advertise `get_note`, `list_notes`, `update_note`, `append_to_note`, `archive_note`, and `search_my_notes` in addition to the existing tools. `create_note` MUST accept `kind` (`note`, `todo`, `big_note`, `timeline`, `research`, `stick`, `task`). When `kind` is omitted, `create_note` MUST keep creating a Notes & TODOs `note` and MUST still return an integer `id` so existing clients keep working. Unified get, update, append, and archive MUST accept an id of the form `kind:rowid`. Old tool names (`list_my_tasks`, `get_task`, `create_stick_note`, `list_stick_notes`, `get_stick_note`, `create_timeline`, `list_timelines`, `get_timeline`, `create_story`, `list_stories`, `get_story`, `create_research`, `list_research`, `get_research`) MUST remain as aliases. Every kind MUST be scoped to the token subject. Another user's id MUST be not found and MUST NOT say forbidden.
+
+#### Scenario: Create each kind then get as owner
+- **WHEN** the caller creates one record of each kind
+- **THEN** `get_note` with that `kind:id` returns the caller's title
+- **AND** another user's `get_note` for the same id is not found
+
+#### Scenario: Omitted kind stays a note
+- **WHEN** a client calls `create_note` with only title and body
+- **THEN** a `user_note_todo` note is stored
+- **AND** the result includes an integer `id`
+
+#### Scenario: Alias still lists stick notes
+- **WHEN** the caller created a stick note through `create_note` with kind `stick`
+- **THEN** `list_stick_notes` includes that row for the owner
+- **AND** another user does not see it
+
+### Requirement: Create is idempotent when a key is sent
+`create_note` MUST accept optional `idempotency_key`. A second create for the same owner and key MUST return the existing record and MUST NOT insert another row.
+
+#### Scenario: Same key returns the same id
+- **WHEN** the caller creates a note twice with the same idempotency key
+- **THEN** both results name the same record
+- **AND** only one row exists
+
+### Requirement: Update honors expected_version
+`update_note` MUST apply the patch only when `expected_version` is omitted or matches the stored version. A mismatch MUST be `conflict` and MUST NOT change the row. A successful update MUST increment version.
+
+#### Scenario: Stale version is conflict
+- **WHEN** the caller updates with an expected_version that is not the current version
+- **THEN** the result is `conflict`
+- **AND** the stored body is unchanged
+
+### Requirement: Archive is a soft delete
+`archive_note` MUST set `archived_at` on the owner's record. Later `get_note`, `list_notes`, and `search_my_notes` MUST treat that id as not found. Another user's archive MUST be not found.
+
+#### Scenario: Archived note disappears
+- **WHEN** the owner archives `note:id`
+- **THEN** `get_note` for that id is not found
+- **AND** `list_notes` does not include it
+
+### Requirement: Tags and search are owner only
+Notes MAY carry lowercase tags (at most 10, each at most 32 characters). `search_my_notes` MUST search only the caller's unarchived notes with a sanitized FTS query. Another user's title or body MUST NOT appear. A malformed query MUST NOT raise a database error; it MUST return an empty page or `invalid_input`.
+
+#### Scenario: Search does not leak
+- **WHEN** user A and user B each have a note that matches the query
+- **THEN** A's `search_my_notes` returns only A's hit
+- **AND** the result does not include B's title or body
+
+#### Scenario: Quoted junk is safe
+- **WHEN** the query contains FTS operators or quotes
+- **THEN** the tool returns an empty page or `invalid_input`
+- **AND** the process stays up
+
+### Requirement: Stick and task rows have an owner
+`CaseTask` rows MUST store `owner_user_id`. Existing rows MUST be backfilled to the first Admin plat user, or the oldest plat user when no Admin exists. MCP list, get, create, update, append, and archive for kinds `stick` and `task` MUST constrain that column to the token subject. The admin CaseTask HTTP list MUST still return every row so the existing board does not go empty for the admin.
+
+#### Scenario: Other user cannot get a stick note
+- **WHEN** user A created a stick note
+- **THEN** user B's `get_stick_note` and `get_note` for that id are not found
+
+#### Scenario: Admin list still returns legacy rows
+- **WHEN** the migration has backfilled existing CaseTask rows
+- **THEN** `GET /api/tran/case-tasks` still returns those rows
+- **AND** the response still includes title and dates
+
+### Requirement: Whoami reports token scopes
+`whoami` MUST include the token's scopes. For a PAT it MUST also include the token expiry when one is stored. A session JWT MUST be treated as having at least `notes:read` and `notes:write`.
+
+#### Scenario: PAT whoami
+- **WHEN** the process is a PAT with `notes:read` and `notes:write`
+- **THEN** `whoami` lists those scopes
+- **AND** it includes an expiry when the token has one
+
+### Requirement: Pool and share tools are advertised
+`tools/list` MUST include `preview_share`, `share_note`, `unshare_note`, `list_my_shares`, `pool_topics`, `pool_search`, `pool_get`, `pool_save_copy`, and `pool_report`. `pool_topics`, `pool_search`, and `pool_get` MUST be marked read-only. Share writes MUST require `pool:publish`. Pool reads MUST require `pool:read`. `pool_save_copy` MUST require `pool:read` and `notes:write`.
+
+#### Scenario: Handshake lists pool tools
+- **WHEN** a client calls `tools/list` after initialize
+- **THEN** the nine pool tools are present
+- **AND** `pool_search` is marked read-only

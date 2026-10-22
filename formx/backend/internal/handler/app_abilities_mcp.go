@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// FormsXAppAbilitiesMCP documents Morph AI generation abilities for FormsX (web-grounded form templates).
+// FormsXAppAbilitiesMCP documents Dorph AI generation abilities for FormsX (web-grounded form templates).
 func (h *Handler) FormsXAppAbilitiesMCP(c *gin.Context) {
 	base := "/api/v1"
 	c.JSON(http.StatusOK, gin.H{
 		"service":     "formsx-app-abilities",
-		"description": "Morph AI app abilities for FormsX: web-grounded form HTML templates, question suggestions, and public web research.",
+		"description": "Dorph AI app abilities for FormsX: web-grounded form HTML templates, question suggestions, and public web research.",
 		"tools": []gin.H{
 			{
 				"name":        "formsx_web_search",
