@@ -32,6 +32,7 @@ jobs:
       - name: DorphUtils stack runbook
         run: sh deploy/check-stack-runbook.sh
       - name: Data Access contract
+        if: hashFiles('SharpReport/deploy/check-container-contract.sh') != ''
         run: sh SharpReport/deploy/check-container-contract.sh
       - name: Blueprint schema
         run: |

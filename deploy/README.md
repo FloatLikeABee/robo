@@ -179,6 +179,17 @@ Dorph AI opens DorphNotes in a modal. That UI embeds Event Logs, Content Maker, 
 | `REACT_APP_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
 | `REACT_APP_PROJECTS_URL` (alias `REACT_APP_DORPH_ENGI_URL`) | Project | `https://<dorph-engi public host>` | `https://dorph-engi.onrender.com` | |
 
+### 6. Env matrix for the DorphUtils embeds
+
+Set these `VITE_*` keys on `dorph-utils`. Story #114 wires them. The Blueprint lists each as a dashboard prompt with no value in git. They are read when the DorphUtils container starts, so a later change does not require a DorphUtils image rebuild. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name.
+
+| Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
+|-----|---------|-------------|--------------------------------------------------|-----------------|
+| `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
+| `VITE_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
+| `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
+| `VITE_PROJECTS_URL` (alias `VITE_DORPH_ENGI_URL`) | Project | `https://<dorph-engi public host>` | `https://dorph-engi.onrender.com` | |
+
 ### Shared Dorph session
 
 The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. The DorphNotes modal passes the Dorph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.

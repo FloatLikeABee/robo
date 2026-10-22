@@ -146,7 +146,7 @@ func sqliteRenameTableIfLegacy(db *sql.DB, oldName, newName string) error {
 	return err
 }
 
-func renameLegacyMorphTables(db *sql.DB) error {
+func renameLegacyTables(db *sql.DB) error {
 	for _, p := range [][2]string{
 		{"morph_knowledge_files", "dorph_knowledge_files"},
 		{"morph_knowledge_chunks", "dorph_knowledge_chunks"},

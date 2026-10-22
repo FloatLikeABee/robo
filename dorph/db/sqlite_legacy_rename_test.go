@@ -2,7 +2,7 @@ package db
 
 import "testing"
 
-func TestRenameLegacyMorphTablesMovesKnowledge(t *testing.T) {
+func TestRenameLegacyTablesMovesKnowledge(t *testing.T) {
 	sqlDB := openMemorySQLite(t)
 	if _, err := sqlDB.Exec(`
 		CREATE TABLE morph_knowledge_files (
@@ -38,7 +38,7 @@ func TestRenameLegacyMorphTablesMovesKnowledge(t *testing.T) {
 	}
 }
 
-func TestRenameLegacyMorphTablesDropsEmptyNewTable(t *testing.T) {
+func TestRenameLegacyTablesDropsEmptyNewTable(t *testing.T) {
 	sqlDB := openMemorySQLite(t)
 	if _, err := sqlDB.Exec(`CREATE TABLE morph_agent_context_cache (user_id TEXT, session_id TEXT, fingerprint TEXT, blob TEXT, updated_at TEXT, PRIMARY KEY (user_id, session_id))`); err != nil {
 		t.Fatal(err)
