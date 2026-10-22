@@ -10,7 +10,7 @@ Bridge A landed PATs and owner-scoped notes. Agents still cannot publish a snaps
 - A rule-based secret/PII scanner blocks a share when it finds secrets or personal data.
 - In-process rate limits. `pool_report` auto-hides a share after three distinct reporters.
 - No pool web page. Stick notes may be shared. Anyone with `pool:read` may `pool_get` a live share id.
-- `docs/agents/16-morph-for-agents.md` and the embedded `agent_guide.md` drop "phase 1B" markers.
+- `docs/agents/16-dorph-for-agents.md` and the embedded `agent_guide.md` drop "phase 1B" markers.
 
 Out of scope: subscribe/feed/mute, `update_share`, admin queue, MCP Apps share/pool UI, HTTP/OAuth, LLM classifier.
 
@@ -22,11 +22,11 @@ Out of scope: subscribe/feed/mute, `update_share`, admin queue, MCP Apps share/p
 
 ### Modified Capabilities
 
-- `morph-mcp-stdio`: Advertise the nine pool tools. Do not reuse `ExposeRecord` for pool reads.
-- `morph-for-agents`: Pool tools are current, not "coming in phase 1B". Stick notes may be shared.
+- `dorph-mcp-stdio`: Advertise the nine pool tools. Do not reuse `ExposeRecord` for pool reads.
+- `dorph-for-agents`: Pool tools are current, not "coming in phase 1B". Stick notes may be shared.
 
 ## Impact
 
-- Schema: `pool_*` tables, `plat_users.pool_alias`. morph-mcp does not migrate.
-- `morph/mcp` share/pool tools. Scanner and in-process limiter.
-- Docs: `16-morph-for-agents.md` and `morph/mcp/agent_guide.md` (must stay identical).
+- Schema: `pool_*` tables, `plat_users.pool_alias`. dorph-mcp does not migrate.
+- `dorph/mcp` share/pool tools. Scanner and in-process limiter.
+- Docs: `16-dorph-for-agents.md` and `dorph/mcp/agent_guide.md` (must stay identical).

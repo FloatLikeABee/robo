@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dev launcher for robo platform apps.
-# Folders: morph, morph-utils, formx, composerx, morph-engi, SharpReport, bk.
+# Folders: dorph, dorph-utils, formx, composerx, dorph-engi, SharpReport, bk.
 #
 # Usage:
 #   ./start-all.sh                         start everything (foreground; Ctrl+C stops all)
@@ -21,15 +21,15 @@
 # npm are not left listening or holding the Badger lock. The next start waits
 # until that service's port is free. PID 0, PID 1, and an empty PID are never
 # signaled. A listener this launcher did not record is stopped as that
-# process tree only, never as a process group. morph-api start and restart
+# process tree only, never as a process group. dorph-api start and restart
 # wait until /health succeeds. Service names match exactly (not as a regex).
 # Port checks use lsof and warn if it is missing.
 #
-# Aliases (API + UI): morph, bk, formx, composerx, morph-engi — or `all` for the
-#   default stack below. morph-utils and sharpreport stay startable by name and
+# Aliases (API + UI): dorph, bk, formx, composerx, dorph-engi — or `all` for the
+#   default stack below. dorph-utils and sharpreport stay startable by name and
 #   are not part of `all`.
 # Neo4j: full-stack start/restart ensures bolt port 7687 is up when `neo4j` CLI exists.
-# Auth: hosted by Morph (the standalone UsersPanel project has been removed).
+# Auth: hosted by Dorph (the standalone UsersPanel project has been removed).
 #
 set -euo pipefail
 
@@ -40,19 +40,19 @@ PID_FILE="${RUN_DIR}/pids"
 # Warn once per process when port checks cannot see listeners.
 LSOF_MISSING_WARNED=0
 
-# Default stack — auth + user admin live in Morph (UsersPanel project removed).
+# Default stack — auth + user admin live in Dorph (UsersPanel project removed).
 ALL_SERVICES=(
-  morph-api
+  dorph-api
   formx-api
   composerx-api
-  morph-engi-api
+  dorph-engi-api
   bk-api
-  morph-ui
+  dorph-ui
   invite-signup-ui
   bk-ui
   formx-ui
   composerx-ui
-  morph-engi-ui
+  dorph-engi-ui
 )
 
 RED='\033[0;31m'
@@ -91,16 +91,72 @@ apply_dotenv() {
   done <"$envfile"
 }
 
+# Copy MORPH_* / REACT_APP_MORPH_* / VITE_MORPH_* into the DORPH names when
+# the new name is empty, so children that only read DORPH_* still work.
+alias_legacy_env() {
+  local oldpre newpre key newkey
+  for oldpre in REACT_APP_MORPH_ VITE_MORPH_ MORPH_; do
+    case "$oldpre" in
+      REACT_APP_MORPH_) newpre=REACT_APP_DORPH_ ;;
+      VITE_MORPH_) newpre=VITE_DORPH_ ;;
+      MORPH_) newpre=DORPH_ ;;
+    esac
+    for key in $(compgen -v "$oldpre" 2>/dev/null || true); do
+      newkey="${newpre}${key#$oldpre}"
+      if [[ -z "${!newkey:-}" ]]; then
+        printf -v "$newkey" '%s' "${!key}"
+        export "$newkey"
+      fi
+    done
+  done
+}
+
+# git mv leaves untracked files in the old trees. Move when the dest path is
+# free. Leave and warn when both exist (do not clobber dorph/data).
+migrate_one_legacy_dir() {
+  local src="$1" dest="$2" f base
+  [[ -d "$src" ]] || return 0
+  mkdir -p "$dest"
+  for f in "$src"/*; do
+    [[ -e "$f" ]] || continue
+    base="${f##*/}"
+    if [[ -e "$dest/$base" ]]; then
+      if [[ "$base" == data || "$base" == *.db || "$base" == *.sqlite ]]; then
+        warn "leftover ${src}/${base} not moved; ${dest}/${base} already exists"
+      fi
+      continue
+    fi
+    mv "$f" "$dest/$base"
+  done
+  rmdir "$src" 2>/dev/null || true
+}
+
+migrate_legacy_dirs() {
+  migrate_one_legacy_dir "${ROOT}/morph" "${ROOT}/dorph"
+  migrate_one_legacy_dir "${ROOT}/morph-utils" "${ROOT}/dorph-utils"
+  migrate_one_legacy_dir "${ROOT}/morph-engi" "${ROOT}/dorph-engi"
+  migrate_one_legacy_dir "${ROOT}/morphgraph-worker" "${ROOT}/dorphgraph-worker"
+  migrate_one_legacy_dir "${ROOT}/pkg/morphai" "${ROOT}/pkg/dorphai"
+  migrate_one_legacy_dir "${ROOT}/pkg/morphai-rs" "${ROOT}/pkg/dorphai-rs"
+  migrate_one_legacy_dir "${ROOT}/pkg/morphgraph" "${ROOT}/pkg/dorphgraph"
+  migrate_one_legacy_dir "${ROOT}/agent-pack/morph" "${ROOT}/agent-pack/dorph"
+  if [[ -f "${ROOT}/dorph-engi/morph_engi.db" && ! -e "${ROOT}/dorph-engi/dorph_engi.db" ]]; then
+    mv "${ROOT}/dorph-engi/morph_engi.db" "${ROOT}/dorph-engi/dorph_engi.db"
+  fi
+}
+
 # Single local config: repo-root .env only (nested app .env files are ignored).
 load_root_env() {
   apply_dotenv "${ROOT}/.env"
+  alias_legacy_env
+  migrate_legacy_dirs
 }
 
-ensure_morph_binary() {
+ensure_dorph_binary() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
-    log "Building morph-api (macOS — avoids BadgerDB LC_UUID issue)..."
+    log "Building dorph-api (macOS — avoids BadgerDB LC_UUID issue)..."
     ensure_run_dirs
-    (cd "${ROOT}/morph" && go build -o "${RUN_DIR}/morph-server" .)
+    (cd "${ROOT}/dorph" && go build -o "${RUN_DIR}/dorph-server" .)
   fi
 }
 
@@ -413,9 +469,9 @@ service_port() {
     return 0
   fi
   case "$name" in
-    morph-api)          printf '%s\n' "${PORT:-9090}" ;;
-    morph-ui)           printf '%s\n' 3031 ;;
-    morph-utils-ui)     printf '%s\n' 3040 ;;
+    dorph-api|morph-api)          printf '%s\n' "${PORT:-9090}" ;;
+    dorph-ui|morph-ui)            printf '%s\n' 3031 ;;
+    dorph-utils-ui|morph-utils-ui) printf '%s\n' 3040 ;;
     invite-signup-ui)   printf '%s\n' 3051 ;;
     bk-api)             printf '%s\n' 8000 ;;
     bk-ui)              printf '%s\n' 3000 ;;
@@ -423,8 +479,8 @@ service_port() {
     formx-ui)           printf '%s\n' 19909 ;;
     composerx-api)      printf '%s\n' 8043 ;;
     composerx-ui)       printf '%s\n' 8044 ;;
-    morph-engi-api)     printf '%s\n' 9096 ;;
-    morph-engi-ui)      printf '%s\n' 5179 ;;
+    dorph-engi-api|morph-engi-api) printf '%s\n' 9096 ;;
+    dorph-engi-ui|morph-engi-ui)   printf '%s\n' 5179 ;;
     sharpreport-api)    printf '%s\n' "${SHARPREPORT_PORT:-3050}" ;;
     sharpreport-ui)     printf '%s\n' 5178 ;;
     *)                  return 0 ;;
@@ -441,7 +497,7 @@ ensure_neo4j() {
     return 0
   fi
   if ! command -v neo4j >/dev/null 2>&1; then
-    warn "Neo4j not installed (port 7687 closed). Morph graph features may be unavailable."
+    warn "Neo4j not installed (port 7687 closed). Dorph graph features may be unavailable."
     return 0
   fi
   log "Starting Neo4j (bolt port 7687)..."
@@ -586,44 +642,44 @@ stop_service() {
   fi
 }
 
-# morph-api restart is not done until GET /health succeeds.
-wait_morph_api_healthy() {
+# dorph-api restart is not done until GET /health succeeds.
+wait_dorph_api_healthy() {
   local port url i=0 attempts interval
-  port="$(service_port morph-api)"
+  port="$(service_port dorph-api)"
   url="http://127.0.0.1:${port}/health"
   attempts="${START_ALL_HEALTH_ATTEMPTS:-90}"
   interval="${START_ALL_HEALTH_INTERVAL:-1}"
   if ! command -v curl >/dev/null 2>&1; then
-    err "curl is not installed; cannot confirm morph-api is healthy at ${url}"
+    err "curl is not installed; cannot confirm dorph-api is healthy at ${url}"
     return 1
   fi
   while [[ "$i" -lt "$attempts" ]]; do
     if curl -fsS --max-time 2 "$url" >/dev/null 2>&1; then
-      ok "morph-api healthy (${url})"
+      ok "dorph-api healthy (${url})"
       return 0
     fi
-    if ! pid_of morph-api >/dev/null; then
-      err "morph-api exited before ${url} returned success"
+    if ! pid_of dorph-api >/dev/null; then
+      err "dorph-api exited before ${url} returned success"
       return 1
     fi
     sleep "$interval"
     i=$((i + 1))
   done
-  err "morph-api did not become healthy at ${url}"
+  err "dorph-api did not become healthy at ${url}"
   return 1
 }
 
 start_one() {
   local name="$1"
   case "$name" in
-    morph-api)
-      ensure_morph_binary
+    dorph-api)
+      ensure_dorph_binary
       if [[ "$(uname -s)" == "Darwin" ]]; then
-        start_service morph-api "${ROOT}/morph" "${RUN_DIR}/morph-server"
+        start_service dorph-api "${ROOT}/dorph" "${RUN_DIR}/dorph-server"
       else
-        start_service morph-api "${ROOT}/morph" go run main.go
+        start_service dorph-api "${ROOT}/dorph" go run main.go
       fi
-      wait_morph_api_healthy
+      wait_dorph_api_healthy
       ;;
     formx-api)
       load_root_env
@@ -642,8 +698,8 @@ start_one() {
         start_service composerx-api "${ROOT}/composerx/backend" go run .
       fi
       ;;
-    morph-engi-api)
-      start_service morph-engi-api "${ROOT}/morph-engi/backend" cargo run
+    dorph-engi-api)
+      start_service dorph-engi-api "${ROOT}/dorph-engi/backend" cargo run
       ;;
     bk-api)
       ensure_bk_venv || { err "bk-api: Python environment not ready"; return 1; }
@@ -652,11 +708,11 @@ start_one() {
     sharpreport-api)
       start_service sharpreport-api "${ROOT}/SharpReport/backend" cargo run
       ;;
-    morph-ui)
-      start_service morph-ui "${ROOT}/morph/frontend" npm start
+    dorph-ui)
+      start_service dorph-ui "${ROOT}/dorph/frontend" npm start
       ;;
-    morph-utils-ui)
-      start_service morph-utils-ui "${ROOT}/morph-utils/frontend" npm run dev
+    dorph-utils-ui)
+      start_service dorph-utils-ui "${ROOT}/dorph-utils/frontend" npm run dev
       ;;
     invite-signup-ui)
       start_service invite-signup-ui "${ROOT}/invite-signup/frontend" npm run dev
@@ -670,8 +726,8 @@ start_one() {
     composerx-ui)
       start_service composerx-ui "${ROOT}/composerx/frontend" npm run dev
       ;;
-    morph-engi-ui)
-      start_service morph-engi-ui "${ROOT}/morph-engi/frontend" npm run dev
+    dorph-engi-ui)
+      start_service dorph-engi-ui "${ROOT}/dorph-engi/frontend" npm run dev
       ;;
     sharpreport-ui)
       start_service sharpreport-ui "${ROOT}/SharpReport/frontend" npm run dev
@@ -695,11 +751,20 @@ resolve_services() {
     all|"")
       echo "${ALL_SERVICES[*]}"
       ;;
-    morph)
-      echo "morph-api morph-ui"
+    dorph|morph)
+      echo "dorph-api dorph-ui"
       ;;
-    morph-utils|utils)
-      echo "morph-utils-ui sharpreport-api sharpreport-ui"
+    morph-api)
+      echo "dorph-api"
+      ;;
+    morph-ui)
+      echo "dorph-ui"
+      ;;
+    dorph-utils|utils|morph-utils)
+      echo "dorph-utils-ui sharpreport-api sharpreport-ui"
+      ;;
+    morph-utils-ui)
+      echo "dorph-utils-ui"
       ;;
     bk|ground-control)
       echo "bk-api bk-ui"
@@ -710,8 +775,14 @@ resolve_services() {
     composerx|tranmail)
       echo "composerx-api composerx-ui"
       ;;
-    morph-engi|engi)
-      echo "morph-engi-api morph-engi-ui"
+    dorph-engi|engi|morph-engi)
+      echo "dorph-engi-api dorph-engi-ui"
+      ;;
+    morph-engi-api)
+      echo "dorph-engi-api"
+      ;;
+    morph-engi-ui)
+      echo "dorph-engi-ui"
       ;;
     sharpreport|datapulse)
       echo "sharpreport-api sharpreport-ui"
@@ -772,9 +843,9 @@ stop_all() {
 
 service_url() {
   case "$1" in
-    morph-api)          echo "http://localhost:${PORT:-9090}" ;;
-    morph-ui)           echo "http://localhost:3031" ;;
-    morph-utils-ui)     echo "http://localhost:3040" ;;
+    dorph-api|morph-api)          echo "http://localhost:${PORT:-9090}" ;;
+    dorph-ui|morph-ui)            echo "http://localhost:3031" ;;
+    dorph-utils-ui|morph-utils-ui) echo "http://localhost:3040" ;;
     invite-signup-ui)   echo "http://localhost:3051" ;;
     bk-api)             echo "http://localhost:8000/docs" ;;
     bk-ui)              echo "http://localhost:3000" ;;
@@ -782,8 +853,8 @@ service_url() {
     formx-ui)           echo "http://localhost:19909" ;;
     composerx-api)      echo "http://localhost:8043/health" ;;
     composerx-ui)       echo "http://localhost:8044" ;;
-    morph-engi-api)     echo "http://127.0.0.1:9096/health" ;;
-    morph-engi-ui)      echo "http://localhost:5179" ;;
+    dorph-engi-api|morph-engi-api) echo "http://127.0.0.1:9096/health" ;;
+    dorph-engi-ui|morph-engi-ui)   echo "http://localhost:5179" ;;
     sharpreport-api)    echo "http://127.0.0.1:${SHARPREPORT_PORT:-3050}" ;;
     sharpreport-ui)     echo "http://localhost:5178" ;;
     *)                  echo "" ;;
@@ -812,33 +883,33 @@ print_list() {
   cat <<'EOF'
 Services (use with start | stop | restart | logs):
 
-  morph-api            Morph / MorphData backend
-  morph-ui             Morph React frontend
-  morph-utils-ui       leftover shell, not started by `all`
+  dorph-api            Dorph / DorphData backend
+  dorph-ui             Dorph React frontend
+  dorph-utils-ui       leftover shell, not started by `all`
   invite-signup-ui     Invite Signup (admin codes + user redeem)
-  bk-api               MorphTools API
-  bk-ui                MorphTools UI
+  bk-api               DorphTools API
+  bk-ui                DorphTools UI
   formx-api            Event Logs backend
   formx-ui             Event Logs frontend
   composerx-api        Content Maker backend
   composerx-ui         Content Maker frontend
-  morph-engi-api       Project API (Rust)
-  morph-engi-ui        Project frontend (Svelte)
+  dorph-engi-api       Project API (Rust)
+  dorph-engi-ui        Project frontend (Svelte)
   sharpreport-api      Data Access backend (not started by `all`)
   sharpreport-ui       Data Access frontend (not started by `all`)
 
 Aliases (API + UI together):
 
-  morph, bk, formx, composerx, morph-engi
-  morph-utils, sharpreport   leftover; not part of `all`
-  all                  default stack (Morph, Event Logs, Content Maker, Project, MorphTools)
+  dorph, bk, formx, composerx, dorph-engi
+  dorph-utils, sharpreport   leftover; not part of `all`
+  all                  default stack (Dorph, Event Logs, Content Maker, Project, DorphTools)
 
 Examples:
 
   ./start-all.sh restart              # stop + start everything
   ./start-all.sh stop                 # stop everything
   ./start-all.sh start                # start everything
-  ./start-all.sh restart morph
+  ./start-all.sh restart dorph
   ./start-all.sh restart formx-api
   ./start-all.sh logs composerx-ui
   ./start-all.sh status
@@ -847,18 +918,18 @@ EOF
 
 do_install() {
   log "Installing dependencies..."
-  (cd "${ROOT}/morph/frontend" && npm install)
-  (cd "${ROOT}/morph-utils/frontend" && npm install)
+  (cd "${ROOT}/dorph/frontend" && npm install)
+  (cd "${ROOT}/dorph-utils/frontend" && npm install)
   (cd "${ROOT}/invite-signup/frontend" && npm install)
   (cd "${ROOT}/bk/frontend" && npm install)
   ensure_bk_venv || warn "bk-api Python deps not installed — run: python3 -m venv bk/.venv && bk/.venv/bin/pip install -r bk/requirements.txt"
-  (cd "${ROOT}/morph" && go mod download)
+  (cd "${ROOT}/dorph" && go mod download)
   (cd "${ROOT}/formx/frontend" && npm install)
   (cd "${ROOT}/formx/backend" && go mod download)
   (cd "${ROOT}/composerx/frontend" && npm install)
   (cd "${ROOT}/composerx/backend" && go mod download)
-  (cd "${ROOT}/morph-engi/frontend" && npm install)
-  (cd "${ROOT}/morph-engi/backend" && cargo fetch)
+  (cd "${ROOT}/dorph-engi/frontend" && npm install)
+  (cd "${ROOT}/dorph-engi/backend" && cargo fetch)
   (cd "${ROOT}/SharpReport/frontend" && npm install)
   (cd "${ROOT}/SharpReport/backend" && cargo fetch)
   ok "Dependencies ready"

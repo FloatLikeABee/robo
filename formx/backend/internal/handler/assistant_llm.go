@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/formsx/backend/internal/models"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const formsXAssistantInstructions = `You are SheetX AI for the SheetX form/sheet builder.
@@ -52,10 +52,10 @@ Tools:
 After TOOL_RESULT: summarize in markdown. Another tool → JSON only. No tool → markdown only.
 Do not invent ids. List before detail lookups.
 
-` + morphai.VisualFirstInstructions
+` + dorphai.VisualFirstInstructions
 
 const formsXToolMaxRounds = 8
-const formsXMaxToolResultRunes = morphai.DefaultToolResultMaxRunes
+const formsXMaxToolResultRunes = dorphai.DefaultToolResultMaxRunes
 
 type formsXToolCall struct {
 	Tool string                 `json:"tool"`
@@ -64,7 +64,7 @@ type formsXToolCall struct {
 
 func (h *Handler) chatWithFormsXLLM(ctx context.Context, req assistantChatRequest, lastUser string) (string, any, error) {
 	if h.AI == nil || !h.AI.Configured() {
-		return "", nil, fmt.Errorf("MorphAI not configured")
+		return "", nil, fmt.Errorf("DorphAI not configured")
 	}
 
 	first := formsXAssistantInstructions
@@ -76,7 +76,7 @@ func (h *Handler) chatWithFormsXLLM(ctx context.Context, req assistantChatReques
 	}
 	first += "\n\nLatest user message:\n" + lastUser
 
-	messages := []morphai.Message{{Role: "user", Content: first}}
+	messages := []dorphai.Message{{Role: "user", Content: first}}
 	var lastRecord any
 
 	for round := 0; round < formsXToolMaxRounds; round++ {
@@ -89,7 +89,7 @@ func (h *Handler) chatWithFormsXLLM(ctx context.Context, req assistantChatReques
 			return "", nil, fmt.Errorf("empty model response")
 		}
 
-		obj, ok := morphai.ExtractJSONObject(reply)
+		obj, ok := dorphai.ExtractJSONObject(reply)
 		if !ok {
 			return reply, lastRecord, nil
 		}
@@ -107,11 +107,11 @@ func (h *Handler) chatWithFormsXLLM(ctx context.Context, req assistantChatReques
 		if execErr != nil {
 			toolMsg += " error=" + execErr.Error()
 		} else {
-			toolMsg += "\n" + morphai.TruncateRunes(result, formsXMaxToolResultRunes)
+			toolMsg += "\n" + dorphai.TruncateRunes(result, formsXMaxToolResultRunes)
 		}
 
-		followUp := morphai.ToolFollowUpPrompt(toolMsg)
-		messages = append(messages, morphai.Message{Role: "user", Content: followUp})
+		followUp := dorphai.ToolFollowUpPrompt(toolMsg)
+		messages = append(messages, dorphai.Message{Role: "user", Content: followUp})
 	}
 
 	return "I hit the tool limit while gathering data. Please narrow your question or try again.", lastRecord, nil
@@ -119,8 +119,8 @@ func (h *Handler) chatWithFormsXLLM(ctx context.Context, req assistantChatReques
 
 func formatAssistantHistory(messages []assistantMessage) string {
 	start := 0
-	if len(messages) > morphai.DefaultHistoryMaxMessages {
-		start = len(messages) - morphai.DefaultHistoryMaxMessages
+	if len(messages) > dorphai.DefaultHistoryMaxMessages {
+		start = len(messages) - dorphai.DefaultHistoryMaxMessages
 	}
 	var b strings.Builder
 	for _, m := range messages[start:] {
@@ -128,7 +128,7 @@ func formatAssistantHistory(messages []assistantMessage) string {
 		if role != "user" && role != "assistant" {
 			continue
 		}
-		content := morphai.TruncateHistoryContent(m.Content, morphai.DefaultHistoryMaxRunes)
+		content := dorphai.TruncateHistoryContent(m.Content, dorphai.DefaultHistoryMaxRunes)
 		if content == "" {
 			continue
 		}

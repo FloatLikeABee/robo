@@ -1,7 +1,7 @@
 ## 1. Reply shape
 
 - [x] 1.1 Replace the visual-first sentence with `ReplyShapeInstructions` and keep `VisualFirstInstructions` as that same text. Add `ModelIdentityInstructions` and a client helper that reports the resolved provider and model even when the key is missing.
-- [x] 1.2 Prefix Morph chat and `GenerateChatResponseWithAgent` with the reply shape and the identity line. Keep the tool catalog. State that label fields and JSON tool calls are only for a real data call.
+- [x] 1.2 Prefix Dorph chat and `GenerateChatResponseWithAgent` with the reply shape and the identity line. Keep the tool catalog. State that label fields and JSON tool calls are only for a real data call.
 - [x] 1.3 Drop Graphs from always-on skills. Use code defaults for Research and Design, and replace a stored always-on body that still says diagram-first, visual-first, or short caption. Give Graphs its own opt-in sentence.
 - [x] 1.4 Point note and TODO text assist, case-task drafts, and research compose at the reply shape, and remove lines that invite a mermaid diagram on every body.
 - [x] 1.5 Update prompt tests so they require the reply-shape rule and the identity line, and reject a diagram-first or invented-version instruction.
@@ -21,4 +21,4 @@
 
 ## 4. Checks
 
-- [x] 4.1 Run the Go tests for `pkg/morphai` and the touched Morph handlers, and the Morph frontend unit tests that cover the pane.
+- [x] 4.1 Run the Go tests for `pkg/dorphai` and the touched Dorph handlers, and the Dorph frontend unit tests that cover the pane.

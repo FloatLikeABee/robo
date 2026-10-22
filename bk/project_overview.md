@@ -4,7 +4,7 @@
 AI tools (`bk/`)
 
 ## Description
-A Retrieval-Augmented Generation (RAG) workbench for assistants and knowledge collections. It does not implement the Model Context Protocol. The platform MCP server is the Morph Go program `morph/cmd/morph-mcp`.
+A Retrieval-Augmented Generation (RAG) workbench for assistants and knowledge collections. It does not implement the Model Context Protocol. The platform MCP server is the Dorph Go program `dorph/cmd/dorph-mcp`.
 
 ## Key Features
 
@@ -31,7 +31,7 @@ A Retrieval-Augmented Generation (RAG) workbench for assistants and knowledge co
 - **Custom Tools**: Extensible tool system for custom functionality
 
 ### Model Context Protocol
-AI tools does not start a TCP or WebSocket MCP server. Connect clients to `morph/cmd/morph-mcp`.
+AI tools does not start a TCP or WebSocket MCP server. Connect clients to `dorph/cmd/dorph-mcp`.
 
 ### 🎨 Modern UI
 - **React + Material-UI**: Beautiful, responsive web interface

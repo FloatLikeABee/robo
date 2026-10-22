@@ -1,14 +1,14 @@
 ## Purpose
 
-Packages Content Maker's API and UI as one image so an operator can start that app, keep its data on a single volume, and supply secrets only through the environment. Health does not call Morph or MorphUtils.
+Packages Content Maker's API and UI as one image so an operator can start that app, keep its data on a single volume, and supply secrets only through the environment. Health does not call Dorph or DorphUtils.
 
 ## ADDED Requirements
 
 ### Requirement: One image serves the Content Maker API and UI
-The repository MUST provide a container image that contains the Content Maker API binary and the production build of the Content Maker UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Data Access, Project, AI tools, Morph, MorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `COMPOSERX_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `8043`. `GET /health` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Morph or MorphUtils. When `COMPOSERX_UI_DIR` points at a directory that contains `index.html`, `GET /` MUST return that UI document without authentication. API routes other than `/health`, `/auth/`, and `/public/` MUST still require authentication. A local checkout that does not set `COMPOSERX_UI_DIR` MUST NOT serve that UI from the API process.
+The repository MUST provide a container image that contains the Content Maker API binary and the production build of the Content Maker UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Data Access, Project, AI tools, Dorph, DorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `COMPOSERX_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `8043`. `GET /health` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Dorph or DorphUtils. When `COMPOSERX_UI_DIR` points at a directory that contains `index.html`, `GET /` MUST return that UI document without authentication. API routes other than `/health`, `/auth/`, and `/public/` MUST still require authentication. A local checkout that does not set `COMPOSERX_UI_DIR` MUST NOT serve that UI from the API process.
 
-#### Scenario: Health does not depend on MorphUtils
-- **WHEN** the image is running and Morph and MorphUtils are not reachable
+#### Scenario: Health does not depend on DorphUtils
+- **WHEN** the image is running and Dorph and DorphUtils are not reachable
 - **THEN** `GET /health` returns HTTP 200
 - **AND** the JSON body has `"status": "ok"`
 
@@ -37,15 +37,15 @@ The image MUST default `COMPOSERX_SQLITE_PATH`, `COMPOSERX_BADGER_PATH`, and `TR
 - **AND** file storage still defaults to `./storage`
 
 ### Requirement: Secrets come from the environment only
-The image build MUST NOT copy `.env` files or `ai.config.json`, and MUST NOT accept secrets as build arguments. The production UI build inside the image MUST set `VITE_API_BASE` empty so the UI calls the same origin. A committed example MUST list `USERS_PANEL_BASE_URL`, `MORPH_AI_API_KEY`, and `TRAN_OPENAI_API_KEY` by name and MUST NOT contain a usable key or a guessed public host.
+The image build MUST NOT copy `.env` files or `ai.config.json`, and MUST NOT accept secrets as build arguments. The production UI build inside the image MUST set `VITE_API_BASE` empty so the UI calls the same origin. A committed example MUST list `USERS_PANEL_BASE_URL`, `DORPH_AI_API_KEY`, and `TRAN_OPENAI_API_KEY` by name and MUST NOT contain a usable key or a guessed public host.
 
 #### Scenario: Example env has no real secret
 - **WHEN** a reviewer reads the committed Content Maker production env example
-- **THEN** `MORPH_AI_API_KEY` and `TRAN_OPENAI_API_KEY` are empty
-- **AND** `USERS_PANEL_BASE_URL` is empty or a placeholder the runbook tells the operator to replace with `https://<morph public host>`
+- **THEN** `DORPH_AI_API_KEY` and `TRAN_OPENAI_API_KEY` are empty
+- **AND** `USERS_PANEL_BASE_URL` is empty or a placeholder the runbook tells the operator to replace with `https://<dorph public host>`
 
 ### Requirement: Operators have a short runbook
-`composerx/backend/README.md` and `docs/agents/05-composerx.md` MUST describe how to build and run the image, which env vars the process reads, that `USERS_PANEL_BASE_URL` is the Morph auth base URL, and that `GET /health` does not call Morph. `docs/agents/12-build-deploy.md` MUST point at that image. The runbook MUST NOT tell the operator to follow `scripts/deploy.sh`.
+`composerx/backend/README.md` and `docs/agents/05-composerx.md` MUST describe how to build and run the image, which env vars the process reads, that `USERS_PANEL_BASE_URL` is the Dorph auth base URL, and that `GET /health` does not call Dorph. `docs/agents/12-build-deploy.md` MUST point at that image. The runbook MUST NOT tell the operator to follow `scripts/deploy.sh`.
 
 #### Scenario: Reader can run the image without Render
 - **WHEN** a reader follows the Content Maker image section

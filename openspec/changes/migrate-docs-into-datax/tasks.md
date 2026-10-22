@@ -24,9 +24,9 @@
 - [x] 4.3 When analysis prompt is present, run AI analysis and include it in the published HTML; when absent, publish display only
 - [x] 4.4 Remove or redirect Docs Board/community feed primary entry to the publish flow
 
-## 5. Morph Utils cleanup
+## 5. Dorph Utils cleanup
 
-- [x] 5.1 Remove `docs` from Morph Utils module list; update login/settings copy
+- [x] 5.1 Remove `docs` from Dorph Utils module list; update login/settings copy
 - [x] 5.2 Redirect legacy Utils `/docs` and `/academi` into DataX Docs
 - [x] 5.3 Point any Docs embed env/docs to DataX Docs path
 
@@ -34,4 +34,4 @@
 
 - [x] 6.1 Smoke DataX: Docs library, AI two-pane sessions, PDF/TXT attach; data import still CSV/JSON
 - [x] 6.2 Smoke publish HTML with and without analysis prompt; Board not primary
-- [x] 6.3 Smoke Morph Utils: no Docs module; legacy Docs path lands in DataX Docs
+- [x] 6.3 Smoke Dorph Utils: no Docs module; legacy Docs path lands in DataX Docs

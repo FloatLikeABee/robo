@@ -1,9 +1,9 @@
-## 1. MorphNotes / Morph AI
+## 1. DorphNotes / Dorph AI
 
 - [x] 1.1 Remove `window.alert` / `window.confirm` fallback from `ConfirmDialog.jsx` `useConfirm` (dev warn only)
 - [x] 1.2 Migrate `SkillsModal.js` delete flow to `useConfirm({ danger: true })`
 
-## 2. Project (morph-engi)
+## 2. Project (dorph-engi)
 
 - [x] 2.1 Add `lib/confirmDialog.ts` + root `ConfirmDialog.svelte` (confirm + alert)
 - [x] 2.2 Replace `confirm()` in `App.svelte` and `ProjectDocumentPanel.svelte`
@@ -31,4 +31,4 @@
 ## 7. Verification
 
 - [x] 7.1 Grep supported product `src/` trees: no `window.alert`, `window.confirm`, `window.prompt`, or bare `confirm(` / `alert(` except in dialog helper implementations
-- [x] 7.2 Smoke: delete confirm in Project, Content Maker draft delete, MorphNotes Skills delete, AI tools assistant delete — all in-app modals
+- [x] 7.2 Smoke: delete confirm in Project, Content Maker draft delete, DorphNotes Skills delete, AI tools assistant delete — all in-app modals

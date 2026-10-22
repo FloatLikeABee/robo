@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Packages the Data Access API and UI as one image an operator can start locally, with health checks that do not call Morph and with secrets only from the environment.
+Packages the Data Access API and UI as one image an operator can start locally, with health checks that do not call Dorph and with secrets only from the environment.
 
 ## Requirements
 
 ### Requirement: One image serves the Data Access API and UI
-The repository MUST provide a container image that contains the Data Access API binary and the production build of the Data Access UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Content Maker, Project, AI tools, Morph, MorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `SHARPREPORT_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `3050`. `GET /health` and `GET /ready` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Morph or MorphUtils. When the UI directory is set and contains `index.html`, `GET /` MUST return that UI document without authentication. `GET /api/v1/health` MUST still return HTTP 200. A local checkout that does not set the UI directory MUST keep the debug redirect from `GET /` to the Vite dev server.
+The repository MUST provide a container image that contains the Data Access API binary and the production build of the Data Access UI. That image MUST be the only application process for this capability. It MUST NOT include Event Logs, Content Maker, Project, AI tools, Dorph, DorphUtils, or Invite Signup. The process MUST listen on all interfaces. The listen port MUST be `SHARPREPORT_PORT` when that variable is non-empty, otherwise `PORT`, otherwise `3050`. `GET /health` and `GET /ready` MUST return HTTP 200 and a JSON body whose `status` is `ok`, and MUST NOT call Dorph or DorphUtils. When the UI directory is set and contains `index.html`, `GET /` MUST return that UI document without authentication. `GET /api/v1/health` MUST still return HTTP 200. A local checkout that does not set the UI directory MUST keep the debug redirect from `GET /` to the Vite dev server.
 
-#### Scenario: Health and ready do not call Morph
-- **WHEN** the image is running and Morph is not reachable
+#### Scenario: Health and ready do not call Dorph
+- **WHEN** the image is running and Dorph is not reachable
 - **THEN** `GET /health` returns HTTP 200 and `{"status":"ok"}`
 - **AND** `GET /ready` returns HTTP 200 and `{"status":"ok"}`
 
@@ -44,16 +44,16 @@ The image build MUST NOT copy `.env` files or accept secrets as build arguments.
 - **WHEN** a reviewer reads the committed production env example
 - **THEN** `JWT_SECRET` and `USERS_PANEL_BASE_URL` are empty
 
-#### Scenario: Health does not need the Morph origin
+#### Scenario: Health does not need the Dorph origin
 - **WHEN** the container starts without `USERS_PANEL_BASE_URL`
 - **THEN** `GET /health` still returns HTTP 200
 
 ### Requirement: Operators have a short runbook
-`SharpReport/README.md` and `docs/agents/07-rust-apps.md` MUST describe how to build and run the image, which env vars the process reads, that `USERS_PANEL_BASE_URL` is the Morph auth base URL, and that `GET /health` does not call Morph. `docs/agents/12-build-deploy.md` MUST point at that image. The runbook MUST NOT tell the operator to follow `scripts/deploy.sh`.
+`SharpReport/README.md` and `docs/agents/07-rust-apps.md` MUST describe how to build and run the image, which env vars the process reads, that `USERS_PANEL_BASE_URL` is the Dorph auth base URL, and that `GET /health` does not call Dorph. `docs/agents/12-build-deploy.md` MUST point at that image. The runbook MUST NOT tell the operator to follow `scripts/deploy.sh`.
 
-#### Scenario: Reader finds the Morph auth base URL
+#### Scenario: Reader finds the Dorph auth base URL
 - **WHEN** a reader opens the Data Access deploy notes
-- **THEN** they see `USERS_PANEL_BASE_URL` documented as the Morph auth base URL with no invented host
+- **THEN** they see `USERS_PANEL_BASE_URL` documented as the Dorph auth base URL with no invented host
 - **AND** the steps do not run `scripts/deploy.sh`
 
 ### Requirement: Startup can read SQL migrations from the working directory

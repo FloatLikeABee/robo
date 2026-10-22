@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines how uploaded files are turned into AI-readable text across Morph apps: which file types are accepted, what limits apply, how PDFs and images are read, and how failures are reported so a partial upload never silently produces an empty result.
+Defines how uploaded files are turned into AI-readable text across Dorph apps: which file types are accepted, what limits apply, how PDFs and images are read, and how failures are reported so a partial upload never silently produces an empty result.
 
 ## ADDED Requirements
 
@@ -117,7 +117,7 @@ When no AI credentials are configured, the system SHALL reject ingestion request
 
 #### Scenario: AI is not configured
 
-- **WHEN** an ingestion request is made and `MORPH_AI_API_KEY` is unset
+- **WHEN** an ingestion request is made and `DORPH_AI_API_KEY` is unset
 - **THEN** the request fails with HTTP 503 and a message stating that AI is not configured
 
 ### Requirement: Per-file result reporting

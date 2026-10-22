@@ -6,7 +6,7 @@ Makes stored markdown and in-app HTML document previews show the same mermaid di
 
 ### Requirement: Markdown documents render mermaid
 
-In-app markdown previews for MorphNotes Research and related notes, Project documents, Content Maker markdown, and Data Access analysis MUST draw mermaid fences as dark-theme diagrams.
+In-app markdown previews for DorphNotes Research and related notes, Project documents, Content Maker markdown, and Data Access analysis MUST draw mermaid fences as dark-theme diagrams.
 
 #### Scenario: Research or Project markdown with mermaid
 
@@ -21,7 +21,7 @@ In-app markdown previews for MorphNotes Research and related notes, Project docu
 
 ### Requirement: HTML previews include live diagrams
 
-In-app HTML document previews (MorphNotes HTML tabs, Project HTML, Content Maker HTML preview) MUST draw mermaid diagrams present in that HTML. Email clients and other non-preview HTML sinks are not required to run mermaid.
+In-app HTML document previews (DorphNotes HTML tabs, Project HTML, Content Maker HTML preview) MUST draw mermaid diagrams present in that HTML. Email clients and other non-preview HTML sinks are not required to run mermaid.
 
 #### Scenario: HTML iframe preview
 

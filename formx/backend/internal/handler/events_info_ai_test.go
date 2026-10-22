@@ -11,11 +11,11 @@ import (
 
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 func TestEventInfoAIDraftRouteIsRegistered(t *testing.T) {
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	r := gin.New()
 	h.Register(r.Group(""))
 
@@ -53,7 +53,7 @@ func TestEventInfoAIDraftRouteIsRegistered(t *testing.T) {
 
 func TestDraftEventInfoAIRequiresPrompt(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{AI: morphai.NewClient(morphai.Config{APIKey: "k", BaseURL: morphai.DefaultBaseURL})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{APIKey: "k", BaseURL: dorphai.DefaultBaseURL})}
 	r := gin.New()
 	r.POST("/events-info/ai-draft", h.DraftEventInfoAI)
 
@@ -68,7 +68,7 @@ func TestDraftEventInfoAIRequiresPrompt(t *testing.T) {
 
 func TestDraftEventInfoAIReportsUnconfigured(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	r := gin.New()
 	r.POST("/events-info/ai-draft", h.DraftEventInfoAI)
 
@@ -83,7 +83,7 @@ func TestDraftEventInfoAIReportsUnconfigured(t *testing.T) {
 
 func TestIngestEventInfoAIRequiresSource(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{AI: morphai.NewClient(morphai.Config{APIKey: "k", BaseURL: morphai.DefaultBaseURL})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{APIKey: "k", BaseURL: dorphai.DefaultBaseURL})}
 	r := gin.New()
 	r.POST("/events-info/ai-ingest", h.IngestEventInfoAI)
 
@@ -117,7 +117,7 @@ func TestEventIngestTextFromBytesPrettyPrintsJSON(t *testing.T) {
 
 func TestIngestEventInfoAIReportsUnconfigured(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	r := gin.New()
 	r.POST("/events-info/ai-ingest", h.IngestEventInfoAI)
 
@@ -132,7 +132,7 @@ func TestIngestEventInfoAIReportsUnconfigured(t *testing.T) {
 
 func TestIngestEventInfoAIRejectsUnsupportedType(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{AI: morphai.NewClient(morphai.Config{})}
+	h := &Handler{AI: dorphai.NewClient(dorphai.Config{})}
 	r := gin.New()
 	r.POST("/events-info/ai-ingest", h.IngestEventInfoAI)
 

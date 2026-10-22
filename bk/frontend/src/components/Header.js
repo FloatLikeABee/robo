@@ -81,7 +81,7 @@ const Header = () => {
             textShadow: (t) => `0 0 30px ${alpha(t.palette.primary.main, 0.5)}`,
           }}
         >
-          {t('morphTools')}
+          {t('dorphTools')}
         </Typography>
 
         {isMobile ? (

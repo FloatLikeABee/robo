@@ -1,0 +1,28 @@
+> **Superseded** by `dorphai-drop-files-workspace`. This change specified Dorph AI's IndexedDB Files workspace (local folder, pins, Files tab). That behavior was removed. Do not re-implement it, and do not sync these delta specs into `openspec/specs/`.
+
+## Why
+
+Dorph AI Files treats the opened folder as throwaway UI state: refresh loses it, switching chat sessions does not restore that session’s folder and pins, and a long hint explains a workflow the user already understands. The conversation and the files should stay one workspace.
+
+## What Changes
+
+- Bind the Files folder (and pins) to the **current chat session**. Switching sessions restores that session’s workspace folder and pins; opening a folder in a session keeps it as that session’s workspace until the user closes it or opens another folder there.
+- Persist the workspace across browser reloads when the browser allows (directory handle + permission), so the chosen folder remains the workspace without picking it again.
+- Keep a **recent folders** list so the user can reopen a previously used folder without hunting through the system picker.
+- **Remove** the Files hint: “Open a local folder to browse files. Pin files to include them in the agent. Dorph never writes to this folder.” Empty state stays short (actions + recents, not a tutorial).
+- Dorph still MUST NOT write to the local folder. Embedded DorphNotes chat (`singleSession`) stays without this Files workspace.
+
+## Capabilities
+
+### New Capabilities
+
+- `dorphai-files-session-workspace`: Per-session Files folder that persists as the workspace, with a recent-folder list for quick reopen, and no instructional Files lede.
+
+### Modified Capabilities
+
+- (none — `dorphai-agent-workspace` lives only on a prior change, not under `openspec/specs/`)
+
+## Impact
+
+- Dorph AI frontend: `AgentFilesTab.jsx`, `AgentWorkspace.jsx`, `SkoolAiChat.js` (folder/pin state is currently global, not keyed by `sessionId`)
+- Browser storage for directory handles and recents (IndexedDB / File System Access); no Dorph API change required for folder bytes

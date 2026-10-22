@@ -1,6 +1,6 @@
 ## Why
 
-Choosing skills in Morph AI chat does not reliably steer the reply. Assistants and RAG collections can only be applied from the AI tools panels, so the operator leaves the composer to attach the thing they want the next message to use.
+Choosing skills in Dorph AI chat does not reliably steer the reply. Assistants and RAG collections can only be applied from the AI tools panels, so the operator leaves the composer to attach the thing they want the next message to use.
 
 ## What Changes
 
@@ -23,7 +23,7 @@ Choosing skills in Morph AI chat does not reliably steer the reply. Assistants a
 
 ## Impact
 
-- Morph AI composer: `SkoolAiChat.js` and the skills picker UI.
-- Chat handler: `handlers/chat.go`, `handlers/skills.go`, `handlers/bk_assistants.go`. New list route for RAG collections if `/api/ai-agents` is the assistant list and RAG has no Morph route yet.
+- Dorph AI composer: `SkoolAiChat.js` and the skills picker UI.
+- Chat handler: `handlers/chat.go`, `handlers/skills.go`, `handlers/bk_assistants.go`. New list route for RAG collections if `/api/ai-agents` is the assistant list and RAG has no Dorph route yet.
 - AI tools assistant panel: remove Apply in `bk/frontend` `AssistantManager.js`.
 - No new database. No Files workspace. Data Access stays out.

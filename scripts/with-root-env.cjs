@@ -53,12 +53,57 @@ function loadEnvFile(filePath) {
   }
 }
 
-const root = findRepoRoot(__dirname);
-if (root) {
-  loadEnvFile(path.join(root, '.env'));
+function aliasLegacyEnv(env) {
+  for (const [key, val] of Object.entries(env)) {
+    let newKey = '';
+    if (key.startsWith('REACT_APP_MORPH_')) {
+      newKey = 'REACT_APP_DORPH_' + key.slice('REACT_APP_MORPH_'.length);
+    } else if (key.startsWith('VITE_MORPH_')) {
+      newKey = 'VITE_DORPH_' + key.slice('VITE_MORPH_'.length);
+    } else if (key.startsWith('MORPH_')) {
+      newKey = 'DORPH_' + key.slice('MORPH_'.length);
+    }
+    if (!newKey) continue;
+    if (env[newKey] !== undefined && String(env[newKey]).trim() !== '') continue;
+    env[newKey] = val;
+  }
+}
+
+function selfCheck() {
+  const prefer = { DORPH_AI_API_KEY: 'new', MORPH_AI_API_KEY: 'old' };
+  aliasLegacyEnv(prefer);
+  if (prefer.DORPH_AI_API_KEY !== 'new') {
+    throw new Error('DORPH_ must win when both are set');
+  }
+  const fallback = { MORPH_AI_API_KEY: 'old' };
+  aliasLegacyEnv(fallback);
+  if (fallback.DORPH_AI_API_KEY !== 'old') {
+    throw new Error('MORPH_ must copy into DORPH_ when the new name is empty');
+  }
+  const vite = { VITE_MORPH_AI_URL: 'http://old' };
+  aliasLegacyEnv(vite);
+  if (vite.VITE_DORPH_AI_URL !== 'http://old') {
+    throw new Error('VITE_MORPH_ must copy into VITE_DORPH_');
+  }
+  const cra = { REACT_APP_MORPH_UTILS_URL: 'http://old' };
+  aliasLegacyEnv(cra);
+  if (cra.REACT_APP_DORPH_UTILS_URL !== 'http://old') {
+    throw new Error('REACT_APP_MORPH_ must copy into REACT_APP_DORPH_');
+  }
 }
 
 const args = process.argv.slice(2);
+if (args[0] === '--self-check') {
+  selfCheck();
+  process.exit(0);
+}
+
+const root = findRepoRoot(__dirname);
+if (root) {
+  loadEnvFile(path.join(root, '.env'));
+  aliasLegacyEnv(process.env);
+}
+
 if (!args.length) {
   console.error('usage: with-root-env.cjs <command> [args...]');
   process.exit(1);

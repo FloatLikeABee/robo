@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Parser unwraps backtick-quoted values
-When a model JSON object uses JS backticks around a string value instead of JSON quotes, Morph MUST unwrap that value into a JSON string and parse the object. The stored markdown MUST be the inner document, not the envelope.
+When a model JSON object uses JS backticks around a string value instead of JSON quotes, Dorph MUST unwrap that value into a JSON string and parse the object. The stored markdown MUST be the inner document, not the envelope.
 
 #### Scenario: Backtick-wrapped markdown field
 - **WHEN** the model returns `{"title":"Weekly Review Habit Guide","markdown": `## Setting Up...`}`

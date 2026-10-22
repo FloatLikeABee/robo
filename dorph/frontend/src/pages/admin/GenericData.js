@@ -1,0 +1,1094 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Drawer,
+  IconButton,
+  LinearProgress,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+  alpha,
+  useTheme,
+} from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import axios from 'axios';
+import { tranApi, tranEndpoints } from '../../api/tranClient';
+import { API_BASE_URL as API_BASE } from '../../apiBase';
+import { getDorphToken } from '../../auth/dorphSession';
+import { RecordSheetJsonDetail } from '../../components/admin/jsonDetailViews';
+import { usePlatformUi } from '../../PlatformUiContext';
+import { useConfirm } from '../../components/ConfirmDialog';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
+import {
+  ADMIN_RIGHT_PANEL_TOP,
+  adminRightPanelHeightCalc,
+} from '../../components/admin/adminRightPanelStyle';
+
+const markdownArticleSx = {
+  '& h1, & h2, & h3, & h4': { mt: 1.5, mb: 0.75, fontWeight: 700, lineHeight: 1.25 },
+  '& h1': { fontSize: '1.75rem', letterSpacing: '-0.02em' },
+  '& h2': { fontSize: '1.25rem' },
+  '& h3': { fontSize: '1.05rem' },
+  '& p': { my: 0.85, lineHeight: 1.65 },
+  '& ul, & ol': { my: 0.85, pl: 2.5 },
+  '& li': { my: 0.35 },
+  '& blockquote': {
+    my: 1.25,
+    pl: 2,
+    borderLeft: 4,
+    borderColor: 'primary.main',
+    color: 'text.secondary',
+    fontStyle: 'italic',
+  },
+  '& code': {
+    fontFamily: 'ui-monospace, monospace',
+    fontSize: '0.9em',
+    px: 0.5,
+    py: 0.15,
+    borderRadius: 0.75,
+    bgcolor: 'action.hover',
+  },
+  '& pre': { my: 1, p: 1.5, borderRadius: 1.5, overflow: 'auto', bgcolor: 'action.hover' },
+  '& table': { width: '100%', borderCollapse: 'collapse', my: 1.25 },
+  '& th, & td': { border: 1, borderColor: 'divider', px: 1, py: 0.5, fontSize: '0.875rem' },
+  '& th': { bgcolor: 'action.hover', fontWeight: 600 },
+  '& hr': { my: 2, borderColor: 'divider' },
+  '& a': { color: 'primary.main' },
+};
+
+function parseDetail(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(String(raw));
+  } catch {
+    return null;
+  }
+}
+
+function sourceTypeIcon(type) {
+  switch (type) {
+    case 'csv':
+      return <TableChartOutlinedIcon fontSize="small" />;
+    case 'pdf':
+      return <PictureAsPdfOutlinedIcon fontSize="small" />;
+    case 'json':
+      return <DataObjectOutlinedIcon fontSize="small" />;
+    default:
+      return <InsertDriveFileOutlinedIcon fontSize="small" />;
+  }
+}
+
+function sourceTypeColor(type) {
+  switch (type) {
+    case 'csv':
+      return 'success';
+    case 'pdf':
+      return 'error';
+    case 'json':
+      return 'info';
+    default:
+      return 'default';
+  }
+}
+
+function formatWhen(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function GenericDataMarkdownView({ markdown, articleTitle, onChange, onSave, saving }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 2, sm: 3 },
+        borderRadius: 2,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        maxWidth: 820,
+        mx: 'auto',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 280,
+      }}
+    >
+      {articleTitle && (
+        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.2 }}>
+          Article
+        </Typography>
+      )}
+      <MarkdownEditor value={markdown} onChange={onChange} minRows={10} hint={false} />
+      {onSave ? (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={onSave}
+          disabled={saving}
+          sx={{ mt: 1, alignSelf: 'flex-start', textTransform: 'none' }}
+        >
+          {saving ? 'Saving…' : 'Save markdown'}
+        </Button>
+      ) : null}
+    </Paper>
+  );
+}
+
+function GenericDataJsonView({ payload }) {
+  return (
+    <Stack spacing={1.5} sx={{ width: '100%', minWidth: 0 }}>
+      <Chip
+        size="small"
+        icon={<DataObjectOutlinedIcon />}
+        label="JSON structure"
+        color="info"
+        variant="outlined"
+        sx={{ alignSelf: 'flex-start' }}
+      />
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+        }}
+      >
+        <Box sx={{ width: '100%', minWidth: 0 }}>
+          <RecordSheetJsonDetail raw={payload} />
+        </Box>
+      </Paper>
+    </Stack>
+  );
+}
+
+function GenericDataContentView({ record, markdown, onMarkdownChange, onMarkdownSave, markdownSaving }) {
+  const detail = parseDetail(record?.detail);
+  const sourceType = record?.source_type;
+
+  if (!detail) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No imported content yet.
+      </Typography>
+    );
+  }
+
+  const md =
+    markdown != null
+      ? markdown
+      : typeof detail.content_markdown === 'string'
+        ? detail.content_markdown
+        : '';
+  const colKeys = detail.columns || [];
+  const hasTable = Array.isArray(colKeys) && colKeys.length > 0;
+  const jsonPayload =
+    detail.payload !== undefined
+      ? detail.payload
+      : !hasTable && !md
+        ? detail
+        : sourceType === 'json' && !hasTable
+          ? Object.fromEntries(
+              Object.entries(detail).filter(
+                ([k]) => !['content_markdown', 'import_meta', 'article_title'].includes(k)
+              )
+            )
+          : null;
+  const showJson =
+    jsonPayload != null &&
+    (typeof jsonPayload !== 'object' ||
+      jsonPayload === null ||
+      Array.isArray(jsonPayload) ||
+      Object.keys(jsonPayload).length > 0);
+
+  return (
+    <Stack spacing={2.5} sx={{ width: '100%', minWidth: 0 }}>
+      {hasTable && (
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            <Chip size="small" label={`${(detail.rows || []).length} rows`} color="success" variant="outlined" />
+            <Chip size="small" label={`${colKeys.length} columns`} variant="outlined" />
+            {detail.import_meta?.truncated && (
+              <Chip size="small" color="warning" label={`Truncated at ${detail.import_meta?.max_rows || 'limit'}`} />
+            )}
+          </Stack>
+          <Paper variant="outlined" sx={{ height: 420, width: '100%' }}>
+            <DataGrid
+              rows={(detail.rows || []).map((row, idx) => {
+                const out = { id: idx + 1 };
+                colKeys.forEach((col, i) => {
+                  out[`c${i}`] = row?.[col] ?? '';
+                });
+                return out;
+              })}
+              columns={colKeys.map((col, i) => ({
+                field: `c${i}`,
+                headerName: String(col),
+                flex: 1,
+                minWidth: 120,
+              }))}
+              density="compact"
+              disableRowSelectionOnClick
+              pageSizeOptions={[25, 50, 100]}
+              initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+              sx={{ border: 0 }}
+            />
+          </Paper>
+        </Stack>
+      )}
+      {showJson && <GenericDataJsonView payload={jsonPayload} />}
+      {md || onMarkdownChange ? (
+        <GenericDataMarkdownView
+          markdown={md}
+          articleTitle={detail.article_title}
+          onChange={onMarkdownChange}
+          onSave={onMarkdownSave}
+          saving={markdownSaving}
+        />
+      ) : null}
+      {!hasTable && !showJson && !md ? (
+        <Typography variant="body2" color="text.secondary">
+          No imported content yet.
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
+function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord }) {
+  const theme = useTheme();
+
+  return (
+    <Stack spacing={2}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          border: 1,
+          borderColor: alpha(theme.palette.primary.main, 0.35),
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(
+            theme.palette.secondary.main,
+            0.06
+          )} 100%)`,
+        }}
+      >
+        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha(theme.palette.primary.main, 0.15),
+              color: 'primary.main',
+              flexShrink: 0,
+            }}
+          >
+            <AutoAwesomeOutlinedIcon />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle1" fontWeight={700}>
+              Dorph AI analysis
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              Summarize patterns, flag data quality issues, and suggest next steps from your imported material.
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeOutlinedIcon />}
+              onClick={onAnalyze}
+              disabled={!hasRecord || loading}
+              sx={{ mt: 1.5, textTransform: 'none', borderRadius: 2 }}
+            >
+              {loading ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Run AI analysis'}
+            </Button>
+          </Box>
+        </Stack>
+      </Paper>
+
+      {loading && <LinearProgress sx={{ borderRadius: 1 }} />}
+
+      {analysis ? (
+        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+          <Box sx={markdownArticleSx}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysis}</ReactMarkdown>
+          </Box>
+        </Paper>
+      ) : (
+        !loading && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            No analysis yet — save a record and run Dorph AI to get insights.
+          </Typography>
+        )
+      )}
+    </Stack>
+  );
+}
+
+function ImportDialog({ open, onClose, onImported }) {
+  const [mode, setMode] = useState('file');
+  const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [pasteText, setPasteText] = useState('');
+  const [extractedJson, setExtractedJson] = useState('');
+  const [extractedMarkdown, setExtractedMarkdown] = useState('');
+  const [extractSourceType, setExtractSourceType] = useState('json');
+  const [extractFilename, setExtractFilename] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) {
+      setMode('file');
+      setFile(null);
+      setTitle('');
+      setDescription('');
+      setPasteText('');
+      setExtractedJson('');
+      setExtractedMarkdown('');
+      setExtractSourceType('json');
+      setExtractFilename('');
+      setError(null);
+      setDragOver(false);
+    }
+  }, [open]);
+
+  const pickFile = (f) => {
+    if (!f) return;
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (!['csv', 'xlsx', 'json', 'pdf', 'md', 'markdown'].includes(ext)) {
+      setError('Use a .csv, .xlsx, .json, .pdf, or .md file');
+      return;
+    }
+    setFile(f);
+    setExtractedJson('');
+    setExtractedMarkdown('');
+    setExtractSourceType('json');
+    setExtractFilename(f.name);
+    setError(null);
+    if (!title) setTitle(f.name.replace(/\.[^.]+$/, ''));
+  };
+
+  const wrapDetail = (parsed, markdown) => {
+    let detail;
+    if (parsed == null || typeof parsed !== 'object') {
+      detail = { payload: parsed };
+    } else if (Array.isArray(parsed)) {
+      detail = { payload: parsed };
+    } else {
+      detail = { ...parsed };
+    }
+    if (markdown != null) {
+      detail.content_markdown = markdown;
+    }
+    return detail;
+  };
+
+  const extractPaste = async () => {
+    if (!pasteText.trim()) {
+      setError('Paste some text to extract');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await tranApi.post(tranEndpoints.extractJson, {
+        text: pasteText.trim(),
+        purpose: 'generic_data',
+      });
+      const obj = res.data?.json;
+      if (obj == null || typeof obj !== 'object') {
+        throw new Error('AI did not return JSON');
+      }
+      setExtractedJson(JSON.stringify(obj, null, 2));
+      if (!title.trim()) {
+        const first = pasteText.trim().split('\n')[0].slice(0, 80);
+        setTitle(first || 'Extracted data');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Extract failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const extractFile = async () => {
+    if (!file) {
+      setError('Choose a file to extract');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      if (title.trim()) fd.append('title', title.trim());
+      const token = getDorphToken();
+      const res = await axios.post(`${API_BASE}${tranEndpoints.genericDataExtract}`, fd, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 300000,
+      });
+      const obj = res.data?.json;
+      if (obj == null) {
+        throw new Error(res.data?.error || 'Extract is unavailable for this file');
+      }
+      setExtractedJson(JSON.stringify(obj, null, 2));
+      setExtractedMarkdown(typeof res.data?.markdown === 'string' ? res.data.markdown : '');
+      if (res.data?.source_type) setExtractSourceType(res.data.source_type);
+      if (res.data?.filename) setExtractFilename(res.data.filename);
+      if (res.data?.title && !title.trim()) setTitle(res.data.title);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Extract failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!extractedJson.trim()) {
+        setError(mode === 'file' ? 'Extract JSON and Markdown first' : 'Extract JSON first');
+        setLoading(false);
+        return;
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(extractedJson);
+      } catch {
+        setError('JSON is not valid — fix it before saving');
+        setLoading(false);
+        return;
+      }
+      if (mode === 'paste') {
+        const res = await tranApi.post(tranEndpoints.genericData, {
+          title: title.trim() || 'Extracted data',
+          source_type: 'json',
+          description: description.trim() || undefined,
+          detail: parsed,
+        });
+        onImported(res.data);
+        onClose();
+        return;
+      }
+      const detail = wrapDetail(parsed, extractedMarkdown);
+      const res = await tranApi.post(tranEndpoints.genericData, {
+        title: title.trim() || 'Imported data',
+        source_type: extractSourceType || 'json',
+        source_filename: extractFilename || file?.name,
+        description: description.trim() || undefined,
+        detail,
+      });
+      onImported(res.data);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Save failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canSubmit = Boolean(extractedJson);
+
+  return (
+    <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+      <DialogTitle sx={{ fontWeight: 700 }}>Import generic data</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 0.5 }}>
+          <Tabs value={mode} onChange={(_, v) => setMode(v)} sx={{ minHeight: 42 }}>
+            <Tab value="file" label="File" sx={{ textTransform: 'none', minHeight: 42 }} />
+            <Tab value="paste" label="Paste text" sx={{ textTransform: 'none', minHeight: 42 }} />
+          </Tabs>
+          {mode === 'file' ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Upload CSV, Excel (.xlsx), JSON, PDF, or Markdown. Dorph AI extracts JSON and Markdown you can edit, then Save. Cancel does not create a record.
+              </Typography>
+              <Paper
+                variant="outlined"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  pickFile(e.dataTransfer.files?.[0]);
+                }}
+                onClick={() => inputRef.current?.click()}
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  borderStyle: 'dashed',
+                  borderWidth: 2,
+                  borderRadius: 2,
+                  borderColor: dragOver ? 'primary.main' : 'divider',
+                  bgcolor: dragOver ? 'action.hover' : 'background.default',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".csv,.xlsx,.json,.pdf,.md,.markdown,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json,application/pdf,text/markdown"
+                  hidden
+                  onChange={(e) => pickFile(e.target.files?.[0])}
+                />
+                <CloudUploadOutlinedIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                <Typography variant="subtitle2">{file ? file.name : 'Drop a file or click to browse'}</Typography>
+                <Stack direction="row" spacing={0.75} justifyContent="center" sx={{ mt: 1 }} flexWrap="wrap">
+                  {['CSV', 'XLSX', 'JSON', 'PDF', 'MD'].map((t) => (
+                    <Chip key={t} size="small" label={t} variant="outlined" />
+                  ))}
+                </Stack>
+              </Paper>
+              <Button
+                variant="outlined"
+                startIcon={loading ? <CircularProgress size={16} /> : <AutoAwesomeOutlinedIcon />}
+                onClick={extractFile}
+                disabled={loading || !file}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+              >
+                {loading ? 'Extracting…' : 'Extract JSON & Markdown'}
+              </Button>
+              {extractedJson ? (
+                <TextField
+                  label="JSON (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedJson}
+                  onChange={(e) => setExtractedJson(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+              {extractedJson || extractedMarkdown ? (
+                <TextField
+                  label="Markdown (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedMarkdown}
+                  onChange={(e) => setExtractedMarkdown(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Paste plain text. Dorph AI extracts JSON you can review, then save as generic data. Cancel does not create a record.
+              </Typography>
+              <TextField
+                label="Pasted text"
+                size="small"
+                fullWidth
+                multiline
+                minRows={5}
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+              />
+              <Button
+                variant="outlined"
+                startIcon={loading ? <CircularProgress size={16} /> : <AutoAwesomeOutlinedIcon />}
+                onClick={extractPaste}
+                disabled={loading}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+              >
+                {loading ? 'Extracting…' : 'Extract JSON'}
+              </Button>
+              {extractedJson ? (
+                <TextField
+                  label="JSON (editable)"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={8}
+                  value={extractedJson}
+                  onChange={(e) => setExtractedJson(e.target.value)}
+                  sx={{ '& .MuiInputBase-input': { fontFamily: 'ui-monospace, monospace', fontSize: 13 } }}
+                />
+              ) : null}
+            </>
+          )}
+          <TextField label="Title" size="small" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} />
+          <TextField
+            label="Description (optional)"
+            size="small"
+            fullWidth
+            multiline
+            minRows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={submit} disabled={loading || !canSubmit} sx={{ textTransform: 'none' }}>
+          {loading ? 'Saving…' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+export default function GenericData() {
+  const { confirm } = useConfirm();
+  const theme = useTheme();
+  const { labels } = usePlatformUi();
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState('content');
+  const [contentMd, setContentMd] = useState('');
+  const [savingMd, setSavingMd] = useState(false);
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  const [rowSelectionModel, setRowSelectionModel] = useState([]);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return tranApi
+      .get(tranEndpoints.genericData)
+      .then((res) => setRows(res.data || []))
+      .catch((err) => setError(err.response?.data?.error || err.message || 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openDetail = useCallback(async (id) => {
+    setSelectedId(id);
+    setDetailTab('content');
+    setActionError(null);
+    setDetailLoading(true);
+    try {
+      const res = await tranApi.get(tranEndpoints.genericDataFull(id));
+      setDetail(res.data || null);
+      const parsed = parseDetail(res.data?.detail);
+      setContentMd(typeof parsed?.content_markdown === 'string' ? parsed.content_markdown : '');
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Failed to load record');
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setDetail(null);
+    setContentMd('');
+    setActionError(null);
+  };
+
+  const saveContentMarkdown = async () => {
+    if (!detail?.id) return;
+    setSavingMd(true);
+    setActionError(null);
+    try {
+      const parsed = parseDetail(detail.detail) || {};
+      const next = { ...parsed, content_markdown: contentMd };
+      const res = await tranApi.put(tranEndpoints.genericDataItem(detail.id), { detail: next });
+      setDetail(res.data || detail);
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Failed to save markdown');
+    } finally {
+      setSavingMd(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    const ok = await confirm({
+      title: 'Delete record',
+      message: 'Delete this imported data record?',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await tranApi.delete(tranEndpoints.genericDataItem(selectedId));
+      closeDetail();
+      await load();
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Delete failed');
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (rowSelectionModel.length === 0) return;
+    setDeleteBusy(true);
+    setActionError(null);
+    try {
+      for (const id of rowSelectionModel) {
+        await tranApi.delete(tranEndpoints.genericDataItem(id));
+      }
+      if (selectedId != null && rowSelectionModel.includes(selectedId)) {
+        closeDetail();
+      }
+      setRowSelectionModel([]);
+      setBatchDeleteOpen(false);
+      await load();
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Delete failed');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!selectedId) return;
+    setAnalyzeLoading(true);
+    setActionError(null);
+    try {
+      const res = await tranApi.post(tranEndpoints.genericDataAnalyze(selectedId));
+      const analysis = res.data?.ai_analysis || '';
+      setDetail((prev) => (prev ? { ...prev, ai_analysis: analysis } : prev));
+      setRows((prev) => prev.map((r) => (r.id === selectedId ? { ...r, ai_analysis: analysis } : r)));
+      setDetailTab('analysis');
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message || 'Analysis failed');
+    } finally {
+      setAnalyzeLoading(false);
+    }
+  };
+
+  const gridColumns = useMemo(
+    () => [
+      {
+        field: 'title',
+        headerName: 'Title',
+        flex: 1.4,
+        minWidth: 200,
+      },
+      {
+        field: 'source_type',
+        headerName: 'Type',
+        width: 110,
+        renderCell: ({ value }) => (
+          <Chip
+            size="small"
+            icon={sourceTypeIcon(value)}
+            label={String(value || '').toUpperCase()}
+            color={sourceTypeColor(value)}
+            variant="outlined"
+            sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+          />
+        ),
+      },
+      {
+        field: 'source_filename',
+        headerName: 'File',
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (_v, row) => row?.source_filename || '—',
+      },
+      {
+        field: 'record_count',
+        headerName: 'Records',
+        width: 100,
+        type: 'number',
+      },
+      {
+        field: 'ai_analysis',
+        headerName: 'AI',
+        width: 72,
+        sortable: false,
+        renderCell: ({ row }) =>
+          row?.ai_analysis ? (
+            <Tooltip title="Analysis available">
+              <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
+            </Tooltip>
+          ) : (
+            '—'
+          ),
+      },
+      {
+        field: 'last_updated',
+        headerName: 'Updated',
+        width: 160,
+        valueGetter: (_v, row) => formatWhen(row?.last_updated),
+      },
+    ],
+    []
+  );
+
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  return (
+    <Box sx={{ width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          border: 1,
+          borderColor: 'divider',
+          background: `linear-gradient(120deg, ${alpha(theme.palette.primary.main, 0.06)} 0%, transparent 55%)`,
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between">
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: 2,
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: alpha(theme.palette.primary.main, 0.12),
+                color: 'primary.main',
+              }}
+            >
+              <DescriptionOutlinedIcon />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight={800} lineHeight={1.2}>
+                {labels.nav_generic_data || 'Generic data'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Import any CSV, Excel, JSON, PDF, or Markdown — extract JSON and Markdown, edit, then Save. Run AI analysis on the saved record.
+              </Typography>
+            </Box>
+          </Stack>
+          <Button
+            variant="contained"
+            startIcon={<CloudUploadOutlinedIcon />}
+            onClick={() => setImportOpen(true)}
+            sx={{ textTransform: 'none', borderRadius: 2, alignSelf: { xs: 'stretch', sm: 'auto' } }}
+          >
+            Import file
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ flex: 1, minHeight: 360, borderRadius: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {rowSelectionModel.length > 0 && (
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary">
+              {rowSelectionModel.length} selected
+            </Typography>
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              startIcon={<DeleteOutlineIcon />}
+              onClick={() => setBatchDeleteOpen(true)}
+              disabled={deleteBusy}
+            >
+              Delete selected
+            </Button>
+          </Stack>
+        )}
+        <DataGrid
+          rows={rows}
+          columns={gridColumns}
+          loading={loading}
+          getRowId={(r) => r.id}
+          checkboxSelection
+          checkboxSelectionVisibleOnly
+          rowSelectionModel={rowSelectionModel}
+          onRowSelectionModelChange={(model) => setRowSelectionModel(model)}
+          onRowClick={(params) => openDetail(params.id)}
+          disableRowSelectionOnClick
+          pageSizeOptions={[25, 50, 100]}
+          initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          sx={{
+            border: 0,
+            flex: 1,
+            minHeight: 0,
+            '& .MuiDataGrid-row': { cursor: 'pointer' },
+          }}
+        />
+      </Paper>
+
+      <Dialog open={batchDeleteOpen} onClose={() => !deleteBusy && setBatchDeleteOpen(false)}>
+        <DialogTitle>Delete {rowSelectionModel.length} records</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Delete {rowSelectionModel.length} imported data record{rowSelectionModel.length === 1 ? '' : 's'}? This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBatchDeleteOpen(false)} disabled={deleteBusy}>
+            Cancel
+          </Button>
+          <Button color="error" variant="contained" onClick={handleBatchDelete} disabled={deleteBusy}>
+            {deleteBusy ? 'Deleting…' : `Delete ${rowSelectionModel.length}`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(record) => {
+          load().then(() => {
+            if (record?.id) openDetail(record.id);
+          });
+        }}
+      />
+
+      <Drawer
+        anchor="right"
+        open={Boolean(selectedId)}
+        onClose={closeDetail}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: '66.666vw' },
+            maxWidth: '100%',
+            top: { xs: 0, sm: `${ADMIN_RIGHT_PANEL_TOP}px` },
+            height: { xs: '100%', sm: adminRightPanelHeightCalc },
+            maxHeight: { xs: '100%', sm: adminRightPanelHeightCalc },
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+          },
+        }}
+        ModalProps={{ keepMounted: false, disableScrollLock: true }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ minWidth: 0, pr: 1 }}>
+            <Typography variant="subtitle1" fontWeight={700} noWrap>
+              {detail?.title || 'Loading…'}
+            </Typography>
+            {detail && (
+              <Stack direction="row" spacing={0.75} sx={{ mt: 0.5 }} flexWrap="wrap">
+                <Chip
+                  size="small"
+                  icon={sourceTypeIcon(detail.source_type)}
+                  label={String(detail.source_type || '').toUpperCase()}
+                  color={sourceTypeColor(detail.source_type)}
+                  variant="outlined"
+                />
+                {detail.source_filename && (
+                  <Chip size="small" label={detail.source_filename} variant="outlined" sx={{ maxWidth: 220 }} />
+                )}
+              </Stack>
+            )}
+          </Box>
+          <Stack direction="row" spacing={0.5}>
+            <Tooltip title="Delete">
+              <IconButton size="small" onClick={handleDelete} disabled={!detail || detailLoading}>
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <IconButton size="small" onClick={closeDetail}>
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+        </Stack>
+
+        <Tabs
+          value={detailTab}
+          onChange={(_, v) => setDetailTab(v)}
+          sx={{ px: 2, borderBottom: 1, borderColor: 'divider', minHeight: 42 }}
+        >
+          <Tab value="content" label="Content" sx={{ textTransform: 'none', minHeight: 42 }} />
+          <Tab
+            value="analysis"
+            label={
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <span>AI analysis</span>
+                {detail?.ai_analysis && <AutoAwesomeOutlinedIcon sx={{ fontSize: 14, color: 'primary.main' }} />}
+              </Stack>
+            }
+            sx={{ textTransform: 'none', minHeight: 42 }}
+          />
+        </Tabs>
+
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2.5 }}>
+          {actionError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setActionError(null)}>
+              {actionError}
+            </Alert>
+          )}
+          {detailLoading ? (
+            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : detailTab === 'content' ? (
+            <Stack spacing={2.5} sx={{ width: '100%', minWidth: 0 }}>
+              {detail?.description && (
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Description
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {detail.description}
+                  </Typography>
+                </Paper>
+              )}
+              <GenericDataContentView
+                record={detail}
+                markdown={contentMd}
+                onMarkdownChange={setContentMd}
+                onMarkdownSave={saveContentMarkdown}
+                markdownSaving={savingMd}
+              />
+            </Stack>
+          ) : (
+            <AiAnalysisPanel
+              analysis={detail?.ai_analysis}
+              loading={analyzeLoading}
+              onAnalyze={handleAnalyze}
+              hasRecord={Boolean(detail)}
+            />
+          )}
+        </Box>
+      </Drawer>
+    </Box>
+  );
+}

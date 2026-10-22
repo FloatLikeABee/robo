@@ -5,16 +5,16 @@ Defines how the local dev launcher stops and restarts a service so a forked chil
 ## ADDED Requirements
 
 ### Requirement: Restart clears the previous listener before bind
-The launcher SHALL stop the previous process and its children before the replacement process binds the service port. After `restart` of Morph API, exactly one listener SHALL remain on that service's port.
+The launcher SHALL stop the previous process and its children before the replacement process binds the service port. After `restart` of Dorph API, exactly one listener SHALL remain on that service's port.
 
-#### Scenario: Morph API restart
-- **WHEN** Morph API is running via the launcher and the operator runs restart for that service
+#### Scenario: Dorph API restart
+- **WHEN** Dorph API is running via the launcher and the operator runs restart for that service
 - **THEN** the previous listener on port 9090 is gone before the new process binds
 - **AND** restart waits until `GET /health` succeeds
-- **AND** status reports a single healthy Morph API
+- **AND** status reports a single healthy Dorph API
 
 #### Scenario: Badger lock is not held across restart
-- **WHEN** Morph API is using its Badger data directory and the operator restarts it
+- **WHEN** Dorph API is using its Badger data directory and the operator restarts it
 - **THEN** the new process log does not contain a directory-lock error
 
 ### Requirement: Stop leaves no orphaned children

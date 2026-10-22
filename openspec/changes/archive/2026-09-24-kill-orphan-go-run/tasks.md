@@ -13,5 +13,5 @@
 ## 3. Docs and evidence
 
 - [x] 3.1 Point launcher help and the local-run note in `docs/agents/12-build-deploy.md` at job control as the primary path, with no `setsid` binary required
-- [x] 3.2 Restart Morph API via `./start-all.sh` several times and record one listener, a clean Badger log, and a single running status line
-- [x] 3.3 Run `go test ./...` in `morph`
+- [x] 3.2 Restart Dorph API via `./start-all.sh` several times and record one listener, a clean Badger log, and a single running status line
+- [x] 3.3 Run `go test ./...` in `dorph`

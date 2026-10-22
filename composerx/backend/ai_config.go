@@ -20,19 +20,25 @@ type aiConfigFile struct {
 	QwenDefaultModel string `json:"qwen_default_model"`
 }
 
-// mergeMorphAIEnv applies unified MorphAI env vars (MORPH_AI_*), with TRAN_QWEN_* legacy fallbacks.
-func mergeMorphAIEnv(cfg *Config) {
-	if s := strings.TrimSpace(os.Getenv("MORPH_AI_API_KEY")); s != "" {
+// mergeDorphAIEnv applies unified DorphAI env vars (DORPH_AI_*), with TRAN_QWEN_* legacy fallbacks.
+func mergeDorphAIEnv(cfg *Config) {
+	if s := strings.TrimSpace(os.Getenv("DORPH_AI_API_KEY")); s != "" {
+		cfg.QwenAPIKey = s
+	} else if s := strings.TrimSpace(os.Getenv("MORPH_AI_API_KEY")); s != "" {
 		cfg.QwenAPIKey = s
 	} else if s := strings.TrimSpace(os.Getenv("TRAN_QWEN_API_KEY")); s != "" {
 		cfg.QwenAPIKey = s
 	}
-	if s := strings.TrimSpace(os.Getenv("MORPH_AI_BASE_URL")); s != "" {
+	if s := strings.TrimSpace(os.Getenv("DORPH_AI_BASE_URL")); s != "" {
+		cfg.QwenBaseURL = strings.TrimRight(s, "/")
+	} else if s := strings.TrimSpace(os.Getenv("MORPH_AI_BASE_URL")); s != "" {
 		cfg.QwenBaseURL = strings.TrimRight(s, "/")
 	} else if s := strings.TrimSpace(os.Getenv("TRAN_QWEN_BASE_URL")); s != "" {
 		cfg.QwenBaseURL = strings.TrimRight(s, "/")
 	}
-	if s := strings.TrimSpace(os.Getenv("MORPH_AI_MODEL")); s != "" {
+	if s := strings.TrimSpace(os.Getenv("DORPH_AI_MODEL")); s != "" {
+		cfg.QwenDefaultModel = s
+	} else if s := strings.TrimSpace(os.Getenv("MORPH_AI_MODEL")); s != "" {
 		cfg.QwenDefaultModel = s
 	} else if s := strings.TrimSpace(os.Getenv("TRAN_QWEN_MODEL")); s != "" {
 		cfg.QwenDefaultModel = s
@@ -40,7 +46,7 @@ func mergeMorphAIEnv(cfg *Config) {
 }
 
 // mergeAIConfigFromFile loads optional JSON (path from TRAN_AI_CONFIG_PATH, default ai.config.json).
-// Missing file is ignored; invalid JSON is logged. Env vars from mergeMorphAIEnv take precedence.
+// Missing file is ignored; invalid JSON is logged. Env vars from mergeDorphAIEnv take precedence.
 func mergeAIConfigFromFile(cfg *Config, path string) {
 	path = strings.TrimSpace(path)
 	if path == "" {

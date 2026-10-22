@@ -1,9 +1,9 @@
-# Image build for Morph API + Morph AI UI.
+# Image build for Dorph API + Dorph AI UI.
 #
 # This is not one of the five required check names. Those stay in ci.yml
-# (Go / Morph API, Go / Event Logs, Go / Content Maker, Go / morphai,
-# Morph frontend). Do not move this job into ci.yml.
-name: Morph image
+# (Go / Dorph API, Go / Event Logs, Go / Content Maker, Go / dorphai,
+# Dorph frontend). Do not move this job into ci.yml.
+name: Dorph image
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: morph-image-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: dorph-image-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,9 +29,10 @@ jobs:
           persist-credentials: false
       - name: Contract
         run: sh deploy/check-container-contract.sh
-      - name: MorphUtils stack runbook
+      - name: DorphUtils stack runbook
         run: sh deploy/check-stack-runbook.sh
       - name: Data Access contract
+        if: hashFiles('SharpReport/deploy/check-container-contract.sh') != ''
         run: sh SharpReport/deploy/check-container-contract.sh
       - name: Blueprint schema
         run: |
@@ -39,4 +40,4 @@ jobs:
           /tmp/render-schema/bin/pip install --disable-pip-version-check 'check-jsonschema==0.33.2'
           /tmp/render-schema/bin/check-jsonschema --schemafile https://render.com/schema/render.yaml.json render.yaml
       - name: Build
-        run: docker build -t morph:ci .
+        run: docker build -t dorph:ci .

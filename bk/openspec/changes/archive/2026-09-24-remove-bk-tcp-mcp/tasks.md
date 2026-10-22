@@ -11,7 +11,7 @@
 
 ## 3. Docs and superseded OpenSpec change
 
-- [x] 3.1 Stop claiming a working BK MCP in `bk/project_overview.md`, `bk/src/help_service.py`, `bk/main.py`, `bk/start.sh`, and `bk/src/__init__.py`. Add a short pointer to `morph/cmd/morph-mcp` in `bk/README.md` and `docs/agents/06-ai-tools.md` without linking `docs/agents/14-morph-mcp.md`. Confirm those files no longer say the BK API starts an MCP server.
+- [x] 3.1 Stop claiming a working BK MCP in `bk/project_overview.md`, `bk/src/help_service.py`, `bk/main.py`, `bk/start.sh`, and `bk/src/__init__.py`. Add a short pointer to `dorph/cmd/dorph-mcp` in `bk/README.md` and `docs/agents/06-ai-tools.md` without linking `docs/agents/14-dorph-mcp.md`. Confirm those files no longer say the BK API starts an MCP server.
 - [x] 3.2 Move `bk/openspec/changes/mcp-tool-registry-refactor/` to `bk/openspec/changes/archive/` and note in its proposal that removal superseded it. Keep `bk/openspec/config.yaml`. The live `mcp-tool-registry` headings are already named so archive can remove them. Confirm `openspec list --json` from `bk/` no longer lists `mcp-tool-registry-refactor` as an active change.
 
 ## 4. Integration check

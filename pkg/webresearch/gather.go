@@ -1,5 +1,5 @@
 // Package webresearch gathers lightweight public snippets (Wikipedia, DuckDuckGo, arXiv)
-// to ground Morph AI generation in FormsX, ComposerX, and related apps. No API keys required.
+// to ground Dorph AI generation in FormsX, ComposerX, and related apps. No API keys required.
 package webresearch
 
 import (
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const userAgent = "RoboMorphAI/1.0 (web-grounded generation; local development)"
+const userAgent = "RoboDorphAI/1.0 (web-grounded generation; local development)"
 
 // Source is a citable reference for AI chat UIs.
 type Source struct {

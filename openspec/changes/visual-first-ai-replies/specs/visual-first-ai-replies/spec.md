@@ -6,7 +6,7 @@ Makes in-stack AI chats answer visually first: mermaid diagrams and charts in th
 
 ### Requirement: Visual-first chat contract
 
-In-stack AI chats (Morph AI, Event Logs assistant, Content Maker assistant) MUST prefer a short caption plus a diagram or chart whenever the answer is structure, process, comparison, or quantities. Programming-like content MUST use mermaid flow, sequence, or class diagrams. Quantity breakdowns MUST use a chart (pie or xy). Single Morph Data records MUST stay compact labeled fields, not fake charts.
+In-stack AI chats (Dorph AI, Event Logs assistant, Content Maker assistant) MUST prefer a short caption plus a diagram or chart whenever the answer is structure, process, comparison, or quantities. Programming-like content MUST use mermaid flow, sequence, or class diagrams. Quantity breakdowns MUST use a chart (pie or xy). Single Dorph Data records MUST stay compact labeled fields, not fake charts.
 
 #### Scenario: Process or code-shaped answer
 
@@ -20,7 +20,7 @@ In-stack AI chats (Morph AI, Event Logs assistant, Content Maker assistant) MUST
 - **THEN** the reply includes a chart
 - **AND** does not paste the same numbers as a long paragraph instead of the chart
 
-#### Scenario: One Morph Data record
+#### Scenario: One Dorph Data record
 
 - **WHEN** the assistant summarizes a single person, place, or similar record
 - **THEN** it uses compact labeled fields
@@ -30,7 +30,7 @@ In-stack AI chats (Morph AI, Event Logs assistant, Content Maker assistant) MUST
 
 Chat UIs that show assistant markdown MUST draw mermaid fences as diagrams (dark theme). Invalid mermaid MUST fall back to the source text. Pixel art MUST appear when the image-generator agent is used, or when the assistant emits a compact pixel grid fence in ordinary chat. The system MUST NOT call an image API on every chat turn.
 
-#### Scenario: Mermaid fence in Morph AI chat
+#### Scenario: Mermaid fence in Dorph AI chat
 
 - **WHEN** an assistant message contains a mermaid code fence
 - **THEN** the operator sees a rendered dark-theme diagram, not only a code block

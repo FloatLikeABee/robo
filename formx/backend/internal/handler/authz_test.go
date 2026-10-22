@@ -26,19 +26,19 @@ func TestHeaderRoleWithoutBearerIs401(t *testing.T) {
 	}
 }
 
-func TestSpoofedMorphBaseDoesNotAcceptHeaderRole(t *testing.T) {
+func TestSpoofedDorphBaseDoesNotAcceptHeaderRole(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	attacker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"user":{"roles":["admin"]},"permissions":["create_form"]}`))
 	}))
 	t.Cleanup(attacker.Close)
-	morph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	dorph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}))
-	t.Cleanup(morph.Close)
+	t.Cleanup(dorph.Close)
 
-	h := &Handler{Cfg: &config.Config{UsersPanelBaseURL: morph.URL}}
+	h := &Handler{Cfg: &config.Config{UsersPanelBaseURL: dorph.URL}}
 	r := gin.New()
 	h.Register(r.Group(""))
 
@@ -53,9 +53,9 @@ func TestSpoofedMorphBaseDoesNotAcceptHeaderRole(t *testing.T) {
 	}
 }
 
-func TestMorphBearerAllowsProtectedRoute(t *testing.T) {
+func TestDorphBearerAllowsProtectedRoute(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	morph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	dorph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer good-token" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -70,9 +70,9 @@ func TestMorphBearerAllowsProtectedRoute(t *testing.T) {
 			http.NotFound(w, r)
 		}
 	}))
-	t.Cleanup(morph.Close)
+	t.Cleanup(dorph.Close)
 
-	h := &Handler{Cfg: &config.Config{UsersPanelBaseURL: morph.URL}}
+	h := &Handler{Cfg: &config.Config{UsersPanelBaseURL: dorph.URL}}
 	r := gin.New()
 	api := r.Group("/api/v1")
 	api.Use(func(c *gin.Context) {

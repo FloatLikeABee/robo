@@ -1,4 +1,4 @@
-# Local Content Maker image. Does not start Morph or MorphUtils.
+# Local Content Maker image. Does not start Dorph or DorphUtils.
 services:
   composerx:
     build:

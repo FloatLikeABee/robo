@@ -15,7 +15,7 @@ import (
 	"github.com/formsx/backend/internal/surveybot"
 	"github.com/gin-gonic/gin"
 	"github.com/robo/docextract"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const (
@@ -133,7 +133,7 @@ func (h *Handler) DraftSurveyBotTemplateFromFile(c *gin.Context) {
 
 	if !h.AI.Configured() {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "AI is not configured — set MORPH_AI_API_KEY to generate surveys from files",
+			"error": "AI is not configured — set DORPH_AI_API_KEY to generate surveys from files",
 		})
 		return
 	}
@@ -216,7 +216,7 @@ func (h *Handler) readSurveySource(
 
 	if !h.AI.VisionSupported() {
 		return "", "", fmt.Errorf("%w: reading images needs an OpenAI-compatible AI endpoint; "+
-			"unset MORPH_AI_API_URL or point it at a /v1 base URL", errVisionUnavailable)
+			"unset DORPH_AI_API_URL or point it at a /v1 base URL", errVisionUnavailable)
 	}
 
 	src, err := fh.Open()
@@ -236,16 +236,16 @@ func (h *Handler) readSurveySource(
 		return "", "", fmt.Errorf("the uploaded image is empty")
 	}
 
-	reply, err := h.AI.ChatCompletionVision(ctx, []morphai.MultiMessage{
-		morphai.UserMultiMessage(
-			morphai.TextPart(
+	reply, err := h.AI.ChatCompletionVision(ctx, []dorphai.MultiMessage{
+		dorphai.UserMultiMessage(
+			dorphai.TextPart(
 				"Transcribe this image for survey building. List every question exactly as written, "+
 					"and under each question list its answer choices if any are shown. "+
 					"Mark questions that appear optional. Include any title, section headings, and instructions. "+
 					"Report only what is visible; do not invent questions.\n"+
 					"If the image is blank, unreadable, or shows nothing that could be a form or questionnaire, "+
 					"reply with exactly "+visionNoContentSentinel+" and nothing else."),
-			morphai.ImageDataPart(mime, raw),
+			dorphai.ImageDataPart(mime, raw),
 		),
 	}, "")
 	if err != nil {
@@ -280,7 +280,7 @@ func (h *Handler) generateSurveyMarkdown(
 				lastErr.Error())
 		}
 
-		reply, err := h.AI.ChatCompletionLong(ctx, []morphai.Message{
+		reply, err := h.AI.ChatCompletionLong(ctx, []dorphai.Message{
 			{Role: "system", Content: surveyFromFileSystemPrompt},
 			{Role: "user", Content: userPrompt},
 		})

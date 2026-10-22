@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md — Why. Data Access header nav is `Sidebar.svelte`: Data tables (`/data-tables`), Data reports (`/reports/builder`), Help. Home `+page.ts` redirects to `/data-tables`. Table detail is `data-tables/[id]/+page.svelte`. Existing `POST /api/v1/data-tables/analyze` converts uploaded files into table JSON — not a narrative analysis. Morph AI (`morphai` crate) already runs in this API. Publish history uses a fixed overlay modal (`DataPagePublishPanel.svelte`). Stay dark-only. User-facing names: Data Access, Data tables, Data reports, MorphUtils.
+See proposal.md — Why. Data Access header nav is `Sidebar.svelte`: Data tables (`/data-tables`), Data reports (`/reports/builder`), Help. Home `+page.ts` redirects to `/data-tables`. Table detail is `data-tables/[id]/+page.svelte`. Existing `POST /api/v1/data-tables/analyze` converts uploaded files into table JSON — not a narrative analysis. Dorph AI (`dorphai` crate) already runs in this API. Publish history uses a fixed overlay modal (`DataPagePublishPanel.svelte`). Stay dark-only. User-facing names: Data Access, Data tables, Data reports, DorphUtils.
 
 ## Goals / Non-Goals
 
@@ -8,14 +8,14 @@ See proposal.md — Why. Data Access header nav is `Sidebar.svelte`: Data tables
 
 - Swap header item order only (reports then tables).
 - New table-scoped AI analysis: modal, rendered markdown, `.md` download.
-- Authenticated API; reuse Morph AI config.
+- Authenticated API; reuse Dorph AI config.
 
 **Non-Goals:**
 
 - Changing `/` redirect to Data reports.
 - Replacing Data reports builder or the file-import analyze endpoint.
 - Persisting analysis on the table record (download is the keep path).
-- MorphNotes Generic data, Event Logs, Content Maker.
+- DorphNotes Generic data, Event Logs, Content Maker.
 - A theme switch or under-title ledes.
 
 ## Decisions
@@ -28,7 +28,7 @@ See proposal.md — Why. Data Access header nav is `Sidebar.svelte`: Data tables
 
 ### 2. New `POST /api/v1/data-tables/:id/ai-analysis`
 
-- **Choice:** Distinct from file `analyze`. Load table schema + a capped row sample (and aggregates if already available), prompt Morph AI for markdown (Overview / Key findings / Gaps / Actions, grounded in the sample). Return `{ markdown }`.
+- **Choice:** Distinct from file `analyze`. Load table schema + a capped row sample (and aggregates if already available), prompt Dorph AI for markdown (Overview / Key findings / Gaps / Actions, grounded in the sample). Return `{ markdown }`.
 - **Why:** File-analyze returns columns/rows JSON. Report assistant is a multi-turn tool loop; a one-shot table id is enough for this modal.
 - **Alternative:** Drive the existing Data AI chat drawer. Rejected — user asked a modal on Data tables.
 
@@ -52,7 +52,7 @@ See proposal.md — Why. Data Access header nav is `Sidebar.svelte`: Data tables
 ## Risks / Trade-offs
 
 - [Large tables] → Cap sample rows/chars in the prompt; say in the markdown if truncated.
-- [No Morph AI key] → 503/error in modal; no fake success download.
+- [No Dorph AI key] → 503/error in modal; no fake success download.
 - [XSS from markdown] → Sanitize HTML before `innerHTML` / equivalent.
 
 ## Migration Plan

@@ -18,13 +18,13 @@ Any signed-in user can create, rewrite, or deactivate Tran `User` rows, includin
 
 ### Modified Capabilities
 
-- `morph-data-api-auth`: A valid session still reaches Tran handlers, but a non-admin session must not succeed at creating, updating, or deleting Tran users.
+- `dorph-data-api-auth`: A valid session still reaches Tran handlers, but a non-admin session must not succeed at creating, updating, or deleting Tran users.
 
 ## Impact
 
-- `morph/handlers/tran_users.go` (admin gate, self-write allowlist, email lookup).
-- `morph/handlers/tran_tools.go` (`tranUserIDFromContext` email match only; no owner-scoping rewrite).
-- `morph/handlers/authz_middleware.go` is reused, not rewritten. `requireAdmin` stays the admin check.
-- `morph/db/sqlite_schema.go` gains `User.DeactivatedDate` so the existing deactivate SQL succeeds on SQLite.
-- `morph/frontend/src/pages/admin/UserSettings.js` makes email read-only.
+- `dorph/handlers/tran_users.go` (admin gate, self-write allowlist, email lookup).
+- `dorph/handlers/tran_tools.go` (`tranUserIDFromContext` email match only; no owner-scoping rewrite).
+- `dorph/handlers/authz_middleware.go` is reused, not rewritten. `requireAdmin` stays the admin check.
+- `dorph/db/sqlite_schema.go` gains `User.DeactivatedDate` so the existing deactivate SQL succeeds on SQLite.
+- `dorph/frontend/src/pages/admin/UserSettings.js` makes email read-only.
 - No JWT, login, or environment-variable changes. Forms, hybrid context, registration, and chat upload admin fallbacks stay for issue #88. Notes owner scoping stays for PR #87.

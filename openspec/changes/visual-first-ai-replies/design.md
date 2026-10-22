@@ -2,13 +2,13 @@
 
 See proposal.md. Specs: `visual-first-ai-replies`, `visual-first-documents`.
 
-Today assistant markdown is GFM only (`ChatMarkdown` / `react-markdown`, `marked` in Content Maker / Project / Data Access). Mermaid fences stay as code. `pkg/morphai.ToolFollowUpPrompt` asks for a markdown summary. Morph AI already has an `image-generator` agent (`generateStoryImageBytes`) and chat `Images[]`. Data Access reports already use ECharts — that path is for table reports, not chat. Dark-only UIs; Morph AI is the system chat (no platform-chat drawers).
+Today assistant markdown is GFM only (`ChatMarkdown` / `react-markdown`, `marked` in Content Maker / Project / Data Access). Mermaid fences stay as code. `pkg/dorphai.ToolFollowUpPrompt` asks for a markdown summary. Dorph AI already has an `image-generator` agent (`generateStoryImageBytes`) and chat `Images[]`. Data Access reports already use ECharts — that path is for table reports, not chat. Dark-only UIs; Dorph AI is the system chat (no platform-chat drawers).
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- One shared visual-first instruction string in `pkg/morphai`, used by Morph AI, Event Logs, and Content Maker tool loops.
+- One shared visual-first instruction string in `pkg/dorphai`, used by Dorph AI, Event Logs, and Content Maker tool loops.
 - Mermaid render in those chats and in markdown/HTML document previews (dark mermaid theme).
 - Occasional pixel art via existing image agent + a compact ```pixel``` grid in ordinary chat (canvas/CSS, no per-turn image API).
 - HTML iframe previews inject a mermaid runtime so stored documents match chat.
@@ -20,15 +20,15 @@ Today assistant markdown is GFM only (`ChatMarkdown` / `react-markdown`, `marked
 - Mermaid inside email HTML (clients will not run JS).
 - Reviving `@robo/platform-chat` drawers.
 - Light/dark theme switch.
-- Changing MorphNotes Research round counts or Content Maker publish semantics.
+- Changing DorphNotes Research round counts or Content Maker publish semantics.
 
 ## Decisions
 
 ### 1. Shared prompt, per-frontend render
 
-**Choice:** Add `VisualFirstInstructions` (and fold it into `ToolFollowUpPrompt`) in `pkg/morphai`. Each markdown UI renders mermaid itself (React `ChatMarkdown` vs `marked` + post-process). No new shared npm package.
+**Choice:** Add `VisualFirstInstructions` (and fold it into `ToolFollowUpPrompt`) in `pkg/dorphai`. Each markdown UI renders mermaid itself (React `ChatMarkdown` vs `marked` + post-process). No new shared npm package.
 
-**Why:** One Go string updates Morph AI, Event Logs, and Content Maker loops. Frontends do not share a bundler. A new `@robo/markdown` package is extra machinery.
+**Why:** One Go string updates Dorph AI, Event Logs, and Content Maker loops. Frontends do not share a bundler. A new `@robo/markdown` package is extra machinery.
 
 **Alternative:** Prompt-only — rejected; mermaid would still show as a fence. **Alternative:** One shared frontend package — rejected (YAGNI).
 
@@ -36,7 +36,7 @@ Today assistant markdown is GFM only (`ChatMarkdown` / `react-markdown`, `marked
 
 **Choice:** Add `mermaid` only on frontends that render these surfaces. Programming-like content → flowchart / sequence / class. Numbers → `pie` / `xychart-beta`. Dark theme via mermaid `theme: dark` (or equivalent init). Invalid mermaid → show source.
 
-**Why:** One language the model already knows; no second chart library in Morph AI CRA.
+**Why:** One language the model already knows; no second chart library in Dorph AI CRA.
 
 **Alternative:** ECharts in chat — rejected (already in Data Access reports; heavy for bubbles). **Alternative:** Server-side SVG render in Go — extra service, skip.
 
@@ -52,29 +52,29 @@ Pixel fence (locked): language `pixel`, body is newline-separated rows of `#RRGG
 
 ### 4. HTML previews: inject mermaid runtime, not email
 
-**Choice:** Extend `withDarkPreviewSrcDoc` (and the morph-engi twin) to include mermaid init when the HTML contains mermaid. Markdown→HTML keeps `class="mermaid"` on fences. Content Maker / Project `marked` previews run mermaid after parse.
+**Choice:** Extend `withDarkPreviewSrcDoc` (and the dorph-engi twin) to include mermaid init when the HTML contains mermaid. Markdown→HTML keeps `class="mermaid"` on fences. Content Maker / Project `marked` previews run mermaid after parse.
 
 **Why:** Stored HTML is viewed in iframes that can run JS. Email cannot.
 
 **Alternative:** Pre-render mermaid to SVG at save time — extra pipeline; do later if email needs diagrams.
 
-### 5. Single-record exception stays in Morph AI field instructions
+### 5. Single-record exception stays in Dorph AI field instructions
 
-**Choice:** Keep “every meaningful field” for one Morph Data record. Visual-first applies to comparisons, lists-as-groups, processes, and code — not to one address.
+**Choice:** Keep “every meaningful field” for one Dorph Data record. Visual-first applies to comparisons, lists-as-groups, processes, and code — not to one address.
 
 **Why:** A pie chart of one employee is worse than **Label:** value.
 
 ## Risks / Trade-offs
 
 - [Mermaid bundle size on CRA] → Dynamic import mermaid in `ChatMarkdown` so first chat without a fence does not pay. ponytail: if the import is painful, load on first fence only.
-- [Model ignores the motto] → Put the contract in both system instructions and `ToolFollowUpPrompt`; Morph AI Research/Design skills can one-line “diagram first”.
+- [Model ignores the motto] → Put the contract in both system instructions and `ToolFollowUpPrompt`; Dorph AI Research/Design skills can one-line “diagram first”.
 - [XSS via mermaid/HTML] → Keep mermaid as text→svg through mermaid’s renderer; do not `dangerouslySetInnerHTML` arbitrary assistant HTML in the chat bubble.
 - [xychart-beta flaky] → If a chart type fails, fallback to source; pie + flowchart are enough for v1.
 - [Pixel grid ugly] → Cap size; image agent remains the high-quality path.
 
 ## Migration Plan
 
-1. `pkg/morphai` prompt + Morph AI `ChatMarkdown` mermaid/pixel + management instructions.
+1. `pkg/dorphai` prompt + Dorph AI `ChatMarkdown` mermaid/pixel + management instructions.
 2. Event Logs + Content Maker assistant markdown + the same follow-up string (already imported).
 3. Document previews: darkPreviewSrcDoc, Research/Project/Content Maker/Data Access analysis.
 4. Rollback: revert prompts; mermaid dep unused if renderers are gated.

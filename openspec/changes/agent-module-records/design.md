@@ -1,6 +1,6 @@
 ## Context
 
-See proposal.md for why. Morph AI’s management tool loop already posts JSON to `/api/tran/*` and `/api/sheetx/*` as the signed-in user. The catalog lists stick notes (`case-tasks`), stories (`big-notes`), and event logs, but not timelines or research. The fast-path text never says which user-facing name maps to which route, so “make a note” lands on Notes & TODOs. morph-mcp `create_note` is a different surface and stays on Notes & TODOs.
+See proposal.md for why. Dorph AI’s management tool loop already posts JSON to `/api/tran/*` and `/api/sheetx/*` as the signed-in user. The catalog lists stick notes (`case-tasks`), stories (`big-notes`), and event logs, but not timelines or research. The fast-path text never says which user-facing name maps to which route, so “make a note” lands on Notes & TODOs. dorph-mcp `create_note` is a different surface and stays on Notes & TODOs.
 
 `TranMySQL` is the local SQL store. Story, timeline, and research creates already generate content. A stick note requires `title`, `start_at`, and `end_at`. A timeline requires pasted content, `content`, or a URL. An event log requires `title` and `time`.
 
@@ -23,9 +23,9 @@ See proposal.md for why. Morph AI’s management tool loop already posts JSON to
 
 Add a name map to `managementToolInstructions` and the missing catalog lines. The model keeps emitting one JSON call with `method`, `path`, and `body`.
 
-**Why not new MCP tools:** The operator is in Morph AI chat. morph-mcp is the external Notes & TODOs server, and its spec says not to POST `/api/tran/notes-todos`. These five modules are already HTTP APIs behind the chat tool loop.
+**Why not new MCP tools:** The operator is in Dorph AI chat. dorph-mcp is the external Notes & TODOs server, and its spec says not to POST `/api/tran/notes-todos`. These five modules are already HTTP APIs behind the chat tool loop.
 
-**Why not a new “save text only” create:** Stories, timelines, and research are generated records. A second store would split what the MorphNotes screens show.
+**Why not a new “save text only” create:** Stories, timelines, and research are generated records. A second store would split what the DorphNotes screens show.
 
 ### 2. Check is list or get
 

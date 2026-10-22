@@ -2,7 +2,7 @@
 
 See proposal.md for motivation. Specs: `specs/shared-root-env/spec.md`.
 
-Today `start-all.sh` `load_app_env` applies the parent directory `.env` then the app working-directory `.env`. App files win, including empty `MORPH_AI_API_KEY=`. Binaries also call `godotenv.Load()` / `dotenvy` against cwd or `../.env`, so a nested empty file still wins when running without the launcher. Production already uses one file: `deploy/.env.production`.
+Today `start-all.sh` `load_app_env` applies the parent directory `.env` then the app working-directory `.env`. App files win, including empty `DORPH_AI_API_KEY=`. Binaries also call `godotenv.Load()` / `dotenvy` against cwd or `../.env`, so a nested empty file still wins when running without the launcher. Production already uses one file: `deploy/.env.production`.
 
 Relative paths such as `TRAN_SQLITE_PATH=./data/tran.sqlite` are resolved from each service’s working directory. That must stay true after the root file is introduced.
 
@@ -27,21 +27,21 @@ Relative paths such as `TRAN_SQLITE_PATH=./data/tran.sqlite` are resolved from e
 
 ### 1. Root file wins; nested `.env` is not loaded
 - **Choice**: `start-all.sh` loads only `${ROOT}/.env`. Go/Rust/Python loaders walk up from cwd until they find a directory that contains `start-all.sh`, then load that directory’s `.env` if present. They MUST NOT load a nearer nested `.env`.
-- **Rationale**: Nested empty keys are what hid Morph AI from FormsX. The user asked for one file, not per-app files with overrides.
+- **Rationale**: Nested empty keys are what hid Dorph AI from FormsX. The user asked for one file, not per-app files with overrides.
 - **Alternatives**: Load nested files but skip empty values — still two sources of truth. Load root then nested non-empty overrides — useful later, not requested.
 
 ### 2. Shared Go helper for walk-up load
-- **Choice**: Add a small helper (e.g. `pkg/repoenv`) used by Morph, FormsX, ComposerX, Booki, Academi, morphgraph-worker. Rust (Morph Engi, SharpReport, morphai-rs) and Python (bk) get the same walk-up rule in their existing config loaders.
+- **Choice**: Add a small helper (e.g. `pkg/repoenv`) used by Dorph, FormsX, ComposerX, Booki, Academi, dorphgraph-worker. Rust (Dorph Engi, SharpReport, dorphai-rs) and Python (bk) get the same walk-up rule in their existing config loaders.
 - **Rationale**: One Go implementation avoids copy-paste mistakes. Rust/Python cannot import that package.
 - **Alternatives**: Only fix `start-all.sh` — fails `go run` from `formx/backend`.
 
 ### 3. Vite `envDir` = repo root; CRA inherits process env
-- **Choice**: Vite apps set `envDir` to the repo root (from each `vite.config`). Morph’s CRA/webpack frontend relies on the shell env from `start-all.sh`, plus the same walk-up if a Node start script can load dotenv from root (keep this thin: `dotenv` pointing at root, or document that Morph UI is started via `start-all.sh`).
+- **Choice**: Vite apps set `envDir` to the repo root (from each `vite.config`). Dorph’s CRA/webpack frontend relies on the shell env from `start-all.sh`, plus the same walk-up if a Node start script can load dotenv from root (keep this thin: `dotenv` pointing at root, or document that Dorph UI is started via `start-all.sh`).
 - **Rationale**: Vite does not read a parent `.env` unless `envDir` is set. Process env from `start-all.sh` is enough when using the launcher; `envDir` covers `npm run dev` in the frontend folder.
 - **Alternatives**: Symlink each `frontend/.env` to root — still many files.
 
 ### 4. Root `.env.example` is the catalog; per-app examples shrink
-- **Choice**: Commit `.env.example` at repo root with shared MorphAI/auth keys first, then commented sections per app (ports, sqlite/badger paths). Each existing per-app `.env.example` becomes a short pointer to `../../.env.example` (or equivalent) plus any key that is truly unique and easy to miss.
+- **Choice**: Commit `.env.example` at repo root with shared DorphAI/auth keys first, then commented sections per app (ports, sqlite/badger paths). Each existing per-app `.env.example` becomes a short pointer to `../../.env.example` (or equivalent) plus any key that is truly unique and easy to miss.
 - **Rationale**: Spec requires one place to see required keys. Keeping a one-line pointer avoids stale duplicate lists.
 - **Alternatives**: Delete all per-app examples — worse for someone who only opens `formx/README.md`.
 
@@ -55,7 +55,7 @@ Relative paths such as `TRAN_SQLITE_PATH=./data/tran.sqlite` are resolved from e
 - [Wrong working directory for relative paths] → Keep `start-all.sh` `cd` into each app dir as today; document that `./data/...` is per-app cwd.
 - [Two `.env` files confuse people] → Docs: ignore nested files; launcher does not load them.
 - [Vite picks up unrelated `VITE_*` from a huge root file] → Prefix remains app-specific; unused vars are harmless.
-- [Merge script picks a stale empty-then-filled order] → Only copy non-empty; prefer Morph’s key when several are set (document order: morph, then others).
+- [Merge script picks a stale empty-then-filled order] → Only copy non-empty; prefer Dorph’s key when several are set (document order: dorph, then others).
 
 ## Migration Plan
 

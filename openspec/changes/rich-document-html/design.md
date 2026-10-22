@@ -13,7 +13,7 @@ See proposal.md for why. `buildTimelineHTML`, `buildResearchHTML`, `buildBigNote
 **Non-Goals:**
 
 - Raw HTML from the model, a chart library, or a mermaid script inside the iframe.
-- Restyling Morph AI chat, stick-note faces, or adding a theme switch.
+- Restyling Dorph AI chat, stick-note faces, or adding a theme switch.
 - Inventing statistics the source does not contain.
 
 ## Decisions

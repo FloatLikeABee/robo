@@ -1,6 +1,6 @@
 ## Purpose
 
-Lets the operator choose RAG collections from the Morph AI composer and use them on the next send.
+Lets the operator choose RAG collections from the Dorph AI composer and use them on the next send.
 
 ## ADDED Requirements
 

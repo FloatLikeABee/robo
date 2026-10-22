@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Lets Morph accept JSON from small local models that put raw newlines inside strings, wrap the object in fences, or add prose around it.
+Lets Dorph accept JSON from small local models that put raw newlines inside strings, wrap the object in fences, or add prose around it.
 
 ## Requirements
 
 ### Requirement: Parser accepts messy model JSON
-When Morph parses a model reply that is meant to be one JSON object, it MUST succeed if the object is wrapped in markdown fences, surrounded by extra text, or contains raw newlines or tabs inside string values. A well-formed JSON object MUST still parse. The same parser MUST be used for big-note generate and timeline generate.
+When Dorph parses a model reply that is meant to be one JSON object, it MUST succeed if the object is wrapped in markdown fences, surrounded by extra text, or contains raw newlines or tabs inside string values. A well-formed JSON object MUST still parse. The same parser MUST be used for big-note generate and timeline generate.
 
 #### Scenario: Raw newlines inside a string
 - **WHEN** the model returns a JSON object whose `markdown` string contains a raw newline
@@ -19,7 +19,7 @@ When Morph parses a model reply that is meant to be one JSON object, it MUST suc
 - **THEN** parse succeeds and yields that object
 
 ### Requirement: Parser repairs missing commas between properties
-When Morph parses a model JSON object, it MUST succeed if two properties are separated only by whitespace (the `invalid character '"' after object key:value pair` failure). Fences around that object MUST still be stripped.
+When Dorph parses a model JSON object, it MUST succeed if two properties are separated only by whitespace (the `invalid character '"' after object key:value pair` failure). Fences around that object MUST still be stripped.
 
 #### Scenario: Missing comma after a string value
 - **WHEN** the model returns `{"title":"Hi" "markdown":"body"}` or the same object with a newline instead of a space
@@ -49,7 +49,7 @@ When big-note generate cannot parse the first model reply as JSON, it MUST retry
 - **THEN** generate does not call the model a second time
 
 ### Requirement: Parser unwraps backtick-quoted values
-When a model JSON object uses JS backticks around a string value instead of JSON quotes, Morph MUST unwrap that value into a JSON string and parse the object. The stored markdown MUST be the inner document, not the envelope.
+When a model JSON object uses JS backticks around a string value instead of JSON quotes, Dorph MUST unwrap that value into a JSON string and parse the object. The stored markdown MUST be the inner document, not the envelope.
 
 #### Scenario: Backtick-wrapped markdown field
 - **WHEN** the model returns `{"title":"Weekly Review Habit Guide","markdown": `## Setting Up...`}`

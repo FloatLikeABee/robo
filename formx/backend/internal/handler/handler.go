@@ -5,7 +5,7 @@ import (
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/formsx/backend/internal/mysql"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 type Handler struct {
@@ -19,7 +19,7 @@ type Handler struct {
 	AIDocRepo             *mongo.AIDocumentRepo
 	SurveyBotTemplateRepo *mongo.SurveyBotTemplateRepo
 	SurveyBotResultRepo   *mongo.SurveyBotResultRepo
-	AI                    *morphai.Client
+	AI                    *dorphai.Client
 }
 
 func New(
@@ -34,7 +34,7 @@ func New(
 	surveyBotTemplateRepo *mongo.SurveyBotTemplateRepo,
 	surveyBotResultRepo *mongo.SurveyBotResultRepo,
 ) *Handler {
-	aiClient := morphai.NewClient(morphai.LoadFromEnv())
+	aiClient := dorphai.NewClient(dorphai.LoadFromEnv())
 	return &Handler{
 		Cfg:                   cfg,
 		FormRepo:              formRepo,
@@ -61,7 +61,7 @@ func (h *Handler) Register(r *gin.RouterGroup) {
 	protected := api.Group("")
 	protected.Use(requireWorkspaceAccess())
 	protected.POST("/assistant/chat", h.AssistantChat)
-	protected.GET("/ai/mcp-tools", h.FormsXMorphMiniMCP)
+	protected.GET("/ai/mcp-tools", h.FormsXDorphMiniMCP)
 	protected.GET("/ai/app-abilities", h.FormsXAppAbilitiesMCP)
 	protected.POST("/ai/web-search", h.WebSearch)
 	protected.POST("/ai/form-template-chat", h.FormTemplateAIChat)

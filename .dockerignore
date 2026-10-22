@@ -12,10 +12,10 @@
 deploy/.env.production
 **/dist
 **/target
-morph/frontend/build
+dorph/frontend/build
 
-# Morph image copies named paths only. Event Logs uses formx/Dockerfile.dockerignore
-# for its own image, so a formx line here only drops Event Logs from the Morph
+# Dorph image copies named paths only. Event Logs uses formx/Dockerfile.dockerignore
+# for its own image, so a formx line here only drops Event Logs from the Dorph
 # context. Content Maker and Data Access use this same root ignore (context .).
 # Keep the words composerx and SharpReport. Do not exclude those trees.
 formx
@@ -23,11 +23,11 @@ composerx/backend/storage
 composerx/frontend/node_modules
 **/ai.config.json
 SharpReport/frontend/node_modules
-morph-engi
+dorph-engi
 bk
-morph-utils
+dorph-utils
 invite-signup
 platform-chat
-morphgraph-worker
+dorphgraph-worker
 docs
 openspec

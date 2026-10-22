@@ -1,0 +1,116 @@
+import axios from 'axios';
+import { API_BASE_URL as API_BASE } from '../apiBase';
+import { getDorphToken, clearDorphSession } from '../auth/dorphSession';
+import { safeReturnPath } from '../auth/returnTo';
+
+export const tranApi = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+  /** Dorph AI replies can take a long time; 0 hangs forever — cap at 5 min for recoverable UI. */
+  timeout: 300000,
+});
+
+tranApi.interceptors.request.use((config) => {
+  const t = getDorphToken();
+  if (t) {
+    const h = config.headers || {};
+    h.Authorization = `Bearer ${t}`;
+    config.headers = h;
+  }
+  return config;
+});
+
+tranApi.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err.response?.status;
+    const url = String(err.config?.url || '');
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (status === 401 && !url.includes('/api/auth/login') && path !== '/login') {
+      clearDorphSession();
+      if (typeof window !== 'undefined') {
+        const here = window.location.pathname + window.location.search + window.location.hash;
+        const returnTo = safeReturnPath(here) || '/';
+        window.location.assign(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+export const tranEndpoints = {
+  districts: '/api/tran/districts',
+  district: (id) => `/api/tran/districts/${id}`,
+  facilities: '/api/tran/facilities',
+  facility: (id) => `/api/tran/facilities/${id}`,
+  members: '/api/tran/members',
+  member: (id) => `/api/tran/members/${id}`,
+  employees: '/api/tran/employees',
+  employee: (id) => `/api/tran/employees/${id}`,
+  assets: '/api/tran/assets',
+  asset: (id) => `/api/tran/assets/${id}`,
+  activities: '/api/tran/activities',
+  activity: (id) => `/api/tran/activities/${id}`,
+  caseTasks: '/api/tran/case-tasks',
+  caseTaskAiDraft: '/api/tran/case-tasks/ai-draft',
+  caseTask: (id) => `/api/tran/case-tasks/${id}`,
+  caseTaskFull: (id) => `/api/tran/case-tasks/${id}/full`,
+  caseTaskAttachments: (id) => `/api/tran/case-tasks/${id}/attachments`,
+  caseTaskAttachment: (id, attachmentId) => `/api/tran/case-tasks/${id}/attachments/${attachmentId}`,
+  caseTaskAttachmentDownload: (id, attachmentId) => `/api/tran/case-tasks/${id}/attachments/${attachmentId}/download`,
+  caseTaskPdf: (id) => `/api/tran/case-tasks/${id}/pdf`,
+  caseTaskSendEmail: (id) => `/api/tran/case-tasks/${id}/send-email`,
+  storyPosts: '/api/tran/story-posts',
+  storyPost: (id) => `/api/tran/story-posts/${id}`,
+  storyPostFull: (id) => `/api/tran/story-posts/${id}/full`,
+  storyPostAIGenerate: '/api/tran/story-posts/ai-generate',
+  attachmentConfig: '/api/tran/attachment-config',
+  entityAttachments: (entityRoute, id) => `/api/tran/${entityRoute}/${id}/attachments`,
+  entityAttachment: (entityRoute, id, attachmentId) =>
+    `/api/tran/${entityRoute}/${id}/attachments/${attachmentId}`,
+  entityAttachmentDownload: (entityRoute, id, attachmentId) =>
+    `/api/tran/${entityRoute}/${id}/attachments/${attachmentId}/download`,
+  gridSavedFilters: '/api/tran/grid-saved-filters',
+  gridColorConfig: '/api/tran/grid-color-config',
+  platformUiConfig: '/api/tran/platform-ui-config',
+  users: '/api/tran/users',
+  user: (id) => `/api/tran/users/${id}`,
+  userMe: '/api/tran/users/me',
+  toolNotes: '/api/tran/tool-notes',
+  toolNote: (id) => `/api/tran/tool-notes/${id}`,
+  toolNoteRead: (id) => `/api/tran/tool-notes/${id}/read`,
+  comments: '/api/tran/comments',
+  comment: (id) => `/api/tran/comments/${id}`,
+  /** Personal notes & TODOs (per UserID; default user until auth) */
+  notesTodos: '/api/tran/notes-todos',
+  /** Agent-authored notes for the signed-in user. Ignores a client user id. */
+  agentNotes: '/api/tran/agent-notes',
+  agentNote: (id) => `/api/tran/agent-notes/${id}`,
+  notesTodo: (id) => `/api/tran/notes-todos/${id}`,
+  bigNotes: '/api/tran/big-notes',
+  bigNote: (id) => `/api/tran/big-notes/${id}`,
+  bigNoteRegenerate: (id) => `/api/tran/big-notes/${id}/regenerate`,
+  bigNotePublish: (id) => `/api/tran/big-notes/${id}/publish`,
+  bigNoteResponses: (id) => `/api/tran/big-notes/${id}/responses`,
+  bigNoteResponseAnalyze: (id, responseId) => `/api/tran/big-notes/${id}/responses/${responseId}/analyze`,
+  bigNoteAnalyzeAll: (id) => `/api/tran/big-notes/${id}/analyze`,
+  timelines: '/api/tran/timelines',
+  timeline: (id) => `/api/tran/timelines/${id}`,
+  timelinePublish: (id) => `/api/tran/timelines/${id}/publish`,
+  research: '/api/tran/research',
+  researchItem: (id) => `/api/tran/research/${id}`,
+  researchPublish: (id) => `/api/tran/research/${id}/publish`,
+  researchCancel: (id) => `/api/tran/research/${id}/cancel`,
+  /** Short AI text helpers (task chain steps). Notes and TODOs use the grill. */
+  textAssist: '/api/tran/text-assist',
+  grill: '/api/tran/grill',
+  grillUI: '/api/tran/grill/ui',
+  composerxEmails: '/api/composerx/emails',
+  composerxEmail: (id) => `/api/composerx/emails/${id}`,
+  genericData: '/api/tran/generic-data',
+  genericDataItem: (id) => `/api/tran/generic-data/${id}`,
+  genericDataFull: (id) => `/api/tran/generic-data/${id}/full`,
+  genericDataExtract: '/api/tran/generic-data/extract',
+	genericDataAnalyze: (id) => `/api/tran/generic-data/${id}/analyze`,
+  extractJson: '/api/tran/extract-json',
+};

@@ -8,7 +8,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/robo/assistmd v0.0.0
 	github.com/robo/docextract v0.0.0
-	github.com/robo/morphai v0.0.0
+	github.com/robo/dorphai v0.0.0
 	github.com/robo/repoenv v0.0.0
 	github.com/robo/webresearch v0.0.0
 	github.com/swaggo/files v1.0.1
@@ -17,7 +17,7 @@ require (
 	gorm.io/gorm v1.25.7
 )
 
-replace github.com/robo/morphai => ../../pkg/morphai
+replace github.com/robo/dorphai => ../../pkg/dorphai
 
 replace github.com/robo/assistmd => ../../pkg/assistmd
 

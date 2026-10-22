@@ -1,12 +1,12 @@
 ## Purpose
 
-Ensures confirms, warnings, and error notices in supported Morph stack products appear as themed in-app modals instead of browser-native alert/confirm dialogs.
+Ensures confirms, warnings, and error notices in supported Dorph stack products appear as themed in-app modals instead of browser-native alert/confirm dialogs.
 
 ## ADDED Requirements
 
 ### Requirement: No browser-native alert or confirm in product UI
 
-Supported product frontends (Morph AI, MorphNotes, MorphUtils shell, Event Logs, Content Maker, Data Access, Project, AI tools) MUST NOT call `window.alert`, `window.confirm`, `window.prompt`, or unqualified global `alert` / `confirm` / `prompt` for user-facing messages. User feedback MUST render as an in-app modal or warning box owned by the product.
+Supported product frontends (Dorph AI, DorphNotes, DorphUtils shell, Event Logs, Content Maker, Data Access, Project, AI tools) MUST NOT call `window.alert`, `window.confirm`, `window.prompt`, or unqualified global `alert` / `confirm` / `prompt` for user-facing messages. User feedback MUST render as an in-app modal or warning box owned by the product.
 
 #### Scenario: Delete confirmation in Project
 
@@ -35,7 +35,7 @@ In-app confirm modals MUST include a title, message body, a cancel control, and 
 
 Informational and error messages that previously used `alert` MUST use an in-app modal with a single dismiss control (e.g. “OK”). The modal MUST be keyboard-dismissible (Escape) and MUST NOT require a browser dialog.
 
-#### Scenario: MorphNotes error in comments
+#### Scenario: DorphNotes error in comments
 
 - **WHEN** adding a comment fails
 - **THEN** an in-app notice modal shows the error message

@@ -1,27 +1,27 @@
 ## Context
 
-See proposal.md — Why. Event Logs Layout still has an Info Sheets tab (`/survey-bot`). `pkg/morphai.VisualFirstInstructions` already defines mermaid-first replies and is used on Morph AI tool follow-ups and Content Maker follow-ups; Event Logs’ first-turn prompt, Data Access, Project, MorphNotes text-assist, case-task draft, and research compose do not. Case-task create still shows description, map, JSON detail, and attachments; AI draft returns location + detail JSON.
+See proposal.md — Why. Event Logs Layout still has an Info Sheets tab (`/survey-bot`). `pkg/dorphai.VisualFirstInstructions` already defines mermaid-first replies and is used on Dorph AI tool follow-ups and Content Maker follow-ups; Event Logs’ first-turn prompt, Data Access, Project, DorphNotes text-assist, case-task draft, and research compose do not. Case-task create still shows description, map, JSON detail, and attachments; AI draft returns location + detail JSON.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Remove Info Sheets from operator Event Logs UI and MorphUtils copy; redirect `/survey-bot` to `/events-info`.
-- Reuse `VisualFirstInstructions` as the graphs contract; seed a Morph AI builtin Graphs skill; append the same string to MorphUtils and MorphNotes AI prompts.
+- Remove Info Sheets from operator Event Logs UI and DorphUtils copy; redirect `/survey-bot` to `/events-info`.
+- Reuse `VisualFirstInstructions` as the graphs contract; seed a Dorph AI builtin Graphs skill; append the same string to DorphUtils and DorphNotes AI prompts.
 - Create-task UI: prompt, upload, Generate, title, start/end; Markdown + HTML tabs. AI draft keys: title, start_at, end_at, markdown.
 
 **Non-Goals:**
 
 - Deleting survey-bot backend tables or public `/s/:slug` collect URLs in this change (operator UI gone; leftover APIs can rot).
-- Forcing a chart on every greeting or a single Morph Data record.
-- New chart libraries (mermaid already in Morph AI / Event Logs / Content Maker previews).
+- Forcing a chart on every greeting or a single Dorph Data record.
+- New chart libraries (mermaid already in Dorph AI / Event Logs / Content Maker previews).
 - Redesigning task **edit** of historical JSON/map data.
 
 ## Decisions
 
 ### 1. Redirect, don’t keep a hidden tab
 
-**Choice:** Drop the Info Sheets `NavLink`. `App.tsx` sends `/survey-bot` (and old forms aliases) to `/events-info`. MorphUtils Event Logs description drops Info Sheets.
+**Choice:** Drop the Info Sheets `NavLink`. `App.tsx` sends `/survey-bot` (and old forms aliases) to `/events-info`. DorphUtils Event Logs description drops Info Sheets.
 
 **Why:** User said the module is not needed. Redirect avoids dead bookmarks.
 
@@ -29,11 +29,11 @@ See proposal.md — Why. Event Logs Layout still has an Info Sheets tab (`/surve
 
 ### 2. One graphs contract, many prompts
 
-**Choice:** Keep `morphai.VisualFirstInstructions`. Mirror the same string as `VISUAL_FIRST_INSTRUCTIONS` in `pkg/morphai-rs` and put it into Rust `tool_follow_up_prompt` (today those follow-ups are prose-only). Add Morph AI builtin skill `builtin-graphs` (seed like Research/Design). Append the constant to first-turn prompts: Event Logs `formsXAssistantInstructions`, Content Maker `tranMailAssistantInstructions`, Data Access `DATA_AI_INSTRUCTIONS`, Project `ENGI_INSTRUCTIONS`, MorphNotes `textAssist*` (allow mermaid fences), `caseTaskAIDraftPrompt`, research compose/write prompts.
+**Choice:** Keep `dorphai.VisualFirstInstructions`. Mirror the same string as `VISUAL_FIRST_INSTRUCTIONS` in `pkg/dorphai-rs` and put it into Rust `tool_follow_up_prompt` (today those follow-ups are prose-only). Add Dorph AI builtin skill `builtin-graphs` (seed like Research/Design). Append the constant to first-turn prompts: Event Logs `formsXAssistantInstructions`, Content Maker `tranMailAssistantInstructions`, Data Access `DATA_AI_INSTRUCTIONS`, Project `ENGI_INSTRUCTIONS`, DorphNotes `textAssist*` (allow mermaid fences), `caseTaskAIDraftPrompt`, research compose/write prompts.
 
 **Why:** User asked for a common skill anywhere. Go follow-ups already have VisualFirst; Rust Data Access / Project follow-ups do not. Duplicating essays per app drifts.
 
-**Alternative:** Only the Morph AI skill — MorphUtils first-turn and Rust follow-ups would still skip graphs.
+**Alternative:** Only the Dorph AI skill — DorphUtils first-turn and Rust follow-ups would still skip graphs.
 
 ### 3. Task document is markdown in description
 

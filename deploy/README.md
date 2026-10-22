@@ -1,19 +1,19 @@
-# Morph image
+# Dorph image
 
-One container runs Morph API and the Morph AI UI. Other apps are not in the image. No host is selected here.
+One container runs Dorph API and the Dorph AI UI. Other apps are not in the image. No host is selected here.
 
 ## Build
 
 From the repo root:
 
 ```bash
-docker build -t morph:local .
+docker build -t dorph:local .
 ```
 
-That build leaves `REACT_APP_MORPH_UTILS_URL` unset, so the production UI omits the MorphUtils header chip. To inline a public origin, pass it as a build arg and rebuild. There is no default host:
+That build leaves `REACT_APP_DORPH_UTILS_URL` unset, so the production UI omits the DorphUtils header chip. To inline a public origin, pass it as a build arg and rebuild. There is no default host:
 
 ```bash
-docker build --build-arg REACT_APP_MORPH_UTILS_URL=https://<morph-utils public host> -t morph:local .
+docker build --build-arg REACT_APP_DORPH_UTILS_URL=https://<dorph-utils public host> -t dorph:local .
 ```
 
 The context is the repo root so `pkg/` (Go `replace` directives) and `scripts/with-root-env.cjs` are available. `.dockerignore` keeps env files, `node_modules`, local `data/`, and the other apps out. There are no secret build args.
@@ -30,11 +30,11 @@ docker compose -f deploy/docker-compose.yml up --build
 
 `deploy/.env.production` is gitignored. Compose loads it with `env_file`. It is not the compose interpolation file (that would be `deploy/.env`).
 
-The process listens on port 9090 inside the container. The container `PORT` must stay 9090. Leave it unset so the image default is used. The healthcheck follows `PORT`, and compose always maps the host port (`MORPH_PUBLISH_PORT`, default 9090) to container port 9090.
+The process listens on port 9090 inside the container. The container `PORT` must stay 9090. Leave it unset so the image default is used. The healthcheck follows `PORT`, and compose always maps the host port (`DORPH_PUBLISH_PORT`, default 9090) to container port 9090.
 
 The `tls` profile still publishes 9090 on the host as well as 80 and 443. Bind that host port to `127.0.0.1`, or firewall it. Render terminates TLS for the hosted service. The compose TLS profile is not that deploy.
 
-`GET /health` is the container healthcheck. `GET /` is the Morph AI UI. The API and the UI are the same origin.
+`GET /health` is the container healthcheck. `GET /` is the Dorph AI UI. The API and the UI are the same origin.
 
 `docker compose up` does not start Caddy. TLS is the `tls` profile (`deploy/Caddyfile`, issue #53):
 
@@ -44,28 +44,28 @@ docker compose -f deploy/docker-compose.yml --profile tls up
 
 ## Volume
 
-Named volume `morph-data` is mounted at `/data`. The image defaults are:
+Named volume `dorph-data` is mounted at `/data`. The image defaults are:
 
 | Variable | Path |
 |----------|------|
 | `DB_PATH` | `/data/badger` |
 | `TRAN_SQLITE_PATH` | `/data/tran.sqlite` |
 | `ENTITY_DETAILS_BADGER` | `/data/entity_details` |
-| `MORPH_KNOWLEDGE_DIR` | `/data/knowledge` |
+| `DORPH_KNOWLEDGE_DIR` | `/data/knowledge` |
 | `TRAN_ENTITY_ATTACHMENT_DIR` | `/data/uploads/entity_attachments` |
 
-The entrypoint starts as root, gives `/data` to uid 65532 (`morph`), and execs the server as that user. Run one replica. SQLite and Badger are single-writer.
+The entrypoint starts as root, gives `/data` to uid 65532 (`dorph`), and execs the server as that user. Run one replica. SQLite and Badger are single-writer.
 
 A checkout started with `start-all.sh` still uses `./data` under the working directory. Those defaults are not changed.
 
 ## Env
 
-Required in `deploy/.env.production` when `MORPH_ENV=production`:
+Required in `deploy/.env.production` when `DORPH_ENV=production`:
 
 - `JWT_SECRET` — unique, at least 32 characters, not the development default
 - `ADMIN_PASSWORD` — unique, at least 12 characters, not `admin123`
 
-Leave `JWT_EXPIRY_HOURS` unset (24 hours). `876000` is refused. `MORPH_AI_API_KEY` is optional; the process starts without it.
+Leave `JWT_EXPIRY_HOURS` unset (24 hours). `876000` is refused. `DORPH_AI_API_KEY` is optional; the process starts without it.
 
 A development secret or password makes the process exit before it listens. `restart: unless-stopped` will then retry. Fix the env file. Do not commit it.
 
@@ -74,13 +74,13 @@ A development secret or password makes the process exit before it listens. `rest
 Stop the container so SQLite is not mid-write, then copy the volume:
 
 ```bash
-docker compose -f deploy/docker-compose.yml stop morph
-docker run --rm -v deploy_morph-data:/data:ro -v "$PWD":/backup alpine \
-  tar -C /data -czf /backup/morph-data.tgz .
-docker compose -f deploy/docker-compose.yml start morph
+docker compose -f deploy/docker-compose.yml stop dorph
+docker run --rm -v deploy_dorph-data:/data:ro -v "$PWD":/backup alpine \
+  tar -C /data -czf /backup/dorph-data.tgz .
+docker compose -f deploy/docker-compose.yml start dorph
 ```
 
-The volume name is `<compose project>_morph-data`. From `deploy/` the project defaults to `deploy`, so the volume is `deploy_morph-data`. `docker volume ls` shows the real name.
+The volume name is `<compose project>_dorph-data`. From `deploy/` the project defaults to `deploy`, so the volume is `deploy_dorph-data`. `docker volume ls` shows the real name.
 
 ## Upgrade
 
@@ -94,17 +94,17 @@ docker compose -f deploy/docker-compose.yml up --build -d
 
 ## Deploy on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in the existing Render project, create a Blueprint and point it at `render.yaml` on `main`. Render builds the root `Dockerfile` (context `.`) as the web service `morph` in Singapore on the starter plan. Deploys from `main` run only after CI checks pass (`autoDeployTrigger: checksPass`). Branch protection should require the five platform checks and `Build image`, so a red image build does not go out.
+The product owner creates the service. This repo does not call Render. After merge, in the existing Render project, create a Blueprint and point it at `render.yaml` on `main`. Render builds the root `Dockerfile` (context `.`) as the web service `dorph` in Singapore on the starter plan. Deploys from `main` run only after CI checks pass (`autoDeployTrigger: checksPass`). Branch protection should require the five platform checks and `Build image`, so a red image build does not go out.
 
 ### Secrets
 
-The Blueprint lists every secret with `sync: false` and no value. Fill these in the dashboard before the first boot. Startup in `MORPH_ENV=production` exits before it listens when a required secret is missing or is a development default.
+The Blueprint lists every secret with `sync: false` and no value. Fill these in the dashboard before the first boot. Startup in `DORPH_ENV=production` exits before it listens when a required secret is missing or is a development default.
 
 | Key | Rule |
 |-----|------|
-| `JWT_SECRET` | At least 32 random characters. Not `morph-dev-jwt-secret-change-me`, not a repeated character, and not a `change-me` / `replace-me` placeholder. |
+| `JWT_SECRET` | At least 32 random characters. Not `dorph-dev-jwt-secret-change-me`, not a repeated character, and not a `change-me` / `replace-me` placeholder. |
 | `ADMIN_PASSWORD` | At least 12 characters. Not `admin123`. |
-| `MORPH_AI_API_KEY` | DashScope key. The service sets `MORPH_AI_PROVIDER=dashscope`, which reads this key. The process starts without it; chat fails until it is set. |
+| `DORPH_AI_API_KEY` | DashScope key. The service sets `DORPH_AI_PROVIDER=dashscope`, which reads this key. The process starts without it; chat fails until it is set. |
 | Other `sync: false` keys | Leave blank unless you use that integration (`GEMINI_API_KEY`, `SMTP_PASS`, `NEO4J_PASSWORD`, and the rest). Do not paste them into git. |
 
 `PORT` is `9090` in the Blueprint. Render would otherwise inject its own port, and the image healthcheck calls `http://127.0.0.1:${PORT}/health`.
@@ -113,23 +113,23 @@ Leave `JWT_EXPIRY_HOURS` unset. Production uses 24 hours. `876000` is refused.
 
 ### Disk
 
-`morph-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service cannot do a zero-downtime deploy and must stay a single instance. Do not scale it out. During a deploy Render stops the old instance before the new one can mount the disk.
+`dorph-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service cannot do a zero-downtime deploy and must stay a single instance. Do not scale it out. During a deploy Render stops the old instance before the new one can mount the disk.
 
 The image entrypoint starts as root, gives `/data` to uid 65532, and then runs the server as that user. Render disks mount as root. That chown is what makes the first boot writable.
 
 ### Backup
 
-Use Render disk snapshots of `morph-data`. Take a snapshot before an upgrade you may need to undo. A snapshot is a point-in-time copy of `/data` (Badger, `tran.sqlite` and its WAL, knowledge, and uploads). Restoring a snapshot replaces the disk contents. Do not `docker compose down -v` against this disk; that command is only for the local compose volume.
+Use Render disk snapshots of `dorph-data`. Take a snapshot before an upgrade you may need to undo. A snapshot is a point-in-time copy of `/data` (Badger, `tran.sqlite` and its WAL, knowledge, and uploads). Restoring a snapshot replaces the disk contents. Do not `docker compose down -v` against this disk; that command is only for the local compose volume.
 
 ### After a deploy
 
-Open `https://<the service host>/health`. It must return HTTP 200 and a JSON body with `"status": "healthy"`. The same path is the container healthcheck. `GET /` is the Morph AI UI.
+Open `https://<the service host>/health`. It must return HTTP 200 and a JSON body with `"status": "healthy"`. The same path is the container healthcheck. `GET /` is the Dorph AI UI.
 
-## MorphUtils stack on Render
+## DorphUtils stack on Render
 
 Forge must not create services on Render. The product owner creates the services in Render project `prj-dahc33dbedkc73a1v8n0` (Prod). This repository does not call Render.
 
-`morph` is already the Morph panel. Example already live (example, do not recreate): `https://morph-gjmb.onrender.com`. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name.
+`dorph` is already the Dorph panel. Example already live (example, do not recreate): `https://dorph-gjmb.onrender.com`. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name.
 
 ### 1. Sync the Blueprint
 
@@ -137,88 +137,99 @@ After this file is on `main`, sync `render.yaml` in that project. One sync creat
 
 | Service | Product |
 |---------|---------|
-| `morph-utils` | MorphUtils |
+| `dorph-utils` | DorphUtils |
 | `formx` | Event Logs |
 | `composerx` | Content Maker |
 | `sharpreport` | Data Access |
-| `morph-engi` | Project |
+| `dorph-engi` | Project |
 
 If a service is already there, the sync updates it. Do not create a second copy.
 
 ### 2. Copy each public HTTPS origin
 
-After the service is live, open the URL the dashboard shows. `GET /health` must succeed (`morph-utils` returns a body of `ok`; the others return HTTP 200). Write the origin down outside git. These hosts are examples the product owner already created. They are not required names.
+After the service is live, open the URL the dashboard shows. `GET /health` must succeed (`dorph-utils` returns a body of `ok`; the others return HTTP 200). Write the origin down outside git. These hosts are examples the product owner already created. They are not required names.
 
 | Service | Product | Health | Example already live (example, do not recreate) |
 |---------|---------|--------|--------------------------------------------------|
-| `morph-utils` | MorphUtils | `GET /health` body `ok` | `https://morph-utils.onrender.com` |
+| `dorph-utils` | DorphUtils | `GET /health` body `ok` | `https://dorph-utils.onrender.com` |
 | `formx` | Event Logs | `GET /health` | `https://formx-vucj.onrender.com` |
 | `composerx` | Content Maker | `GET /health` | `https://composerx.onrender.com` |
 | `sharpreport` | Data Access | `GET /health` | `https://sharpreport.onrender.com` |
-| `morph-engi` | Project | `GET /health` | `https://morph-engi.onrender.com` |
+| `dorph-engi` | Project | `GET /health` | `https://dorph-engi.onrender.com` |
 
 ### 3. Dashboard env the create step can drop
 
-A Blueprint create can drop nested env vars. After create, open each service. If `USERS_PANEL_BASE_URL` is missing or blank on `formx`, `composerx`, `sharpreport`, or `morph-engi`, set it in the dashboard to `https://<morph public host>` with no path. The Morph panel example above is one such origin. It is not a secret. Save so that service starts again. `GET /health` does not call Morph, so a green health check does not prove this key is set.
+A Blueprint create can drop nested env vars. After create, open each service. If `USERS_PANEL_BASE_URL` is missing or blank on `formx`, `composerx`, `sharpreport`, or `dorph-engi`, set it in the dashboard to `https://<dorph public host>` with no path. The Dorph panel example above is one such origin. It is not a secret. Save so that service starts again. `GET /health` does not call Dorph, so a green health check does not prove this key is set.
 
-On `morph-utils`, set `VITE_MORPH_API_URL` to `https://<morph public host>` when it is missing or blank, then restart. The entrypoint rewrites `/config.js`. A MorphUtils image rebuild is not required for that key.
+On `dorph-utils`, set `VITE_DORPH_API_URL` to `https://<dorph public host>` when it is missing or blank, then restart. The entrypoint rewrites `/config.js`. A DorphUtils image rebuild is not required for that key.
 
 Do not put a JWT, password, or API key in git. Fill those prompts in the dashboard only.
 
-### 4. Rebuild Morph after the MorphUtils origin exists
+### 4. Rebuild Dorph after the DorphUtils origin exists
 
-Only after step 2 has copied the `morph-utils` origin: on the `morph` service, set `REACT_APP_MORPH_UTILS_URL` to `https://<morph-utils public host>` (no path) and rebuild the Morph image. The Blueprint already lists that key with `sync: false` and no value. Fill the dashboard prompt. Do not put a value in `render.yaml`. Morph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not commit the URL.
+Only after step 2 has copied the `dorph-utils` origin: on the `dorph` service, set `REACT_APP_DORPH_UTILS_URL` to `https://<dorph-utils public host>` (no path) and rebuild the Dorph image. The Blueprint already lists that key with `sync: false` and no value. Fill the dashboard prompt. Do not put a value in `render.yaml`. Dorph image rebuild is required. The root Dockerfile declares that name as `ARG` and the UI build inlines it. Render passes service env vars into the Docker build. A restart without a rebuild does not set the header link. An empty or loopback value omits it. If the link is still missing after the deploy, clear the build cache and deploy again. Do not commit the URL.
 
-### 5. Env matrix for the MorphNotes modal embeds
+### 5. Env matrix for the DorphNotes modal embeds
 
-Morph AI opens MorphNotes in a modal. That UI embeds Event Logs, Content Maker, and Project. Data Access is not a product embed. Set these keys for the Morph frontend build. They are read when that UI is built. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
+Dorph AI opens DorphNotes in a modal. That UI embeds Event Logs, Content Maker, and Project. Data Access is not a product embed. Set these keys for the Dorph frontend build. They are read when that UI is built. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
 
 | Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
 |-----|---------|-------------|--------------------------------------------------|-----------------|
 | `REACT_APP_SHEETX_URL` (alias `REACT_APP_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
 | `REACT_APP_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
-| `REACT_APP_PROJECTS_URL` (alias `REACT_APP_MORPH_ENGI_URL`) | Project | `https://<morph-engi public host>` | `https://morph-engi.onrender.com` | |
+| `REACT_APP_PROJECTS_URL` (alias `REACT_APP_DORPH_ENGI_URL`) | Project | `https://<dorph-engi public host>` | `https://dorph-engi.onrender.com` | |
 
-### Shared Morph session
+### 6. Env matrix for the DorphUtils embeds
 
-The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. The MorphNotes modal passes the Morph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.
+Set these `VITE_*` keys on `dorph-utils`. Story #114 wires them. The Blueprint lists each as a dashboard prompt with no value in git. They are read when the DorphUtils container starts, so a later change does not require a DorphUtils image rebuild. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name.
 
-Failure modes: the bearer can appear in the log of that first request before the page strips the query; signing out on one host does not clear the cookie on the others; opening an embed origin directly does not see the Morph host cookie. A custom parent domain you control would be a later cookie `Domain`. It is not used here.
+| Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
+|-----|---------|-------------|--------------------------------------------------|-----------------|
+| `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
+| `VITE_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
+| `VITE_DATAX_URL` | Data Access | `https://<sharpreport public host>` | `https://sharpreport.onrender.com` | |
+| `VITE_PROJECTS_URL` (alias `VITE_DORPH_ENGI_URL`) | Project | `https://<dorph-engi public host>` | `https://dorph-engi.onrender.com` | |
 
-The sections below keep the per-service port, disk, and secret tables. Those sections still do not put a value for `REACT_APP_MORPH_UTILS_URL` in the Blueprint. The `morph` service lists the key as a dashboard prompt.
+### Shared Dorph session
 
-## MorphUtils on Render
+The session cookie is `userspanel_session_token`. It is host-only: `SameSite=Lax`, no `Domain`. Do not set a cookie `Domain` of `onrender.com`. That name is a public suffix, so the browser drops it, and each `*.onrender.com` host is its own site. A `SameSite=Lax` cookie is not sent on a cross-site iframe load. The DorphNotes modal passes the Dorph bearer as `userspanel_token` on the iframe `src`. Each embed stores that bearer on its own host and sends `Authorization: Bearer` to `USERS_PANEL_BASE_URL`.
 
-The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-utils` (Singapore, starter) beside `morph`. Render builds `morph-utils/Dockerfile` with context `morph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `morph-engi` service. Set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, and `VITE_DATAX_URL` on `morph-utils` as prompts with no value in git.
+Failure modes: the bearer can appear in the log of that first request before the page strips the query; signing out on one host does not clear the cookie on the others; opening an embed origin directly does not see the Dorph host cookie. A custom parent domain you control would be a later cookie `Domain`. It is not used here.
+
+The sections below keep the per-service port, disk, and secret tables. Those sections still do not put a value for `REACT_APP_DORPH_UTILS_URL` in the Blueprint. The `dorph` service lists the key as a dashboard prompt.
+
+## DorphUtils on Render
+
+The product owner creates the shell. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `dorph-utils` (Singapore, starter) beside `dorph`. Render builds `dorph-utils/Dockerfile` with context `dorph-utils/`. Deploys from `main` run only after CI checks pass. There is no disk. Event Logs is the `formx` service. Content Maker is the `composerx` service. Data Access is the `sharpreport` service. Project is the `dorph-engi` service. Set `VITE_SHEETX_URL`, `VITE_FORMSX_URL`, `VITE_COMPOSERX_URL`, and `VITE_DATAX_URL` on `dorph-utils` as prompts with no value in git.
 
 ### Env
 
 | Key | Required | Value |
 |-----|----------|--------|
 | `PORT` | yes | `3040`. Render would otherwise inject its own port. The image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
-| `VITE_MORPH_API_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
-| `VITE_USERS_PANEL_API_URL` | no | Alias used only when `VITE_MORPH_API_URL` is unset or blank. Leave it unset. |
-| `VITE_SHEETX_URL` | yes for the Event Logs iframe | Event Logs origin. Alias: `VITE_FORMSX_URL`. Prompt on `morph-utils`, no value in git. Placeholder `https://<event-logs public host>`. |
+| `VITE_DORPH_API_URL` | yes | `https://<dorph public host>`, no path. This is the public Dorph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
+| `VITE_USERS_PANEL_API_URL` | no | Alias used only when `VITE_DORPH_API_URL` is unset or blank. Leave it unset. |
+| `VITE_SHEETX_URL` | yes for the Event Logs iframe | Event Logs origin. Alias: `VITE_FORMSX_URL`. Prompt on `dorph-utils`, no value in git. Placeholder `https://<event-logs public host>`. |
 | `VITE_FORMSX_URL` | no | Legacy alias for `VITE_SHEETX_URL`. Same prompt rules. |
-| `VITE_COMPOSERX_URL` | yes for the Content Maker iframe | Content Maker origin. Prompt on `morph-utils`, no value in git. Placeholder `https://<composerx public host>`. |
-| `VITE_DATAX_URL` | yes for the Data Access iframe | Data Access origin. Prompt on `morph-utils`, no value in git. Placeholder `https://<sharpreport public host>`. |
-| `VITE_PROJECTS_URL` | yes for the Project iframe | Project origin. Placeholder `https://<morph-engi public host>`. Alias: `VITE_MORPH_ENGI_URL`. |
-| `VITE_MORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. Same prompt rules. |
-| `VITE_MORPH_AI_URL` | no | Morph origin for the sign-in link when it should differ from `VITE_MORPH_API_URL`. |
+| `VITE_COMPOSERX_URL` | yes for the Content Maker iframe | Content Maker origin. Prompt on `dorph-utils`, no value in git. Placeholder `https://<composerx public host>`. |
+| `VITE_DATAX_URL` | yes for the Data Access iframe | Data Access origin. Prompt on `dorph-utils`, no value in git. Placeholder `https://<sharpreport public host>`. |
+| `VITE_PROJECTS_URL` | yes for the Project iframe | Project origin. Placeholder `https://<dorph-engi public host>`. Alias: `VITE_DORPH_ENGI_URL`. |
+| `VITE_DORPH_ENGI_URL` | no | Legacy alias for `VITE_PROJECTS_URL`. Same prompt rules. |
+| `VITE_DORPH_AI_URL` | no | Dorph origin for the sign-in link when it should differ from `VITE_DORPH_API_URL`. |
 
-Set `VITE_MORPH_API_URL` and the embed prompts in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. A blank embed origin leaves that iframe unmounted. `GET /health` does not call them. The session cookie notes are in the stack section above: `userspanel_session_token`, `SameSite=Lax`, no `Domain`.
+Set `VITE_DORPH_API_URL` and the embed prompts in the dashboard, then restart the service so the entrypoint rewrites `/config.js`. A rebuild is not required for a runtime value. A blank embed origin leaves that iframe unmounted. `GET /health` does not call them. The session cookie notes are in the stack section above: `userspanel_session_token`, `SameSite=Lax`, no `Domain`.
 
-Morph already allows cross-origin `Authorization` for non-loopback origins (`Access-Control-Allow-Origin: *`, credentials false). The shell sends `Authorization: Bearer` and does not send cookies cross-origin. This change does not edit CORS.
+Dorph already allows cross-origin `Authorization` for non-loopback origins (`Access-Control-Allow-Origin: *`, credentials false). The shell sends `Authorization: Bearer` and does not send cookies cross-origin. This change does not edit CORS.
 
 No JWT, password, or API key is set on this service.
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `morph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder is `https://<morph-utils public host>`. The `morph` service lists `REACT_APP_MORPH_UTILS_URL` as a dashboard prompt with no value. Fill that prompt and rebuild Morph. This MorphUtils section does not set `REACT_APP_MORPH_UTILS_URL` on `morph-utils`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `dorph-utils`. `GET /health` must return HTTP 200 and a body of `ok`. Copy that origin. The placeholder is `https://<dorph-utils public host>`. The `dorph` service lists `REACT_APP_DORPH_UTILS_URL` as a dashboard prompt with no value. Fill that prompt and rebuild Dorph. This DorphUtils section does not set `REACT_APP_DORPH_UTILS_URL` on `dorph-utils`. Do not guess an `onrender.com` host from the service name.
 
 ## Event Logs on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `morph` and `morph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on `formx`. Those keys are empty prompts on `morph-utils`. Do not set `REACT_APP_MORPH_UTILS_URL` on `formx`. The `morph` service lists that key as a dashboard prompt with no value.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `formx` (Singapore, starter) beside `dorph` and `dorph-utils`. Render builds `formx/Dockerfile` with context `.` (the repo root, so `pkg/` is available). Deploys from `main` run only after CI checks pass. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on `formx`. Those keys are empty prompts on `dorph-utils`. Do not set `REACT_APP_DORPH_UTILS_URL` on `formx`. The `dorph` service lists that key as a dashboard prompt with no value.
 
 ### Env
 
@@ -228,9 +239,9 @@ The product owner creates the service. This repo does not call Render. After mer
 | `FORMSX_SQLITE_PATH` | yes | `/data/formsx.sqlite` |
 | `FORMSX_BADGER_PATH` | yes | `/data/formsx_badger` |
 | `UPLOAD_DIR` | yes | `/data/uploads` |
-| `USERS_PANEL_BASE_URL` | yes | `https://<morph public host>`, no path. This is the public Morph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. Login fails until it is set. `GET /health` does not call Morph or MorphUtils. |
+| `USERS_PANEL_BASE_URL` | yes | `https://<dorph public host>`, no path. This is the public Dorph origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. Login fails until it is set. `GET /health` does not call Dorph or DorphUtils. |
 | `PUBLIC_FORM_BASE_URL` | no | `https://<event-logs public host>`, no path. Used in broadcast mail. Prompted, no value in git. |
-| `MORPH_AI_API_KEY` | no | Optional model key. The process starts without it. |
+| `DORPH_AI_API_KEY` | no | Optional model key. The process starts without it. |
 | `SMTP_PASSWORD` | no | Optional. Leave blank unless broadcast mail needs SMTP. Do not commit it. |
 
 `SMTP_HOST`, `SMTP_USER`, and `SMTP_FROM` stay unset unless you send mail. Do not put a password in git.
@@ -245,13 +256,13 @@ Use Render disk snapshots of `formx-data`. Take a snapshot before an upgrade you
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `formx`. `GET /health` must return HTTP 200 and a JSON body with `"status": "healthy"`. `GET /events-info` is the UI. Copy that origin. The placeholder is `https://<event-logs public host>`. Set that value as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on `morph-utils`. That prompt has no value in git. Do not set it on `formx` or `morph`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `formx`. `GET /health` must return HTTP 200 and a JSON body with `"status": "healthy"`. `GET /events-info` is the UI. Copy that origin. The placeholder is `https://<event-logs public host>`. Set that value as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on `dorph-utils`. That prompt has no value in git. Do not set it on `formx` or `dorph`. Do not guess an `onrender.com` host from the service name.
 
 ## Content Maker on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `composerx` (Singapore, starter) beside `morph`, `morph-utils`, and `formx`. Render builds `composerx/Dockerfile` with context `.` (the repo root, so `pkg/` replace directives resolve). Deploys from `main` run only after CI checks pass. The image runbook for a local build is [`composerx/backend/README.md`](../composerx/backend/README.md).
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `composerx` (Singapore, starter) beside `dorph`, `dorph-utils`, and `formx`. Render builds `composerx/Dockerfile` with context `.` (the repo root, so `pkg/` replace directives resolve). Deploys from `main` run only after CI checks pass. The image runbook for a local build is [`composerx/backend/README.md`](../composerx/backend/README.md).
 
-`GET /health` returns HTTP 200 and `"status":"ok"` without calling Morph or MorphUtils. `GET /` is the Content Maker UI on the same port. Local Vite stays on 8044; the image does not publish 8044.
+`GET /health` returns HTTP 200 and `"status":"ok"` without calling Dorph or DorphUtils. `GET /` is the Content Maker UI on the same port. Local Vite stays on 8044; the image does not publish 8044.
 
 ### Env
 
@@ -263,12 +274,12 @@ The product owner creates the service. This repo does not call Render. After mer
 | `COMPOSERX_SQLITE_PATH` | yes | `/data/composerx.sqlite` |
 | `COMPOSERX_BADGER_PATH` | yes | `/data/composerx_badger` |
 | `TRAN_FILE_STORAGE_PATH` | yes | `/data/storage` |
-| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<morph public host>`, no path. This is the Morph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `/health` does not call it. |
-| `MORPH_AI_API_KEY` | no | DashScope key for compose chat. The process starts without it. |
-| `TRAN_QWEN_API_KEY` | no | Legacy alias used only when `MORPH_AI_API_KEY` is unset. |
+| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<dorph public host>`, no path. This is the Dorph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `/health` does not call it. |
+| `DORPH_AI_API_KEY` | no | DashScope key for compose chat. The process starts without it. |
+| `TRAN_QWEN_API_KEY` | no | Legacy alias used only when `DORPH_AI_API_KEY` is unset. |
 | `TRAN_OPENAI_API_KEY` | no | Optional reference-library embeddings. Leave blank unless you use that path. |
 
-Do not put key values in git. Set `VITE_COMPOSERX_URL` on `morph-utils` as a prompt with no value in git. Do not set it on `composerx`.
+Do not put key values in git. Set `VITE_COMPOSERX_URL` on `dorph-utils` as a prompt with no value in git. Do not set it on `composerx`.
 
 ### Disk
 
@@ -278,11 +289,11 @@ Use Render disk snapshots of `composerx-data` before an upgrade you may need to 
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<composerx public host>`. Set that value as `VITE_COMPOSERX_URL` on `morph-utils`. That prompt has no value in git. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `composerx`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<composerx public host>`. Set that value as `VITE_COMPOSERX_URL` on `dorph-utils`. That prompt has no value in git. Do not guess an `onrender.com` host from the service name.
 
 ## Data Access on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `sharpreport` (Singapore, starter) beside `morph`, `morph-utils`, `formx`, and `composerx`. Render builds `SharpReport/Dockerfile` with context `.` (the image needs `pkg/morphai-rs`). Deploys from `main` run only after CI checks pass.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `sharpreport` (Singapore, starter) beside `dorph`, `dorph-utils`, `formx`, and `composerx`. Render builds `SharpReport/Dockerfile` with context `.` (the image needs `pkg/dorphai-rs`). Deploys from `main` run only after CI checks pass.
 
 ### Local image
 
@@ -293,7 +304,7 @@ docker build -t sharpreport:local -f SharpReport/Dockerfile .
 docker run --rm -p 127.0.0.1:3050:3050 sharpreport:local
 ```
 
-`GET /health` and `GET /ready` return HTTP 200 and `{"status":"ok"}` without Morph. `GET /` is the Data Access UI. The image does not publish Vite port 5178. `sh SharpReport/deploy/check-container-contract.sh` checks the contract without a daemon.
+`GET /health` and `GET /ready` return HTTP 200 and `{"status":"ok"}` without Dorph. `GET /` is the Data Access UI. The image does not publish Vite port 5178. `sh SharpReport/deploy/check-container-contract.sh` checks the contract without a daemon.
 
 `docker compose -f SharpReport/docker-compose.yml up --build` uses `SharpReport/deploy/.env.production` when that file exists (copy from `SharpReport/deploy/.env.production.example`). Data is the named volume at `/data`.
 
@@ -305,9 +316,9 @@ docker run --rm -p 127.0.0.1:3050:3050 sharpreport:local
 | `SHARPREPORT_PORT` | yes | `3050` |
 | `SHARPREPORT_DATABASE_URL` | yes | `sqlite:///data/datapulse.db` |
 | `SHARPREPORT_UI_DIR` | yes | `/app/ui` |
-| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<morph public host>`, no path. This is the Morph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `GET /health` does not call it. |
+| `USERS_PANEL_BASE_URL` | yes for sign-in | `https://<dorph public host>`, no path. This is the Dorph auth base URL. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. `GET /health` does not call it. |
 | `JWT_SECRET` | before storing connection passwords | Dashboard prompt. Empty still lets `/health` succeed. The development file secret is used until this is set. |
-| `MORPH_AI_API_KEY` | no | Data AI stays off until this is set. |
+| `DORPH_AI_API_KEY` | no | Data AI stays off until this is set. |
 
 Do not pass secrets as `docker build` arguments. Do not set `RUN_ENV=production` on this service. That file selects Postgres and placeholder passwords. Metabase is not in the image.
 
@@ -319,31 +330,31 @@ Use Render disk snapshots of `sharpreport-data` before an upgrade you may need t
 
 ### Public URL
 
-After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<sharpreport public host>`. Set that origin as `VITE_DATAX_URL` on `morph-utils`. That prompt has no value in git. Do not set it on `sharpreport`. Do not guess an `onrender.com` host from the service name.
+After the first deploy is live, open the URL Render shows for `sharpreport`. `GET /health` must return HTTP 200. Copy that origin. The placeholder is `https://<sharpreport public host>`. Set that origin as `VITE_DATAX_URL` on `dorph-utils`. That prompt has no value in git. Do not set it on `sharpreport`. Do not guess an `onrender.com` host from the service name.
 
 ## Project on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `morph-engi` (Singapore, starter) after `morph-utils`. Render builds `morph-engi/Dockerfile` with context `.`. Deploys from `main` run only after CI checks pass. The MorphUtils module id is `projects`. `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` are empty prompts on `morph-utils`, not on this service.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync the Blueprint from `render.yaml` on `main`. That adds the web service `dorph-engi` (Singapore, starter) after `dorph-utils`. Render builds `dorph-engi/Dockerfile` with context `.`. Deploys from `main` run only after CI checks pass. The DorphUtils module id is `projects`. `VITE_PROJECTS_URL` and `VITE_DORPH_ENGI_URL` are empty prompts on `dorph-utils`, not on this service.
 
 ### Env
 
 | Key | Required | Value |
 |-----|----------|--------|
-| `PORT` | yes | `9096`. Do not set `MORPH_ENGI_PORT`; it overrides `PORT`, and the image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
-| `APP_ENV` | yes | `production`. A development `JWT_SECRET` or a loopback Morph API base then refuses to listen. |
+| `PORT` | yes | `9096`. Do not set `DORPH_ENGI_PORT`; it overrides `PORT`, and the image healthcheck calls `http://127.0.0.1:${PORT}/health`. |
+| `APP_ENV` | yes | `production`. A development `JWT_SECRET` or a loopback Dorph API base then refuses to listen. |
 | `STATIC_DIR` | yes | `/app/frontend/dist`. The API serves the UI on the same origin. |
-| `MORPH_ENGI_DATABASE_URL` | yes | `sqlite:///data/morph_engi.db` |
-| `MORPH_ENGI_UPLOAD_DIR` | yes | `/data/uploads` |
-| `USERS_PANEL_BASE_URL` | yes | `https://<morph public host>`, no path. This is the public Morph API origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
-| `JWT_SECRET` | yes | The same value as Morph. At least 32 characters. Dashboard prompt, no value in git. |
-| `MORPH_AI_API_KEY` | no | Dashboard prompt, no value in git. `/health` succeeds without it. AI project documents do not. |
+| `DORPH_ENGI_DATABASE_URL` | yes | `sqlite:///data/dorph_engi.db` |
+| `DORPH_ENGI_UPLOAD_DIR` | yes | `/data/uploads` |
+| `USERS_PANEL_BASE_URL` | yes | `https://<dorph public host>`, no path. This is the public Dorph API origin. It is not a secret. The Blueprint prompts for it (`sync: false`) and stores no value in git. |
+| `JWT_SECRET` | yes | The same value as Dorph. At least 32 characters. Dashboard prompt, no value in git. |
+| `DORPH_AI_API_KEY` | no | Dashboard prompt, no value in git. `/health` succeeds without it. AI project documents do not. |
 
 ### Disk
 
-`morph-engi-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service is a single instance. Do not scale it out. The entrypoint starts as root, creates `/data/uploads`, gives `/data` to uid 65532, and then runs the server as that user.
+`dorph-engi-data` is mounted at `/data` (1 GB). A persistent disk attaches to one instance, so the service is a single instance. Do not scale it out. The entrypoint starts as root, creates `/data/uploads`, gives `/data` to uid 65532, and then runs the server as that user.
 
 ### Public URL
 
-`GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder is `https://<morph-engi public host>`. Set that origin as `VITE_PROJECTS_URL` and `VITE_MORPH_ENGI_URL` on `morph-utils`. Those prompts have no value in git. Do not set them on `morph-engi`.
+`GET /health` must return HTTP 200. Copy the HTTPS origin Render shows. The placeholder is `https://<dorph-engi public host>`. Set that origin as `VITE_PROJECTS_URL` and `VITE_DORPH_ENGI_URL` on `dorph-utils`. Those prompts have no value in git. Do not set them on `dorph-engi`.
 
-Local image build, without Render: `DOCKER_BUILDKIT=1 docker build -f morph-engi/Dockerfile -t morph-engi:local .` from the repo root. BuildKit is required so `morph-engi/Dockerfile.dockerignore` is used instead of the root ignore file. Fill `morph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.
+Local image build, without Render: `DOCKER_BUILDKIT=1 docker build -f dorph-engi/Dockerfile -t dorph-engi:local .` from the repo root. BuildKit is required so `dorph-engi/Dockerfile.dockerignore` is used instead of the root ignore file. Fill `dorph-engi/deploy/.env.production.example` into a gitignored env file before `docker run`.

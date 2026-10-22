@@ -21,10 +21,10 @@ PR #154 saved 5 of 6 Qwen 3B big notes, but one stored the raw JS-style JSON env
 ### Modified Capabilities
 
 - `ai-json-envelope`: Parser unwraps backtick-quoted values; generate must not store a raw JSON envelope; empty title uses the idea.
-- `morph-generated-document-theme`: Heading count is real `##` only; timeout is longer with a clean retry error.
+- `dorph-generated-document-theme`: Heading count is real `##` only; timeout is longer with a clean retry error.
 - `note-ai-grill`: Write prompt is colour-free plain markdown; hex tables are sanitized; cards stay `#111827` at render.
 - `html-anything-base-skill`: Grill write no longer injects the compact skill (it is markdown, not HTML). The 512-token budget is unchanged.
 
 ## Impact
 
-`morph/handlers` parse + generate, `morph/grill` prompt/sanitizer. No API shape change. Image-build #114 stays out of scope.
+`dorph/handlers` parse + generate, `dorph/grill` prompt/sanitizer. No API shape change. Image-build #114 stays out of scope.

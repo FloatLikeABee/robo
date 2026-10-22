@@ -16,7 +16,7 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 	"github.com/robo/repoenv"
 )
 
@@ -44,7 +44,7 @@ type App struct {
 	savedEmails    *SavedEmailRepository
 	publishedPages *PublishedPageRepository
 	publishDrafts  *PublishDraftRepository
-	ai             *morphai.Client
+	ai             *dorphai.Client
 }
 
 type HealthResponse struct {
@@ -96,7 +96,7 @@ func requireTranmailAccess(usersPanelBaseURL string, uiPaths map[string]struct{}
 			c.Next()
 			return
 		}
-		// Same strip as Morph AuthzMiddleware. Client headers are not a session.
+		// Same strip as Dorph AuthzMiddleware. Client headers are not a session.
 		stripClientIdentityHeaders(c.Request)
 		token := bearerToken(c.GetHeader("Authorization"))
 		if token == "" {
@@ -108,7 +108,7 @@ func requireTranmailAccess(usersPanelBaseURL string, uiPaths map[string]struct{}
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 			return
 		}
-		// Morph-hosted auth: a bearer Morph accepted. Role and permissions come only from that response.
+		// Dorph-hosted auth: a bearer Dorph accepted. Role and permissions come only from that response.
 		rawPermissions := strings.Join(perms, ",")
 		if role == "admin" || len(perms) > 0 || (role == "employee" && hasCSVPermission(rawPermissions, "compose_email")) {
 			c.Next()
@@ -181,7 +181,7 @@ func bearerToken(header string) string {
 	return strings.TrimSpace(parts[1])
 }
 
-// ok is false when Morph did not accept the bearer. An empty role with ok true is a validated session.
+// ok is false when Dorph did not accept the bearer. An empty role with ok true is a validated session.
 func resolveRoleAndPermissionsFromUsersPanel(baseURL, token string) (string, []string, bool) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if baseURL == "" || token == "" {
@@ -253,7 +253,7 @@ func main() {
 		UsersPanelBaseURL: getEnv("USERS_PANEL_BASE_URL", "http://127.0.0.1:9090"),
 	}
 	mergeAIConfigFromFile(&cfg, getEnv("TRAN_AI_CONFIG_PATH", "ai.config.json"))
-	mergeMorphAIEnv(&cfg)
+	mergeDorphAIEnv(&cfg)
 	normalizeQwenDefaults(&cfg)
 
 	sqlDB, err := openComposerXSQLite(cfg.SQLitePath)
@@ -287,7 +287,7 @@ func main() {
 		savedEmails:    NewSavedEmailRepository(sqlDB, emailBodies),
 		publishedPages: NewPublishedPageRepository(sqlDB, emailBodies),
 		publishDrafts:  NewPublishDraftRepository(sqlDB),
-		ai:             morphai.NewClient(morphai.LoadFromEnv()),
+		ai:             dorphai.NewClient(dorphai.LoadFromEnv()),
 	}
 
 	app.registerRoutes()

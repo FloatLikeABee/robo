@@ -5,7 +5,7 @@
 #   ./scripts/deploy.sh help
 #   ./scripts/deploy.sh doctor
 #   ./scripts/deploy.sh build --all
-#   ./scripts/deploy.sh build --app=morph,formx,composerx
+#   ./scripts/deploy.sh build --app=dorph,formx,composerx
 #   ./scripts/deploy.sh package
 #   ./scripts/deploy.sh docker build --all --tag=robo
 #   ./scripts/deploy.sh render validate|apply|status
@@ -43,22 +43,22 @@ warn() { echo -e "${YELLOW}!${NC} $*"; }
 err()  { echo -e "${RED}✗${NC} $*" >&2; }
 
 ALL_APPS=(
-  morph
+  dorph
   formx
   composerx
   booki
-  morph-engi
-  morph-utils
+  dorph-engi
+  dorph-utils
   sharpreport
 )
 
 # Apps that produce Docker API images
 DOCKER_APPS=(
-  morph
+  dorph
   formx
   composerx
   booki
-  morph-engi
+  dorph-engi
   sharpreport
 )
 
@@ -142,7 +142,7 @@ cmd_doctor() {
   if have go; then ok "go $(go version | awk '{print $3}')"; else err "go missing"; missing=1; fi
   if have node; then ok "node $(node -v)"; else err "node missing"; missing=1; fi
   if have npm; then ok "npm $(npm -v)"; else err "npm missing"; missing=1; fi
-  if have cargo; then ok "cargo $(cargo --version | awk '{print $2}')"; else warn "cargo missing (Morph Engi / SharpReport)"; fi
+  if have cargo; then ok "cargo $(cargo --version | awk '{print $2}')"; else warn "cargo missing (Dorph Engi / SharpReport)"; fi
   if have docker; then ok "docker $(docker --version | awk '{print $3}' | tr -d ',')"; else warn "docker missing (needed for image builds)"; fi
   if have render; then ok "render CLI present"; else warn "render CLI optional — https://render.com/docs/cli"; fi
   if have rsync; then ok "rsync present"; else warn "rsync missing (alibaba sync)"; fi
@@ -166,12 +166,12 @@ cmd_list() {
   done
 }
 
-build_morph() {
-  log "Building Morph frontend…"
-  (cd "${ROOT}/morph/frontend" && npm ci && npm run build)
-  log "Building Morph API…"
-  (cd "${ROOT}/morph" && go build -o "${DIST_DIR}/bin/morph-server" .)
-  ok "morph"
+build_dorph() {
+  log "Building Dorph frontend…"
+  (cd "${ROOT}/dorph/frontend" && npm ci && npm run build)
+  log "Building Dorph API…"
+  (cd "${ROOT}/dorph" && go build -o "${DIST_DIR}/bin/dorph-server" .)
+  ok "dorph"
 }
 
 build_formx() {
@@ -201,19 +201,19 @@ build_booki() {
   ok "booki"
 }
 
-build_morph_engi() {
-  log "Building Morph Engi API…"
-  (cd "${ROOT}/morph-engi/backend" && cargo build --release)
-  log "Building Morph Engi UI…"
-  (cd "${ROOT}/morph-engi/frontend" && npm ci && npm run build)
-  ok "morph-engi"
+build_dorph_engi() {
+  log "Building Dorph Engi API…"
+  (cd "${ROOT}/dorph-engi/backend" && cargo build --release)
+  log "Building Dorph Engi UI…"
+  (cd "${ROOT}/dorph-engi/frontend" && npm ci && npm run build)
+  ok "dorph-engi"
 }
 
 
-build_morph_utils() {
-  log "Building MorphUtils UI…"
-  (cd "${ROOT}/morph-utils/frontend" && npm ci && npm run build)
-  ok "morph-utils"
+build_dorph_utils() {
+  log "Building DorphUtils UI…"
+  (cd "${ROOT}/dorph-utils/frontend" && npm ci && npm run build)
+  ok "dorph-utils"
 }
 
 build_sharpreport() {
@@ -230,12 +230,12 @@ cmd_build() {
   local app
   while IFS= read -r app; do
     case "$app" in
-      morph) build_morph ;;
+      dorph) build_dorph ;;
       formx) build_formx ;;
       composerx) build_composerx ;;
       booki) build_booki ;;
-      morph-engi) build_morph_engi ;;
-      morph-utils) build_morph_utils ;;
+      dorph-engi) build_dorph_engi ;;
+      dorph-utils) build_dorph_utils ;;
       sharpreport) build_sharpreport ;;
       *) warn "unknown app: $app" ;;
     esac
@@ -257,8 +257,8 @@ cmd_package() {
   [[ -d "${DIST_DIR}/bin" ]] && cp -R "${DIST_DIR}/bin/." "${staging}/bin/" 2>/dev/null || true
 
   # Copy release binaries from cargo targets when present
-  [[ -f "${ROOT}/morph-engi/backend/target/release/morph-engi-api" ]] && \
-    cp "${ROOT}/morph-engi/backend/target/release/morph-engi-api" "${staging}/bin/"
+  [[ -f "${ROOT}/dorph-engi/backend/target/release/dorph-engi-api" ]] && \
+    cp "${ROOT}/dorph-engi/backend/target/release/dorph-engi-api" "${staging}/bin/"
   [[ -f "${ROOT}/SharpReport/backend/target/release/datapulse" ]] && \
     cp "${ROOT}/SharpReport/backend/target/release/datapulse" "${staging}/bin/"
 
@@ -270,12 +270,12 @@ cmd_package() {
       cp -R "$src" "$dest"
     fi
   }
-  copy_dist "${ROOT}/morph/frontend/build" "${staging}/apps/morph-ui"
+  copy_dist "${ROOT}/dorph/frontend/build" "${staging}/apps/dorph-ui"
   copy_dist "${ROOT}/formx/frontend/dist" "${staging}/apps/formx-ui"
   copy_dist "${ROOT}/composerx/frontend/dist" "${staging}/apps/composerx-ui"
   copy_dist "${ROOT}/booki/frontend/dist" "${staging}/apps/booki-ui"
-  copy_dist "${ROOT}/morph-engi/frontend/dist" "${staging}/apps/morph-engi-ui"
-  copy_dist "${ROOT}/morph-utils/frontend/dist" "${staging}/apps/morph-utils-ui"
+  copy_dist "${ROOT}/dorph-engi/frontend/dist" "${staging}/apps/dorph-engi-ui"
+  copy_dist "${ROOT}/dorph-utils/frontend/dist" "${staging}/apps/dorph-utils-ui"
   copy_dist "${ROOT}/SharpReport/frontend/build" "${staging}/apps/sharpreport-ui"
   copy_dist "${ROOT}/SharpReport/frontend/.svelte-kit/output/client" "${staging}/apps/sharpreport-ui-kit" 2>/dev/null || true
 
@@ -426,12 +426,12 @@ VPC
  ├─ Tair Redis
  ├─ OSS + CDN (SPA dist + uploads optional)
  ├─ ECS / SAE
- │   ├─ morph-api        (first — hosts auth; + disk for Badger)
+ │   ├─ dorph-api        (first — hosts auth; + disk for Badger)
  │   ├─ formx-api        (+ uploads volume)
  │   ├─ composerx-api    (+ storage volume)
  │   ├─ booki-api
- │   ├─ morph-engi-api
- │   └─ morph-utils (static)
+ │   ├─ dorph-engi-api
+ │   └─ dorph-utils (static)
  └─ ECS (large) SharpReport + Metabase Compose
 ALB/SLB terminates HTTPS → APIs; CDN serves SPAs
 EOF
@@ -445,7 +445,7 @@ EOF
 
 REQUIRED_ENV_KEYS=(
   USERS_PANEL_BASE_URL
-  MORPH_AI_API_KEY
+  DORPH_AI_API_KEY
   JWT_SECRET
   TRAN_MYSQL_DSN
   TRAN_MONGO_URI

@@ -34,7 +34,7 @@ import api from '../services/api';
 import {
   APPLIED_ASSISTANT_MSG,
   parseAppliedAssistantMessage,
-  postToMorph,
+  postToDorph,
   subscribeAppliedAssistantChannel,
 } from '../lib/appliedAssistantChannel';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -103,7 +103,7 @@ const AssistantManager = () => {
       const parsed = parseAppliedAssistantMessage(data);
       if (parsed?.type === APPLIED_ASSISTANT_MSG.STATE) applyState(parsed.assistant);
     });
-    postToMorph({ type: APPLIED_ASSISTANT_MSG.REQUEST });
+    postToDorph({ type: APPLIED_ASSISTANT_MSG.REQUEST });
     return () => {
       window.removeEventListener('message', onWindow);
       unsub();
@@ -162,7 +162,7 @@ const AssistantManager = () => {
   return (
     <ModuleShell
       title="Assistants"
-      helpText="Each assistant has a system prompt and can use one or more RAG collections. Choose an assistant from the Morph AI composer. Collect RAG data under RAG (file upload or API request)."
+      helpText="Each assistant has a system prompt and can use one or more RAG collections. Choose an assistant from the Dorph AI composer. Collect RAG data under RAG (file upload or API request)."
     >
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>

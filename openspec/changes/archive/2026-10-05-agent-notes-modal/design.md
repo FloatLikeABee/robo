@@ -1,10 +1,10 @@
 ## Context
 
-See proposal.md for why. Code checked on `main` at `5de4ca9`, which contains #137 (`9873cbc`). Ge's Mac may have uncommitted modal chrome for Morph Notes. That tree is not on this branch. The decisions below use only what is on `main`.
+See proposal.md for why. Code checked on `main` at `5de4ca9`, which contains #137 (`9873cbc`). Ge's Mac may have uncommitted modal chrome for Dorph Notes. That tree is not on this branch. The decisions below use only what is on `main`.
 
 What `main` actually does:
 
-- The header chip "MorphNotes" is an `href` to `/morphdata`. `HeaderMoreMenu` opens `href` items in a new tab. It is not an overlay.
+- The header chip "DorphNotes" is an `href` to `/dorphdata`. `HeaderMoreMenu` opens `href` items in a new tab. It is not an overlay.
 - `ChatNotesTodosDrawer` is the notes-shaped overlay (`hybrid-drawer-overlay` plus a panel `min(94vw, 900px)`). `notesDrawerOpen` is never set to true, so it does not open.
 - AI tools (`AiToolsWorkspaceDrawer`) is the live large overlay: same overlay class, panel `min(96vw, 1200px)`, close button, overlay `mousedown` dismisses. It has no Escape handler, no `role="dialog"`, and no focus move.
 - Skills (`SkillsModal`) is the live dialog: centered panel, `role="dialog"`, Escape, `body` scroll lock, overlay click dismisses. It does not move focus in or restore it.
@@ -23,10 +23,10 @@ What `main` actually does:
 
 **Non-Goals:**
 
-- Restyling MorphNotes, AI tools, or Skills.
+- Restyling DorphNotes, AI tools, or Skills.
 - Enabling `ChatNotesTodosDrawer`.
 - Editing notes, calling get-by-id, or changing ownership rules.
-- MorphUtils, Render, or a shared overlay framework.
+- DorphUtils, Render, or a shared overlay framework.
 
 ## Decisions
 
@@ -77,7 +77,7 @@ Below 768px the existing rule remains: one column, list until a row is chosen, d
 
 ## Review
 
-Proposer: treat Morph Notes on `main` as the modal to clone. Reviewer: the header MorphNotes control is a new-tab link, and `notesDrawerOpen` is never set. Checked in `SkoolAiChat.js` and `HeaderMoreMenu.js`. Clone the AI tools / notes-drawer chrome that is actually rendered, and add the dialog behavior from Skills, the enlarge overlay, and `onSheetKeyDown`. Say in the PR that the Mac WIP was not available.
+Proposer: treat Dorph Notes on `main` as the modal to clone. Reviewer: the header DorphNotes control is a new-tab link, and `notesDrawerOpen` is never set. Checked in `SkoolAiChat.js` and `HeaderMoreMenu.js`. Clone the AI tools / notes-drawer chrome that is actually rendered, and add the dialog behavior from Skills, the enlarge overlay, and `onSheetKeyDown`. Say in the PR that the Mac WIP was not available.
 
 Proposer: use `<dialog showModal()>` because the web guidance requires it. Reviewer: it would not match the div overlays, Safari still needs a light-dismiss fallback, and jsdom cannot open it. Keep the div. Record the rejection.
 

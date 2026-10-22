@@ -1,6 +1,6 @@
 ## Purpose
 
-Lets a Morph AI agent create, check, and get stick notes, timelines, stories, research, and event logs in the modules the operator already uses.
+Lets a Dorph AI agent create, check, and get stick notes, timelines, stories, research, and event logs in the modules the operator already uses.
 
 ## ADDED Requirements
 

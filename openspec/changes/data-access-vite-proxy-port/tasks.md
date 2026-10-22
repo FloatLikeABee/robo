@@ -1,6 +1,6 @@
 ## 1. Dev proxy and SSR rewrite
 
-- [x] 1.1 `vite.config.ts`: load `SHARPREPORT_PORT` from repo-root env (default 3050); proxy `/api`, `/public`, `/metabase` to that origin; keep `/api/messages` on Morph 9090
+- [x] 1.1 `vite.config.ts`: load `SHARPREPORT_PORT` from repo-root env (default 3050); proxy `/api`, `/public`, `/metabase` to that origin; keep `/api/messages` on Dorph 9090
 - [x] 1.2 `hooks.server.ts`: rewrite same-origin `/api/*` fetch to the same SharpReport origin (not hardcoded 3050)
 
 ## 2. Operator status and docs

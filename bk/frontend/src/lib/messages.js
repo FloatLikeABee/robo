@@ -1,6 +1,6 @@
 export const en = {
   language: 'Language',
-  morphTools: 'MorphTools',
+  dorphTools: 'DorphTools',
   assistants: 'Assistants',
   rag: 'RAG',
   documents: 'Documents',
@@ -9,7 +9,7 @@ export const en = {
 
 export const zh = {
   language: '语言',
-  morphTools: 'MorphTools',
+  dorphTools: 'DorphTools',
   assistants: '助手',
   rag: 'RAG',
   documents: '文档',

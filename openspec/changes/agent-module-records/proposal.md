@@ -1,6 +1,6 @@
 ## Why
 
-Morph AI can already call the admin APIs, but when someone asks an agent for a note it files a personal Notes & TODOs row. Stick notes, timelines, stories, research, and event logs are separate records, and timelines and research are not even named in the tool instructions.
+Dorph AI can already call the admin APIs, but when someone asks an agent for a note it files a personal Notes & TODOs row. Stick notes, timelines, stories, research, and event logs are separate records, and timelines and research are not even named in the tool instructions.
 
 ## What Changes
 
@@ -16,12 +16,12 @@ Out of scope: new MCP tools, Info Sheets, a language switch, and generic data.
 
 ### New Capabilities
 
-- `agent-module-records`: Morph AI agents create, check, and get stick notes, timelines, stories, research, and event logs through the existing module APIs.
+- `agent-module-records`: Dorph AI agents create, check, and get stick notes, timelines, stories, research, and event logs through the existing module APIs.
 
 ### Modified Capabilities
 
 ## Impact
 
-- Morph AI management tool instructions and catalog in `morph/handlers/management_chat.go`.
+- Dorph AI management tool instructions and catalog in `dorph/handlers/management_chat.go`.
 - Existing routes stay: `/api/tran/case-tasks`, `/api/tran/timelines`, `/api/tran/big-notes`, `/api/tran/research`, `/api/sheetx/events-info`.
-- No new tables and no change to the morph-mcp Notes & TODOs tools.
+- No new tables and no change to the dorph-mcp Notes & TODOs tools.

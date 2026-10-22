@@ -1,0 +1,19 @@
+# DorphUtils shell only. Does not start Dorph or the embedded apps.
+services:
+  dorph-utils:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${DORPH_UTILS_PUBLISH_PORT:-3040}:3040"
+    environment:
+      PORT: "3040"
+      VITE_DORPH_API_URL: ${VITE_DORPH_API_URL:-}
+      VITE_USERS_PANEL_API_URL: ${VITE_USERS_PANEL_API_URL:-}
+      VITE_SHEETX_URL: ${VITE_SHEETX_URL:-}
+      VITE_FORMSX_URL: ${VITE_FORMSX_URL:-}
+      VITE_COMPOSERX_URL: ${VITE_COMPOSERX_URL:-}
+      VITE_DATAX_URL: ${VITE_DATAX_URL:-}
+      VITE_PROJECTS_URL: ${VITE_PROJECTS_URL:-}
+      VITE_DORPH_ENGI_URL: ${VITE_DORPH_ENGI_URL:-}
+      VITE_DORPH_AI_URL: ${VITE_DORPH_AI_URL:-}

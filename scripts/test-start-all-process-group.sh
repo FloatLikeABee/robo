@@ -334,19 +334,19 @@ assert_alive "$victim" "same-group process after refusing PID 0/1/empty"
 kill -9 "$victim" >/dev/null 2>&1 || true
 wait "$victim" 2>/dev/null || true
 
-printf 'morph-api:%s\nbk-ui:%s\n' "$$" "$$" >"$PID_FILE"
+printf 'dorph-api:%s\nbk-ui:%s\n' "$$" "$$" >"$PID_FILE"
 got="$(pid_of '.*' || true)"
 [[ -z "$got" ]] || fail "regex name .* selected pid ${got}"
 got="$(pid_of 'm.*' || true)"
 [[ -z "$got" ]] || fail "regex name m.* selected pid ${got}"
-got="$(pid_of morph-api)"
-[[ "$got" == "$$" ]] || fail "exact morph-api lookup got ${got}"
+got="$(pid_of dorph-api)"
+[[ "$got" == "$$" ]] || fail "exact dorph-api lookup got ${got}"
 remove_pid_entry '.*'
-grep -q '^morph-api:' "$PID_FILE" || fail "remove of .* deleted morph-api"
+grep -q '^dorph-api:' "$PID_FILE" || fail "remove of .* deleted dorph-api"
 grep -q '^bk-ui:' "$PID_FILE" || fail "remove of .* deleted bk-ui"
-remove_pid_entry morph-api
-if grep -q '^morph-api:' "$PID_FILE"; then
-  fail "exact remove left morph-api"
+remove_pid_entry dorph-api
+if grep -q '^dorph-api:' "$PID_FILE"; then
+  fail "exact remove left dorph-api"
 fi
 grep -q '^bk-ui:' "$PID_FILE" || fail "exact remove deleted bk-ui"
 rm -f "$PID_FILE"
@@ -406,11 +406,11 @@ fi
 PATH="$saved_path"
 LSOF_MISSING_WARNED=0
 
-echo "case 9: morph-api restart waits for /health"
+echo "case 9: dorph-api restart waits for /health"
 health_port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')"
 saved_override_name="$START_ALL_PORT_OVERRIDE_NAME"
 saved_override_port="$START_ALL_PORT_OVERRIDE"
-START_ALL_PORT_OVERRIDE_NAME=morph-api
+START_ALL_PORT_OVERRIDE_NAME=dorph-api
 START_ALL_PORT_OVERRIDE="$health_port"
 START_ALL_HEALTH_ATTEMPTS=20
 START_ALL_HEALTH_INTERVAL=0.2
@@ -445,22 +445,22 @@ while [[ "$i" -lt 30 ]]; do
   i=$((i + 1))
 done
 curl -fsS --max-time 1 "http://127.0.0.1:${health_port}/health" >/dev/null 2>&1 || fail "health fixture did not serve /health"
-record_pid morph-api "$health_pid"
-wait_morph_api_healthy || fail "healthy morph-api fixture was rejected"
+record_pid dorph-api "$health_pid"
+wait_dorph_api_healthy || fail "healthy dorph-api fixture was rejected"
 kill -9 "$health_pid" >/dev/null 2>&1 || true
 wait "$health_pid" 2>/dev/null || true
 sleep 30 &
 dummy_pid=$!
 note_pid "$dummy_pid"
-record_pid morph-api "$dummy_pid"
+record_pid dorph-api "$dummy_pid"
 START_ALL_HEALTH_ATTEMPTS=3
 START_ALL_HEALTH_INTERVAL=0.2
-if wait_morph_api_healthy >/dev/null 2>&1; then
-  fail "unhealthy morph-api was treated as healthy"
+if wait_dorph_api_healthy >/dev/null 2>&1; then
+  fail "unhealthy dorph-api was treated as healthy"
 fi
 kill -9 "$dummy_pid" >/dev/null 2>&1 || true
 wait "$dummy_pid" 2>/dev/null || true
-remove_pid_entry morph-api
+remove_pid_entry dorph-api
 START_ALL_PORT_OVERRIDE_NAME="$saved_override_name"
 START_ALL_PORT_OVERRIDE="$saved_override_port"
 
@@ -504,7 +504,7 @@ help_text="$("${ROOT}/start-all.sh" --help)"
 printf '%s\n' "$help_text" | grep -q "process group" || fail "help does not document process-group stop"
 printf '%s\n' "$help_text" | grep -q "port is free" || fail "help does not document the port wait"
 printf '%s\n' "$help_text" | grep -q "PID 0" || fail "help does not document the PID 0 refusal"
-printf '%s\n' "$help_text" | grep -q "/health" || fail "help does not document the morph-api health wait"
+printf '%s\n' "$help_text" | grep -q "/health" || fail "help does not document the dorph-api health wait"
 printf '%s\n' "$help_text" | grep -q "lsof" || fail "help does not document lsof"
 real_pids="${ROOT}/.robo-dev/pids"
 pid_before=""
@@ -526,5 +526,28 @@ if [[ -f "$real_pids" || -n "$pid_before" ]]; then
 fi
 "${ROOT}/start-all.sh" status >/dev/null
 "${ROOT}/start-all.sh" list >/dev/null
+
+echo "case 11: MORPH_ env names copy into DORPH_ when the new name is empty"
+unset DORPH_TESTONLY_KEY MORPH_TESTONLY_KEY VITE_DORPH_TESTONLY_URL VITE_MORPH_TESTONLY_URL
+export MORPH_TESTONLY_KEY=from-old
+alias_legacy_env
+[[ "${DORPH_TESTONLY_KEY}" == from-old ]] || fail "MORPH_TESTONLY_KEY did not copy into DORPH_TESTONLY_KEY"
+export DORPH_TESTONLY_KEY=from-new
+export MORPH_TESTONLY_KEY=from-old
+alias_legacy_env
+[[ "${DORPH_TESTONLY_KEY}" == from-new ]] || fail "set DORPH_TESTONLY_KEY was overwritten by MORPH_"
+export VITE_MORPH_TESTONLY_URL=http://old
+unset VITE_DORPH_TESTONLY_URL
+alias_legacy_env
+[[ "${VITE_DORPH_TESTONLY_URL}" == http://old ]] || fail "VITE_MORPH_ did not copy into VITE_DORPH_"
+unset DORPH_TESTONLY_KEY MORPH_TESTONLY_KEY VITE_DORPH_TESTONLY_URL VITE_MORPH_TESTONLY_URL
+
+echo "case 12: old morph service names resolve to dorph"
+[[ "$(resolve_services morph)" == "dorph-api dorph-ui" ]] || fail "morph alias: $(resolve_services morph)"
+[[ "$(resolve_services morph-api)" == "dorph-api" ]] || fail "morph-api alias"
+[[ "$(resolve_services morph-ui)" == "dorph-ui" ]] || fail "morph-ui alias"
+[[ "$(resolve_services morph-utils)" == "dorph-utils-ui sharpreport-api sharpreport-ui" ]] || fail "morph-utils alias"
+[[ "$(resolve_services morph-engi)" == "dorph-engi-api dorph-engi-ui" ]] || fail "morph-engi alias"
+[[ "$(service_port morph-api)" == "$(service_port dorph-api)" ]] || fail "morph-api port"
 
 echo "OK: process-group stop reaps non-listening children before port cleanup"

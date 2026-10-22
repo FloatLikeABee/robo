@@ -1,8 +1,8 @@
-# Vercel only builds morph-engi/frontend (+ platform-chat). Skip the rest of the monorepo.
+# Vercel only builds dorph-engi/frontend (+ platform-chat). Skip the rest of the monorepo.
 UsersPanel
-morph
-morph-utils
-morph-broadcast
+dorph
+dorph-utils
+dorph-broadcast
 composerx
 booki
 formx

@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-func TestListenPortStaysOnServerPortWhenMorphPortIsSet(t *testing.T) {
+func TestListenPortStaysOnServerPortWhenDorphPortIsSet(t *testing.T) {
 	orig := osGetEnv
 	t.Cleanup(func() { osGetEnv = orig })
 	osGetEnv = func(key string) string {

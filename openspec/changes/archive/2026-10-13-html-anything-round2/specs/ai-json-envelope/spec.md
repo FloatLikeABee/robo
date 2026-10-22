@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Parser repairs missing commas between properties
-When Morph parses a model JSON object, it MUST succeed if two properties are separated only by whitespace (the `invalid character '"' after object key:value pair` failure). Fences around that object MUST still be stripped.
+When Dorph parses a model JSON object, it MUST succeed if two properties are separated only by whitespace (the `invalid character '"' after object key:value pair` failure). Fences around that object MUST still be stripped.
 
 #### Scenario: Missing comma after a string value
 - **WHEN** the model returns `{"title":"Hi" "markdown":"body"}` or the same object with a newline instead of a space

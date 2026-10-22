@@ -1,6 +1,6 @@
 ## Purpose
 
-Lets the operator choose an AI tools assistant from the Morph AI composer.
+Lets the operator choose an AI tools assistant from the Dorph AI composer.
 
 ## ADDED Requirements
 
@@ -19,4 +19,4 @@ The chat composer MUST offer an assistant picker in the same control family as t
 
 #### Scenario: No Apply button
 - **WHEN** the operator opens the AI tools assistant panel
-- **THEN** there is no Apply control that attaches an assistant to Morph chat
+- **THEN** there is no Apply control that attaches an assistant to Dorph chat

@@ -1,6 +1,6 @@
 ## Purpose
 
-Makes a skill checked in Morph AI chat govern the next assistant reply.
+Makes a skill checked in Dorph AI chat govern the next assistant reply.
 
 ## ADDED Requirements
 

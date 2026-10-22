@@ -53,7 +53,7 @@ Three alternatives per fork. Chosen: A2 + B3 + C2 + D1.
 
 ## Migration Plan
 
-Code and tests. Restart Morph. Rollback is revert.
+Code and tests. Restart Dorph. Rollback is revert.
 
 ## Open Questions
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 	"github.com/robo/webresearch"
 )
 
@@ -93,7 +93,7 @@ func resolveWebSearchQuery(payload formTemplateAIRequest) string {
 // FormTemplateAIChat generates a web-grounded HTML form template and optional question suggestions.
 func (h *Handler) FormTemplateAIChat(c *gin.Context) {
 	if h.AI == nil || !h.AI.Configured() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "MorphAI is not configured (set MORPH_AI_API_KEY)"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "DorphAI is not configured (set DORPH_AI_API_KEY)"})
 		return
 	}
 
@@ -140,16 +140,16 @@ Design goals:
 		system += "\n\nWeb research (ground truth for topic and common form fields):\n" + researchNotes
 	}
 
-	messages := []morphai.Message{{Role: "user", Content: system + "\n\nReply with JSON only."}}
+	messages := []dorphai.Message{{Role: "user", Content: system + "\n\nReply with JSON only."}}
 	for _, m := range payload.Messages {
 		role := strings.TrimSpace(m.Role)
 		if role != "user" && role != "assistant" {
 			continue
 		}
-		messages = append(messages, morphai.Message{Role: role, Content: m.Content})
+		messages = append(messages, dorphai.Message{Role: role, Content: m.Content})
 	}
 	if len(payload.Messages) == 0 {
-		messages = append(messages, morphai.Message{
+		messages = append(messages, dorphai.Message{
 			Role:    "user",
 			Content: "Create a form HTML template and suggested questions based on the form name and description.",
 		})
@@ -193,7 +193,7 @@ Design goals:
 	})
 }
 
-// WebSearch returns lightweight public research notes for Morph AI tool loops.
+// WebSearch returns lightweight public research notes for Dorph AI tool loops.
 func (h *Handler) WebSearch(c *gin.Context) {
 	var body struct {
 		Query string `json:"query"`

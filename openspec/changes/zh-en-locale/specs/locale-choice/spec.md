@@ -38,14 +38,14 @@ Choosing English or 中文 MUST save that choice on this browser and MUST use it
 - **THEN** the login screen is shown in Simplified Chinese
 
 ### Requirement: One choice covers embedded modules
-The language chosen in Morph AI MUST be the language used by MorphNotes, MorphTools, Event Logs, Content Maker, and Project, including when those modules are open inside Morph AI. Changing the language MUST update an already open module without signing in again.
+The language chosen in Dorph AI MUST be the language used by DorphNotes, DorphTools, Event Logs, Content Maker, and Project, including when those modules are open inside Dorph AI. Changing the language MUST update an already open module without signing in again.
 
-#### Scenario: MorphNotes modal follows the chat
-- **WHEN** the operator chooses 中文 in Morph AI and opens MorphNotes
-- **THEN** MorphNotes chrome is Simplified Chinese
+#### Scenario: DorphNotes modal follows the chat
+- **WHEN** the operator chooses 中文 in Dorph AI and opens DorphNotes
+- **THEN** DorphNotes chrome is Simplified Chinese
 
 #### Scenario: Open module updates
-- **WHEN** Event Logs, Content Maker, Project, or MorphTools is already open and the operator switches language in Morph AI
+- **WHEN** Event Logs, Content Maker, Project, or DorphTools is already open and the operator switches language in Dorph AI
 - **THEN** that module’s chrome switches to the new language
 
 ### Requirement: Document language matches the choice

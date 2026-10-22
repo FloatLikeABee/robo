@@ -69,7 +69,7 @@ coverage.*
 *.dylib
 bin/
 vendor/
-# Morph-vendored skills are not Go modules.
+# Dorph-vendored skills are not Go modules.
 !skills/vendor/
 !skills/vendor/**
 

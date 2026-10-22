@@ -2,14 +2,14 @@
 
 ## Overview
 
-User-facing product: **Event Logs**. Repository folder stays `formx`. MorphUtils embed id is `sheetx`. Default iframe URL is `/events-info`. Legacy `/survey-bot` redirects there.
+User-facing product: **Event Logs**. Repository folder stays `formx`. DorphUtils embed id is `sheetx`. Default iframe URL is `/events-info`. Legacy `/survey-bot` redirects there.
 
 | | |
 |--|--|
 | Backend | `formx/backend/` Go + Gin |
 | Frontend | `formx/frontend/` React + Vite + Tailwind (dark) |
 | Ports | API `29909`, UI `19909` |
-| Auth | Morph SSO (`USERS_PANEL_BASE_URL`) |
+| Auth | Dorph SSO (`USERS_PANEL_BASE_URL`) |
 | Data | SQLite `FORMSX_SQLITE_PATH` + Badger `FORMSX_BADGER_PATH` |
 
 Inner tab: **Events & Info** only. Do not restore an Info Sheets tab. Do not label the module Survey Maker / SurveyX.
@@ -40,9 +40,9 @@ formx/backend/
     └── surveybot/
 ```
 
-## MorphUtils
+## DorphUtils
 
-Embed: `VITE_SHEETX_URL` (fallback `VITE_FORMSX_URL`) + `/events-info`. Chat is Morph AI, not a satellite drawer.
+Embed: `VITE_SHEETX_URL` (fallback `VITE_FORMSX_URL`) + `/events-info`. Chat is Dorph AI, not a satellite drawer.
 
 ## Run
 

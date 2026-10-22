@@ -21,6 +21,6 @@ Notes & TODOs **AI assist** still tells the model it is writing for a transporta
 
 ## Impact
 
-- Morph backend: `morph/handlers/tran_text_assist.go` (`generate_todo`, `generate_note`, `task_chain_step` prompts). Same POST `/api/tran/text-assist`.
-- Morph frontend: `NotesTodosContent.jsx` only if the request omits title/seed (should already send `seed: title`).
+- Dorph backend: `dorph/handlers/tran_text_assist.go` (`generate_todo`, `generate_note`, `task_chain_step` prompts). Same POST `/api/tran/text-assist`.
+- Dorph frontend: `NotesTodosContent.jsx` only if the request omits title/seed (should already send `seed: title`).
 - Tests: new Go tests on prompt construction (no live model required for the leftover-string check).

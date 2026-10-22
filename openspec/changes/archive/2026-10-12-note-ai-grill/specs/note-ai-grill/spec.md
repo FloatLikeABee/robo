@@ -30,7 +30,7 @@ The grill MUST plan fewer questions for a short single-intent title and more for
 - **THEN** the grill plans one question
 
 #### Scenario: Multi-part title
-- **WHEN** the title is a longer or multi-part topic such as "make this morphAI a platform for agents, actually agent notebook"
+- **WHEN** the title is a longer or multi-part topic such as "make this dorphAI a platform for agents, actually agent notebook"
 - **THEN** the grill plans more than one question
 - **AND** it plans at most four
 
@@ -66,10 +66,10 @@ The operator MUST be able to skip the current question or stop the interview and
 - **THEN** the grill stays on the same question
 
 ### Requirement: Confirmed draft is body text
-After the interview, the grill MUST show a draft and MUST NOT insert it until the operator confirms. The draft MUST be the note or TODO body. It MUST NOT be a greeting, a self-introduction, or an offer of further help. A TODO draft MUST be actionable subtasks. Confirming in the Morph SPA MUST replace the editor body and MUST NOT save the item by itself. Cancelling MUST leave the editor body unchanged. In the MCP app, confirming MUST store a note for the verified session through the existing note create tool, and only after the draft is shown.
+After the interview, the grill MUST show a draft and MUST NOT insert it until the operator confirms. The draft MUST be the note or TODO body. It MUST NOT be a greeting, a self-introduction, or an offer of further help. A TODO draft MUST be actionable subtasks. Confirming in the Dorph SPA MUST replace the editor body and MUST NOT save the item by itself. Cancelling MUST leave the editor body unchanged. In the MCP app, confirming MUST store a note for the verified session through the existing note create tool, and only after the draft is shown.
 
 #### Scenario: Chatty model draft
-- **WHEN** the model answers the title as an assistant ("Great! I'm Morph AI...")
+- **WHEN** the model answers the title as an assistant ("Great! I'm Dorph AI...")
 - **THEN** the draft shown for review is note or TODO content about the title and the answers
 - **AND** that assistant reply is not the inserted text
 
@@ -92,10 +92,10 @@ After the interview, the grill MUST show a draft and MUST NOT insert it until th
 - **THEN** the editor body is a short list of subtasks about the title
 
 ### Requirement: Grill sessions belong to the signed-in user
-The HTTP grill MUST require the same Morph session as other private `/api/tran/` routes. A missing session MUST be rejected and MUST NOT call the model. A grill id MUST be readable only by the session that started it. Another session MUST get the same not-found result it would for a missing id, and MUST NOT receive the draft.
+The HTTP grill MUST require the same Dorph session as other private `/api/tran/` routes. A missing session MUST be rejected and MUST NOT call the model. A grill id MUST be readable only by the session that started it. Another session MUST get the same not-found result it would for a missing id, and MUST NOT receive the draft.
 
 #### Scenario: No session
-- **WHEN** a client calls the grill HTTP route without a Morph session
+- **WHEN** a client calls the grill HTTP route without a Dorph session
 - **THEN** the response is unauthorized
 - **AND** no model call is made
 
@@ -105,7 +105,7 @@ The HTTP grill MUST require the same Morph session as other private `/api/tran/`
 - **AND** the draft is not included
 
 ### Requirement: One grill page for the SPA and MCP hosts
-The conversation UI MUST be one HTML document served as an MCP app resource and rendered inside the Morph SPA AI assist modal. The page MUST use a dark background, light text, and an Arial or equivalent sans-serif stack. It MUST NOT contain an external URL, an HTML-sink assignment, or a session token. It MUST talk to the host only through the MCP app bridge.
+The conversation UI MUST be one HTML document served as an MCP app resource and rendered inside the Dorph SPA AI assist modal. The page MUST use a dark background, light text, and an Arial or equivalent sans-serif stack. It MUST NOT contain an external URL, an HTML-sink assignment, or a session token. It MUST talk to the host only through the MCP app bridge.
 
 #### Scenario: SPA modal renders the grill page
 - **WHEN** the operator opens AI assist in Notes & TODOs

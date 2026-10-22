@@ -1,10 +1,10 @@
 # 07 — Data Access and Project (Rust)
 
-Two Rust APIs: **Axum**, **SQLx**, SQLite, `pkg/morphai-rs`, Morph SSO (`USERS_PANEL_BASE_URL` → Morph `:9090`). Neither ships a `platform-chat` drawer.
+Two Rust APIs: **Axum**, **SQLx**, SQLite, `pkg/dorphai-rs`, Dorph SSO (`USERS_PANEL_BASE_URL` → Dorph `:9090`). Neither ships a `platform-chat` drawer.
 
 ## Data Access (`SharpReport/`)
 
-User-facing name: **Data Access** (not DataPulse / DataX in UI copy). Iframe path in MorphUtils: `/datax`.
+User-facing name: **Data Access** (not DataPulse / DataX in UI copy). Iframe path in DorphUtils: `/datax`.
 
 | | |
 |--|--|
@@ -13,25 +13,25 @@ User-facing name: **Data Access** (not DataPulse / DataX in UI copy). Iframe pat
 | DB | SQLite |
 | Extra | Embedded Metabase (Java 17+), dark-only UI |
 
-If MorphUtils `/datax` says connection refused, start `sharpreport-ui` (`./start-all.sh start sharpreport-ui`) and keep Vite `server.host` reachable. API up on `SHARPREPORT_PORT` is not enough if 5178 is down.
+If DorphUtils `/datax` says connection refused, start `sharpreport-ui` (`./start-all.sh start sharpreport-ui`) and keep Vite `server.host` reachable. API up on `SHARPREPORT_PORT` is not enough if 5178 is down.
 
-Reuse the Morph JWT cookie. Do not show a second password form. Do not clear the shared cookie on 502 from Data Access `/auth/me`.
+Reuse the Dorph JWT cookie. Do not show a second password form. Do not clear the shared cookie on 502 from Data Access `/auth/me`.
 
-Key files: `SharpReport/backend/src/main.rs`, `config.rs`, `api/`. Frontend is SvelteKit. The container image is `SharpReport/Dockerfile` (context repo root). `SHARPREPORT_PORT` wins over `PORT` (both `3050` in the image). `GET /health` and `GET /ready` return `{"status":"ok"}` and do not call Morph. `USERS_PANEL_BASE_URL` is the Morph auth base URL (not a secret). SQLite defaults to `/data/datapulse.db` in the image; a checkout without that variable still uses `sqlite://./data/datapulse.db`. Metabase is not in the image. More: [`SharpReport/README.md`](../../SharpReport/README.md), [`deploy/README.md`](../../deploy/README.md).
+Key files: `SharpReport/backend/src/main.rs`, `config.rs`, `api/`. Frontend is SvelteKit. The container image is `SharpReport/Dockerfile` (context repo root). `SHARPREPORT_PORT` wins over `PORT` (both `3050` in the image). `GET /health` and `GET /ready` return `{"status":"ok"}` and do not call Dorph. `USERS_PANEL_BASE_URL` is the Dorph auth base URL (not a secret). SQLite defaults to `/data/datapulse.db` in the image; a checkout without that variable still uses `sqlite://./data/datapulse.db`. Metabase is not in the image. More: [`SharpReport/README.md`](../../SharpReport/README.md), [`deploy/README.md`](../../deploy/README.md).
 
-## Project (`morph-engi/`)
+## Project (`dorph-engi/`)
 
-User-facing name: **Project** inside MorphUtils.
+User-facing name: **Project** inside DorphUtils.
 
 | | |
 |--|--|
 | API | `9096` |
 | UI | `5179` |
-| DB | SQLite (`DATABASE_URL`, default `sqlite://morph_engi.db`) |
+| DB | SQLite (`DATABASE_URL`, default `sqlite://dorph_engi.db`) |
 
-AI project documents from files or paste, plus a files library. `POST /api/v1/projects/generate-document` needs `MORPH_AI_API_KEY`. Chat for operators is Morph AI.
+AI project documents from files or paste, plus a files library. `POST /api/v1/projects/generate-document` needs `DORPH_AI_API_KEY`. Chat for operators is Dorph AI.
 
-**Vercel static preview** (UI only, localStorage, no Rust API): see [`morph-engi/README.md`](../../morph-engi/README.md#vercel-static-preview).
+**Vercel static preview** (UI only, localStorage, no Rust API): see [`dorph-engi/README.md`](../../dorph-engi/README.md#vercel-static-preview).
 
 ## Shared auth
 

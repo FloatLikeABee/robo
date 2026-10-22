@@ -1,14 +1,14 @@
-# Morph API + Morph AI UI, the MorphUtils shell, Event Logs, Content Maker,
+# Dorph API + Dorph AI UI, the DorphUtils shell, Event Logs, Content Maker,
 # Data Access, and Project. Attach this file to the existing Render project.
 # Secrets and public origins that are filled in the dashboard are prompts. Do
-# not put values on those keys. VITE_MORPH_API_URL and USERS_PANEL_BASE_URL are
-# public origin prompts, not secrets. REACT_APP_MORPH_UTILS_URL is a morph
-# dashboard prompt with no value. Embed origins are prompts on morph-utils
+# not put values on those keys. VITE_DORPH_API_URL and USERS_PANEL_BASE_URL are
+# public origin prompts, not secrets. REACT_APP_DORPH_UTILS_URL is a dorph
+# dashboard prompt with no value. Embed origins are prompts on dorph-utils
 # only (sync: false, no value). Do not put an onrender.com host in this file.
 services:
   - type: web
     runtime: docker
-    name: morph
+    name: dorph
     region: singapore
     plan: starter
     branch: main
@@ -19,7 +19,7 @@ services:
     maxShutdownDelaySeconds: 120
     buildFilter:
       paths:
-        - morph/**
+        - dorph/**
         - pkg/**
         - Dockerfile
         - .dockerignore
@@ -27,35 +27,35 @@ services:
         - deploy/docker-entrypoint.sh
         - render.yaml
     disk:
-      name: morph-data
+      name: dorph-data
       mountPath: /data
       sizeGB: 1
-    # REACT_APP_MORPH_UTILS_URL is a Docker build arg. CRA inlines it. Empty or
-    # loopback omits the MorphUtils header chip. Do not put a URL on the key.
+    # REACT_APP_DORPH_UTILS_URL is a Docker build arg. CRA inlines it. Empty or
+    # loopback omits the DorphUtils header chip. Do not put a URL on the key.
     envVars:
-      - key: MORPH_ENV
+      - key: DORPH_ENV
         value: production
       - key: PORT
         value: "9090"
       - key: GIN_MODE
         value: release
-      - key: MORPH_AI_PROVIDER
+      - key: DORPH_AI_PROVIDER
         value: dashscope
       - key: ADMIN_USERNAME
-        value: morphadmin
+        value: dorphadmin
       - key: ADMIN_EMAIL
-        value: morphadmin@local.com
+        value: dorphadmin@local.com
       - key: DB_PATH
         value: /data/badger
       - key: TRAN_SQLITE_PATH
         value: /data/tran.sqlite
       - key: ENTITY_DETAILS_BADGER
         value: /data/entity_details
-      - key: MORPH_KNOWLEDGE_DIR
+      - key: DORPH_KNOWLEDGE_DIR
         value: /data/knowledge
       - key: TRAN_ENTITY_ATTACHMENT_DIR
         value: /data/uploads/entity_attachments
-      - key: REACT_APP_MORPH_UTILS_URL
+      - key: REACT_APP_DORPH_UTILS_URL
         sync: false
       - key: JWT_SECRET
         sync: false
@@ -63,7 +63,7 @@ services:
         sync: false
       - key: BOOTSTRAP_ADMIN_PASSWORD
         sync: false
-      - key: MORPH_AI_API_KEY
+      - key: DORPH_AI_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
@@ -85,7 +85,7 @@ services:
         sync: false
       - key: OPENAI_COMPATIBLE_API_KEY
         sync: false
-      - key: MORPH_IMAGE_API_KEY
+      - key: DORPH_IMAGE_API_KEY
         sync: false
       - key: POLLINATIONS_API_KEY
         sync: false
@@ -100,30 +100,30 @@ services:
       - key: TRAN_OPENAI_API_KEY
         sync: false
 
-  # MorphUtils shell only. No disk. Embed origins are not set on this service.
+  # DorphUtils shell only. No disk. Embed origins are not set on this service.
   - type: web
     runtime: docker
-    name: morph-utils
+    name: dorph-utils
     region: singapore
     plan: starter
     branch: main
-    dockerfilePath: ./morph-utils/Dockerfile
-    dockerContext: ./morph-utils
+    dockerfilePath: ./dorph-utils/Dockerfile
+    dockerContext: ./dorph-utils
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     buildFilter:
       paths:
-        - morph-utils/frontend/**
-        - morph-utils/Dockerfile
-        - morph-utils/.dockerignore
-        - morph-utils/deploy/docker-entrypoint.sh
-        - morph-utils/deploy/nginx.conf.template
+        - dorph-utils/frontend/**
+        - dorph-utils/Dockerfile
+        - dorph-utils/.dockerignore
+        - dorph-utils/deploy/docker-entrypoint.sh
+        - dorph-utils/deploy/nginx.conf.template
         - render.yaml
     envVars:
       - key: PORT
         value: "3040"
-      # Public Morph origin, filled in the dashboard. Not a secret.
-      - key: VITE_MORPH_API_URL
+      # Public Dorph origin, filled in the dashboard. Not a secret.
+      - key: VITE_DORPH_API_URL
         sync: false
       # Embed origins. Dashboard prompts. Not secrets. No host in git.
       - key: VITE_SHEETX_URL
@@ -136,12 +136,12 @@ services:
         sync: false
       - key: VITE_PROJECTS_URL
         sync: false
-      - key: VITE_MORPH_ENGI_URL
+      - key: VITE_DORPH_ENGI_URL
         sync: false
-      - key: VITE_MORPH_AI_URL
+      - key: VITE_DORPH_AI_URL
         sync: false
 
-  # Event Logs API + UI. One disk. The MorphUtils iframe origin is VITE_SHEETX_URL on morph-utils.
+  # Event Logs API + UI. One disk. The DorphUtils iframe origin is VITE_SHEETX_URL on dorph-utils.
   - type: web
     runtime: docker
     name: formx
@@ -174,12 +174,12 @@ services:
         value: /data/formsx_badger
       - key: UPLOAD_DIR
         value: /data/uploads
-      # Public Morph origin. Not a secret.
+      # Public Dorph origin. Not a secret.
       - key: USERS_PANEL_BASE_URL
         sync: false
       - key: PUBLIC_FORM_BASE_URL
         sync: false
-      - key: MORPH_AI_API_KEY
+      - key: DORPH_AI_API_KEY
         sync: false
       - key: SMTP_PASSWORD
         sync: false
@@ -221,10 +221,10 @@ services:
         value: /data/composerx_badger
       - key: TRAN_FILE_STORAGE_PATH
         value: /data/storage
-      # Public Morph origin, no path. Not a secret. Do not invent the host.
+      # Public Dorph origin, no path. Not a secret. Do not invent the host.
       - key: USERS_PANEL_BASE_URL
         sync: false
-      - key: MORPH_AI_API_KEY
+      - key: DORPH_AI_API_KEY
         sync: false
       - key: TRAN_QWEN_API_KEY
         sync: false
@@ -246,7 +246,7 @@ services:
     buildFilter:
       paths:
         - SharpReport/**
-        - pkg/morphai-rs/**
+        - pkg/dorphai-rs/**
         - SharpReport/Dockerfile
         - SharpReport/deploy/docker-entrypoint.sh
         - .dockerignore
@@ -266,37 +266,37 @@ services:
         value: /app/ui
       - key: RUST_LOG
         value: info
-      # Morph auth base URL. Not a secret. No value in git.
+      # Dorph auth base URL. Not a secret. No value in git.
       - key: USERS_PANEL_BASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: MORPH_AI_API_KEY
+      - key: DORPH_AI_API_KEY
         sync: false
 
-  # Project (MorphUtils module id projects). VITE_PROJECTS_URL and
-  # VITE_MORPH_ENGI_URL are prompts on morph-utils, not on this service.
+  # Project (DorphUtils module id projects). VITE_PROJECTS_URL and
+  # VITE_DORPH_ENGI_URL are prompts on dorph-utils, not on this service.
   - type: web
     runtime: docker
-    name: morph-engi
+    name: dorph-engi
     region: singapore
     plan: starter
     branch: main
-    dockerfilePath: ./morph-engi/Dockerfile
+    dockerfilePath: ./dorph-engi/Dockerfile
     dockerContext: .
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     maxShutdownDelaySeconds: 120
     buildFilter:
       paths:
-        - morph-engi/**
-        - pkg/morphai-rs/**
-        - morph-engi/Dockerfile
-        - morph-engi/Dockerfile.dockerignore
-        - morph-engi/deploy/docker-entrypoint.sh
+        - dorph-engi/**
+        - pkg/dorphai-rs/**
+        - dorph-engi/Dockerfile
+        - dorph-engi/Dockerfile.dockerignore
+        - dorph-engi/deploy/docker-entrypoint.sh
         - render.yaml
     disk:
-      name: morph-engi-data
+      name: dorph-engi-data
       mountPath: /data
       sizeGB: 1
     envVars:
@@ -306,14 +306,14 @@ services:
         value: "9096"
       - key: STATIC_DIR
         value: /app/frontend/dist
-      - key: MORPH_ENGI_DATABASE_URL
-        value: sqlite:///data/morph_engi.db
-      - key: MORPH_ENGI_UPLOAD_DIR
+      - key: DORPH_ENGI_DATABASE_URL
+        value: sqlite:///data/dorph_engi.db
+      - key: DORPH_ENGI_UPLOAD_DIR
         value: /data/uploads
-      # Public Morph origin, filled in the dashboard. Not a secret.
+      # Public Dorph origin, filled in the dashboard. Not a secret.
       - key: USERS_PANEL_BASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: MORPH_AI_API_KEY
+      - key: DORPH_AI_API_KEY
         sync: false

@@ -46,9 +46,14 @@ func LoadFrom(start string) error {
 	path := filepath.Join(root, ".env")
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
+			aliasLegacyEnv()
 			return nil
 		}
 		return err
 	}
-	return godotenv.Load(path)
+	if err := godotenv.Load(path); err != nil {
+		return err
+	}
+	aliasLegacyEnv()
+	return nil
 }

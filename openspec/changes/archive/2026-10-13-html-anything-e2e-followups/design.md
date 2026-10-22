@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for why. PR #150 (`9a32e6c`) already vendors html-anything and injects a compact skill via `pkg/morphai.WithHTMLSkill`. Local E2E on Qwen2.5-Coder-3B showed five leftover bugs: `json.Unmarshal` fails on raw newlines in strings (`parse AI note JSON: invalid character '\n' in string literal`); the overlay text `cyan #38bdf8` is copied into CSS; grill `WritePrompt` ends with “HTML: self-contained `<!DOCTYPE html>`” so the model writes a Dear-Team letter; `QuestionCap` scores word count and misses prepositional parts (`for` / `in`); empty-topic `GuideExcerpt` is outline + golden rules only; `.meta` still uses `system-ui`. Evidence: issue #151 artifacts (`big.json`/`big2.json` parse errors, `grill-draft.html` invalid CSS + letter, `mcp-guide.log` outline).
+See proposal.md for why. PR #150 (`9a32e6c`) already vendors html-anything and injects a compact skill via `pkg/dorphai.WithHTMLSkill`. Local E2E on Qwen2.5-Coder-3B showed five leftover bugs: `json.Unmarshal` fails on raw newlines in strings (`parse AI note JSON: invalid character '\n' in string literal`); the overlay text `cyan #38bdf8` is copied into CSS; grill `WritePrompt` ends with “HTML: self-contained `<!DOCTYPE html>`” so the model writes a Dear-Team letter; `QuestionCap` scores word count and misses prepositional parts (`for` / `in`); empty-topic `GuideExcerpt` is outline + golden rules only; `.meta` still uses `system-ui`. Evidence: issue #151 artifacts (`big.json`/`big2.json` parse errors, `grill-draft.html` invalid CSS + letter, `mcp-guide.log` outline).
 
 ## Goals / Non-Goals
 
@@ -12,7 +12,7 @@ See proposal.md for why. PR #150 (`9a32e6c`) already vendors html-anything and i
 - Hex-only accent text in the compact skill and form/grill prompts, still ≤512 tokens.
 - Grill asks one question per title part (cap 4) and stores a note body, not a letter.
 - Big-note prompt restates the idea and forbids invented features.
-- Empty `morph_guide` names html-anything.
+- Empty `dorph_guide` names html-anything.
 - Generated `.meta` (and sibling chrome) is Arial.
 
 **Non-Goals:**
@@ -48,11 +48,11 @@ Three alternatives were grilled for each fork. Recommendation is A3 + B1 + C2.
 
 ### 1. Shared parse helper
 
-Add `parseModelJSON(raw string, dest any) error` next to `extractJSONObjectAware` in `morph/handlers`. Walk extracted object bytes; while `inString` and not escaped, replace raw newline/tab with the JSON escape. Unmarshal the repaired bytes. Big-note and timeline generate call this instead of bare `json.Unmarshal`. Tests use fixtures with raw newlines, fences, and surrounding prose.
+Add `parseModelJSON(raw string, dest any) error` next to `extractJSONObjectAware` in `dorph/handlers`. Walk extracted object bytes; while `inString` and not escaped, replace raw newline/tab with the JSON escape. Unmarshal the repaired bytes. Big-note and timeline generate call this instead of bare `json.Unmarshal`. Tests use fixtures with raw newlines, fences, and surrounding prose.
 
 ### 2. Hex-only overlay
 
-Edit `skills/vendor/html-anything/condensed.md` and the `pkg/morphai` embed (same-bytes test stays). Wording: `accents #38bdf8 #a78bfa #34d399` — no colour word before a hex. Same treatment in `BuildFormHTMLPrompt`. Keep the 512-token budget test.
+Edit `skills/vendor/html-anything/condensed.md` and the `pkg/dorphai` embed (same-bytes test stays). Wording: `accents #38bdf8 #a78bfa #34d399` — no colour word before a hex. Same treatment in `BuildFormHTMLPrompt`. Keep the 512-token budget test.
 
 ### 3. Grill write and sanitize
 
@@ -75,7 +75,7 @@ Big-note prompt adds “use only the idea; do not invent features”. `guideOutl
 
 ## Migration Plan
 
-Code and tests only. Restart Morph to pick up prompts. Rollback is revert.
+Code and tests only. Restart Dorph to pick up prompts. Rollback is revert.
 
 ## Open Questions
 

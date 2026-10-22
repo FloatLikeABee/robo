@@ -126,7 +126,7 @@ func (h *Handler) GetEventInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, models.EventInfoToResponse(ev))
 }
 
-// GetEventInfoAIContext returns the event for Morph / assistants.
+// GetEventInfoAIContext returns the event for Dorph / assistants.
 func (h *Handler) GetEventInfoAIContext(c *gin.Context) {
 	idHex := c.Param("id")
 	if strings.TrimSpace(idHex) == "" {
@@ -199,8 +199,8 @@ func (h *Handler) BatchDeleteEventInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"deleted": deleted})
 }
 
-// FormsXMorphMiniMCP returns a small tool catalog so Morph AI and other clients can call FormsX Events APIs.
-func (h *Handler) FormsXMorphMiniMCP(c *gin.Context) {
+// FormsXDorphMiniMCP returns a small tool catalog so Dorph AI and other clients can call FormsX Events APIs.
+func (h *Handler) FormsXDorphMiniMCP(c *gin.Context) {
 	base := "/api/v1"
 	c.JSON(http.StatusOK, gin.H{
 		"service":     "formsx-events-info",
@@ -263,7 +263,7 @@ func (h *Handler) FormsXMorphMiniMCP(c *gin.Context) {
 			},
 			{
 				"name":        "formsx_app_abilities",
-				"description": "Web-grounded form template generation and related Morph AI app abilities.",
+				"description": "Web-grounded form template generation and related Dorph AI app abilities.",
 				"method":      "GET",
 				"path":        base + "/ai/app-abilities",
 			},

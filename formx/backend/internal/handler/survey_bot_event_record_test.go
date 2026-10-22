@@ -13,7 +13,7 @@ import (
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/formsx/backend/internal/surveybot"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 func openTestStore(t *testing.T) *mongo.Store {
@@ -26,7 +26,7 @@ func openTestStore(t *testing.T) *mongo.Store {
 	return store
 }
 
-func fakeDashScopeAI(t *testing.T, reply string) *morphai.Client {
+func fakeDashScopeAI(t *testing.T, reply string) *dorphai.Client {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -41,16 +41,16 @@ func fakeDashScopeAI(t *testing.T, reply string) *morphai.Client {
 		})
 	}))
 	t.Cleanup(srv.Close)
-	return morphai.NewClient(morphai.Config{
+	return dorphai.NewClient(dorphai.Config{
 		APIKey:       "test-key",
-		Model:        morphai.DefaultModel,
+		Model:        dorphai.DefaultModel,
 		APIURL:       srv.URL,
 		BaseURL:      srv.URL,
 		UseNativeAPI: true,
 	})
 }
 
-func testEventRecordHandler(t *testing.T, ai *morphai.Client) *Handler {
+func testEventRecordHandler(t *testing.T, ai *dorphai.Client) *Handler {
 	t.Helper()
 	store := openTestStore(t)
 	return &Handler{
@@ -61,7 +61,7 @@ func testEventRecordHandler(t *testing.T, ai *morphai.Client) *Handler {
 }
 
 func TestFinalizeSurveySavesWhenAIUnset(t *testing.T) {
-	h := testEventRecordHandler(t, morphai.NewClient(morphai.Config{}))
+	h := testEventRecordHandler(t, dorphai.NewClient(dorphai.Config{}))
 	st := assistantConversation{
 		SurveyBot: &SurveyBotRuntime{
 			Title:        "Pump check",
@@ -108,7 +108,7 @@ func TestFinalizeSurveySavesWhenAIUnset(t *testing.T) {
 }
 
 func TestInsertInfoSheetEventNoDuplicate(t *testing.T) {
-	h := testEventRecordHandler(t, morphai.NewClient(morphai.Config{}))
+	h := testEventRecordHandler(t, dorphai.NewClient(dorphai.Config{}))
 	res := &models.SurveyBotResult{
 		Title:   "Pump check",
 		Answers: map[string]string{"site": "B"},

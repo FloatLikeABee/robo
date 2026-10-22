@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const eventInfoAIDraftSystem = `You draft operational Events & Info records for a field / construction / ops team.
@@ -59,7 +59,7 @@ func (h *Handler) DraftEventInfoAI(c *gin.Context) {
 	}
 	if h.AI == nil || !h.AI.Configured() {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "AI is not configured — set MORPH_AI_API_KEY to generate Events & Info from a prompt",
+			"error": "AI is not configured — set DORPH_AI_API_KEY to generate Events & Info from a prompt",
 		})
 		return
 	}
@@ -70,7 +70,7 @@ func (h *Handler) DraftEventInfoAI(c *gin.Context) {
 		time.Now().UTC().Format(time.RFC3339),
 	)
 
-	reply, err := h.AI.ChatCompletion(c.Request.Context(), []morphai.Message{
+	reply, err := h.AI.ChatCompletion(c.Request.Context(), []dorphai.Message{
 		{Role: "system", Content: eventInfoAIDraftSystem},
 		{Role: "user", Content: userPrompt},
 	})
@@ -79,7 +79,7 @@ func (h *Handler) DraftEventInfoAI(c *gin.Context) {
 		return
 	}
 
-	raw, ok := morphai.ExtractJSONObject(reply)
+	raw, ok := dorphai.ExtractJSONObject(reply)
 	if !ok {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "AI reply was not valid JSON", "raw": truncateStr(reply, 800)})
 		return

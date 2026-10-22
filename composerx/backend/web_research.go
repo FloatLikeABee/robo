@@ -37,7 +37,7 @@ func webSearchEnabledComposer(useFlag *bool) bool {
 	return *useFlag
 }
 
-// WebSearch handles public web research for Morph AI tool loops.
+// WebSearch handles public web research for Dorph AI tool loops.
 func (a *App) WebSearch(c *gin.Context) {
 	var body struct {
 		Query string `json:"query"`
@@ -59,11 +59,11 @@ func (a *App) WebSearch(c *gin.Context) {
 	})
 }
 
-// ComposerXAppAbilitiesMCP documents Morph AI generation abilities for email and publish pages.
+// ComposerXAppAbilitiesMCP documents Dorph AI generation abilities for email and publish pages.
 func (a *App) ComposerXAppAbilitiesMCP(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"service":     "composerx-app-abilities",
-		"description": "Morph AI app abilities for ComposerX: templates, saved markdown, reference-doc search, web-grounded email content, and public publish pages.",
+		"description": "Dorph AI app abilities for ComposerX: templates, saved markdown, reference-doc search, web-grounded email content, and public publish pages.",
 		"tools": []gin.H{
 			{
 				"name":        "composerx_web_search",

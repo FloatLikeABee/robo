@@ -13,7 +13,7 @@ See proposal.md — Why. Content Maker already stores saved HTML in `publish_dra
 **Non-Goals:**
 
 - Unpublishing, custom slugs, or merging already-divergent `foo` vs `foo-2` history (leave extra rows; new publishes do not add more).
-- Changing MorphUtils iframe auth, Compose keep-alive, or Event Logs / Data Access / MorphNotes.
+- Changing DorphUtils iframe auth, Compose keep-alive, or Event Logs / Data Access / DorphNotes.
 
 ## Decisions
 

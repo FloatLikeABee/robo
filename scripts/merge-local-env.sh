@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-shot: copy non-empty keys from known per-app .env files into repo-root .env.
-# Does not overwrite an existing root .env. Last non-empty value wins; Morph is applied last.
+# Does not overwrite an existing root .env. Last non-empty value wins; Dorph is applied last.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,13 +18,13 @@ SOURCES=(
   "${ROOT}/booki/.env"
   "${ROOT}/booki/frontend/.env"
   "${ROOT}/academi/backend/.env"
-  "${ROOT}/morph-engi/.env"
+  "${ROOT}/dorph-engi/.env"
   "${ROOT}/SharpReport/.env"
   "${ROOT}/bk/.env"
   "${ROOT}/bk/frontend/.env"
-  "${ROOT}/morph/frontend/.env"
-  "${ROOT}/morph/frontend/.env.local"
-  "${ROOT}/morph/.env"
+  "${ROOT}/dorph/frontend/.env"
+  "${ROOT}/dorph/frontend/.env.local"
+  "${ROOT}/dorph/.env"
 )
 
 STASH="$(mktemp -d)"
@@ -51,10 +51,10 @@ ingest() {
       case "$envfile" in
         *"/composerx/backend/.env") [[ "$key" == PORT ]] && key=COMPOSERX_PORT ;;
         *"/academi/backend/.env") [[ "$key" == SERVER_PORT ]] && key=ACADEMI_SERVER_PORT ;;
-        *"/morph-engi/.env")
-          [[ "$key" == APP_PORT ]] && key=MORPH_ENGI_PORT
-          [[ "$key" == DATABASE_URL ]] && key=MORPH_ENGI_DATABASE_URL
-          [[ "$key" == CORS_ORIGIN ]] && key=MORPH_ENGI_CORS_ORIGIN
+        *"/dorph-engi/.env")
+          [[ "$key" == APP_PORT ]] && key=DORPH_ENGI_PORT
+          [[ "$key" == DATABASE_URL ]] && key=DORPH_ENGI_DATABASE_URL
+          [[ "$key" == CORS_ORIGIN ]] && key=DORPH_ENGI_CORS_ORIGIN
           ;;
         *"/SharpReport/.env")
           [[ "$key" == PORT ]] && key=SHARPREPORT_PORT

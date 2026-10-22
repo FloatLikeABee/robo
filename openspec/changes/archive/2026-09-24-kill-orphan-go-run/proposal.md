@@ -1,6 +1,6 @@
 ## Why
 
-`./start-all.sh restart morph-api` kills the recorded PID and leaves the `go run` child listening on `:9090` with the Badger directory lock, so the new process cannot start. The same parent/child split affects every `go run`, `cargo run`, and npm dev server the launcher starts.
+`./start-all.sh restart dorph-api` kills the recorded PID and leaves the `go run` child listening on `:9090` with the Badger directory lock, so the new process cannot start. The same parent/child split affects every `go run`, `cargo run`, and npm dev server the launcher starts.
 
 ## What Changes
 

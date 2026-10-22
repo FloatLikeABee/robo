@@ -1,7 +1,7 @@
 import { en, zh } from './messages';
 
-export const LOCALE_STORAGE_KEY = 'morph-locale';
-export const LOCALE_MESSAGE = 'morph-locale';
+export const LOCALE_STORAGE_KEY = 'dorph-locale';
+export const LOCALE_MESSAGE = 'dorph-locale';
 
 const catalogs = { en, zh };
 let current = '';
@@ -57,6 +57,7 @@ export function getLocale() {
   if (!current) {
     try {
       localStorage.removeItem(LOCALE_STORAGE_KEY);
+      localStorage.removeItem('morph-locale');
     } catch {
       /* private mode */
     }
@@ -75,6 +76,7 @@ function publish(locale) {
 export function setLocale() {
   try {
     localStorage.removeItem(LOCALE_STORAGE_KEY);
+    localStorage.removeItem('morph-locale');
   } catch {
     /* private mode */
   }
@@ -128,9 +130,9 @@ export function postLocaleToFrame(iframe, locale) {
 export function bindFrameLocale(iframe) {
   const send = () => postLocaleToFrame(iframe, getLocale());
   const onChange = () => send();
-  window.addEventListener('morph-locale-changed', onChange);
+  window.addEventListener('dorph-locale-changed', onChange);
   send();
-  return () => window.removeEventListener('morph-locale-changed', onChange);
+  return () => window.removeEventListener('dorph-locale-changed', onChange);
 }
 
 export function withLang(url, locale) {

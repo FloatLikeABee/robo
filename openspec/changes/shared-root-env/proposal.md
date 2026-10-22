@@ -1,6 +1,6 @@
 ## Why
 
-Each app keeps its own `.env`, so shared keys like `MORPH_AI_API_KEY` drift: Morph can have a working key while Event Logs / FormsX has an empty one, and collect features silently skip AI. Operators should set secrets once.
+Each app keeps its own `.env`, so shared keys like `DORPH_AI_API_KEY` drift: Dorph can have a working key while Event Logs / FormsX has an empty one, and collect features silently skip AI. Operators should set secrets once.
 
 ## What Changes
 
@@ -25,7 +25,7 @@ Each app keeps its own `.env`, so shared keys like `MORPH_AI_API_KEY` drift: Mor
 ## Impact
 
 - `start-all.sh` env loading
-- Go/Rust/Python dotenv loaders (Morph, FormsX, ComposerX, Booki, Academi, Morph Engi, SharpReport, morphgraph-worker, DataX/bk)
+- Go/Rust/Python dotenv loaders (Dorph, FormsX, ComposerX, Booki, Academi, Dorph Engi, SharpReport, dorphgraph-worker, DataX/bk)
 - Vite/CRA frontends that read `VITE_*` / `REACT_APP_*`
 - Root `.gitignore` already ignores `**/.env`; add root `.env.example`
 - README, DEVELOPER_BASELINE, deploy notes, agent docs that say “copy each app’s `.env.example`”

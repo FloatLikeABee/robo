@@ -198,7 +198,7 @@ export function FormTemplateAIPanel({
       {open && (
         <div className="border-t border-slate-200 dark:border-slate-700/50 p-2 space-y-2">
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            Morph AI searches the web for examples, generates an HTML template preview, and suggests questions.
+            Dorph AI searches the web for examples, generates an HTML template preview, and suggests questions.
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-[140px]">
             <div className="flex flex-col min-h-0">

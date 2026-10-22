@@ -2,7 +2,7 @@
 
 See proposal.md. Spec: `chat-visual-enlarge`.
 
-Visual-first chat already draws mermaid (SVG), pixel-grid canvases, Morph AI generated `Images[]`, and GFM markdown images inside the bubble. Those stay at bubble width. Morph AI `SkillsModal` is the existing dark overlay (Escape + backdrop). Confirm dialogs are for confirms, not pictures. Frontends do not share an npm package (same constraint as visual-first). Dark-only; Morph AI is the system chat.
+Visual-first chat already draws mermaid (SVG), pixel-grid canvases, Dorph AI generated `Images[]`, and GFM markdown images inside the bubble. Those stay at bubble width. Dorph AI `SkillsModal` is the existing dark overlay (Escape + backdrop). Confirm dialogs are for confirms, not pictures. Frontends do not share an npm package (same constraint as visual-first). Dark-only; Dorph AI is the system chat.
 
 ## Goals / Non-Goals
 
@@ -31,9 +31,9 @@ Visual-first chat already draws mermaid (SVG), pixel-grid canvases, Morph AI gen
 
 **Alternative:** New mermaid `render()` at a bigger id — extra work, flicker, id collisions. **Alternative:** Browser fullscreen API — leaves the dark in-app chrome.
 
-### 2. Per-frontend copy, Morph AI first
+### 2. Per-frontend copy, Dorph AI first
 
-**Choice:** Morph AI: small overlay component + click handlers on mermaid, pixel canvas, generated `<img>`, and markdown `<img>` in `VisualMarkdown`. Event Logs and Content Maker get the same overlay next to their assistant markdown (no new shared package).
+**Choice:** Dorph AI: small overlay component + click handlers on mermaid, pixel canvas, generated `<img>`, and markdown `<img>` in `VisualMarkdown`. Event Logs and Content Maker get the same overlay next to their assistant markdown (no new shared package).
 
 **Why:** Bundlers differ (CRA vs Vite vs Svelte). Visual-first already accepted this split.
 
@@ -45,7 +45,7 @@ Visual-first chat already draws mermaid (SVG), pixel-grid canvases, Morph AI gen
 
 **Why:** Confirm dialogs are title + buttons. SkillsModal already matches chat chrome.
 
-**Alternative:** MUI `Dialog` — works in Morph AI only; skip a second modal system.
+**Alternative:** MUI `Dialog` — works in Dorph AI only; skip a second modal system.
 
 ### 4. Fallback text and chrome are not targets
 
@@ -62,7 +62,7 @@ Visual-first chat already draws mermaid (SVG), pixel-grid canvases, Morph AI gen
 
 ## Migration Plan
 
-1. Morph AI overlay + mermaid/pixel/generated/markdown images.
+1. Dorph AI overlay + mermaid/pixel/generated/markdown images.
 2. Event Logs + Content Maker assistant markdown.
 3. Rollback: remove overlay components; visuals stay inline.
 

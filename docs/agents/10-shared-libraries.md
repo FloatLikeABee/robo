@@ -1,39 +1,39 @@
 # 10 — Shared Libraries (`pkg/`)
 
-Go modules use `replace` in `go.mod`. Rust uses a path dependency on `pkg/morphai-rs`.
+Go modules use `replace` in `go.mod`. Rust uses a path dependency on `pkg/dorphai-rs`.
 
 ```
 pkg/
-├── morphai/          Go multi-provider client (DashScope by default)
-├── morphai-rs/       Rust DashScope client
+├── dorphai/          Go multi-provider client (DashScope by default)
+├── dorphai-rs/       Rust DashScope client
 ├── repoenv/          Load repo-root `.env` (walk up to start-all.sh)
 ├── assistmd/         Markdown helpers
 ├── docextract/       PDF/text extract for prompts
-├── morphgraph/       GraphRAG types + Neo4j helpers
+├── dorphgraph/       GraphRAG types + Neo4j helpers
 └── webresearch/      Wikipedia, DuckDuckGo, arXiv
 ```
 
-## `pkg/morphai` (Go)
+## `pkg/dorphai` (Go)
 
-**Module:** `github.com/robo/morphai`
+**Module:** `github.com/robo/dorphai`
 
-**Used by:** morph, formx, composerx.
+**Used by:** dorph, formx, composerx.
 
 ```go
-client := morphai.NewClientFromEnv()
+client := dorphai.NewClientFromEnv()
 response, err := client.ChatCompletion(ctx, messages)
 ```
 
-Env: `MORPH_AI_API_KEY`, `MORPH_AI_MODEL` (default `qwen3-max`), `MORPH_AI_API_URL` / `MORPH_AI_BASE_URL`. Named providers and their env keys are listed in [`pkg/morphai/README.md`](../../pkg/morphai/README.md). A missing named-provider key is an error, not a silent fallback.
+Env: `DORPH_AI_API_KEY`, `DORPH_AI_MODEL` (default `qwen3-max`), `DORPH_AI_API_URL` / `DORPH_AI_BASE_URL`. Named providers and their env keys are listed in [`pkg/dorphai/README.md`](../../pkg/dorphai/README.md). A missing named-provider key is an error, not a silent fallback.
 
-## `pkg/morphai-rs` (Rust)
+## `pkg/dorphai-rs` (Rust)
 
-**Used by:** Data Access (`SharpReport`), Project (`morph-engi`). Same `MORPH_AI_*` keys.
+**Used by:** Data Access (`SharpReport`), Project (`dorph-engi`). Same `DORPH_AI_*` keys.
 
 ## `pkg/repoenv`
 
 Call `repoenv.Load()` at process start so nested working directories still read the **repo-root** `.env`. Nested leftover `.env` files must not blank shared keys.
 
-## `pkg/morphgraph`
+## `pkg/dorphgraph`
 
-Optional Neo4j types/ops for GraphRAG. Worker: `morphgraph-worker/`. See [`docs/MORPH_GRAPH_OPS.md`](../MORPH_GRAPH_OPS.md).
+Optional Neo4j types/ops for GraphRAG. Worker: `dorphgraph-worker/`. See [`docs/DORPH_GRAPH_OPS.md`](../DORPH_GRAPH_OPS.md).

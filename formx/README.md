@@ -1,6 +1,6 @@
 # Event Logs (`formx/`)
 
-User-facing product: **Event Logs**. Repository folder remains `formx`; MorphUtils embed id remains `sheetx`. Events & Info only. Default embed route: `/events-info`. `/survey-bot` redirects there.
+User-facing product: **Event Logs**. Repository folder remains `formx`; DorphUtils embed id remains `sheetx`. Events & Info only. Default embed route: `/events-info`. `/survey-bot` redirects there.
 
 Forms/questions live in embedded SQLite; responses and document collections live in Badger. Go packages may still be named `mysql` / `mongo` — they open SQLite and Badger. No MySQL or MongoDB server is required.
 
@@ -38,7 +38,7 @@ Backend reads:
 | `SMTP_PASSWORD` | _(empty)_ |
 | `SMTP_FROM` | _(empty)_ — From address for broadcasts |
 | `PUBLIC_FORM_BASE_URL` | `http://localhost:19909` — base URL appended to `/f/{slug}` in broadcast emails |
-| `USERS_PANEL_BASE_URL` | `http://127.0.0.1:9090` — Morph auth |
+| `USERS_PANEL_BASE_URL` | `http://127.0.0.1:9090` — Dorph auth |
 
 Copy and adjust at the **repo root** (nested `backend/.env` is ignored):
 
@@ -52,11 +52,11 @@ Frontend (optional):
 
 ## AI
 
-Event Logs uses [`pkg/morphai`](../pkg/morphai) for optional LLM-backed APIs. The default is DashScope via `MORPH_AI_*`. Named providers are available on that same client. Platform chat is **Morph AI** (`:3031`), not a satellite drawer.
+Event Logs uses [`pkg/dorphai`](../pkg/dorphai) for optional LLM-backed APIs. The default is DashScope via `DORPH_AI_*`. Named providers are available on that same client. Platform chat is **Dorph AI** (`:3031`), not a satellite drawer.
 
 ```bash
-MORPH_AI_API_KEY=sk-your-dashscope-key
-MORPH_AI_MODEL=qwen3-max
+DORPH_AI_API_KEY=sk-your-dashscope-key
+DORPH_AI_MODEL=qwen3-max
 ```
 
 Restart: `./start-all.sh restart formx-api`
@@ -110,7 +110,7 @@ docker run --rm -p 127.0.0.1:29909:29909 \
   formx:local
 ```
 
-`PORT` inside the container is `29909`. The entrypoint copies it to `SERVER_PORT`. A checkout `.env` with `PORT=9090` does not apply inside the image. `GET /health` returns `{"status":"healthy"}` and does not call Morph or MorphUtils. `GET /events-info` is the UI. `GET /api/` stays the API.
+`PORT` inside the container is `29909`. The entrypoint copies it to `SERVER_PORT`. A checkout `.env` with `PORT=9090` does not apply inside the image. `GET /health` returns `{"status":"healthy"}` and does not call Dorph or DorphUtils. `GET /events-info` is the UI. `GET /api/` stays the API.
 
 Optional compose, from `formx/`:
 
@@ -134,11 +134,11 @@ Named volume `formx-data` is mounted at `/data`. Run one replica. SQLite and Bad
 
 ## Deploy on Render
 
-The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync `render.yaml` on `main`. That adds web service `formx` (Singapore, starter) beside `morph` and MorphUtils. `PORT` is `29909`. `FORMSX_SQLITE_PATH`, `FORMSX_BADGER_PATH`, and `UPLOAD_DIR` are the `/data` paths above.
+The product owner creates the service. This repo does not call Render. After merge, in Render project `prj-dahc33dbedkc73a1v8n0`, sync `render.yaml` on `main`. That adds web service `formx` (Singapore, starter) beside `dorph` and DorphUtils. `PORT` is `29909`. `FORMSX_SQLITE_PATH`, `FORMSX_BADGER_PATH`, and `UPLOAD_DIR` are the `/data` paths above.
 
-`USERS_PANEL_BASE_URL` is required and is not a secret: set it to `https://<morph public host>` (no path). `MORPH_AI_API_KEY` and `SMTP_PASSWORD` are optional prompts with no value in git. A disk (`formx-data` at `/data`, 1 GB) is a single instance. Do not scale it out.
+`USERS_PANEL_BASE_URL` is required and is not a secret: set it to `https://<dorph public host>` (no path). `DORPH_AI_API_KEY` and `SMTP_PASSWORD` are optional prompts with no value in git. A disk (`formx-data` at `/data`, 1 GB) is a single instance. Do not scale it out.
 
-`GET /health` does not call MorphUtils. After the deploy is live, copy the HTTPS origin Render shows. The placeholder is `https://<event-logs public host>`. Story #114 sets that origin as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on MorphUtils. Those prompts are on `morph-utils` with no value in git. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on Morph or on the `formx` service. Event Logs does not set `REACT_APP_MORPH_UTILS_URL`. The `morph` service lists that key as a dashboard prompt with no value.
+`GET /health` does not call DorphUtils. After the deploy is live, copy the HTTPS origin Render shows. The placeholder is `https://<event-logs public host>`. Story #114 sets that origin as `VITE_SHEETX_URL` (alias `VITE_FORMSX_URL`) on DorphUtils. Those prompts are on `dorph-utils` with no value in git. Do not set `VITE_SHEETX_URL` or `VITE_FORMSX_URL` on Dorph or on the `formx` service. Event Logs does not set `REACT_APP_DORPH_UTILS_URL`. The `dorph` service lists that key as a dashboard prompt with no value.
 
 ## Project layout
 

@@ -12,7 +12,7 @@ import (
 	"github.com/formsx/backend/internal/mongo"
 	"github.com/formsx/backend/internal/surveybot"
 	"github.com/gin-gonic/gin"
-	"github.com/robo/morphai"
+	"github.com/robo/dorphai"
 )
 
 const (
@@ -101,7 +101,7 @@ func (h *Handler) summarizeInfoSheetAsEvent(ctx context.Context, res *models.Sur
 		strings.TrimSpace(res.TemplateSlug),
 		surveybot.FormatAnswersMarkdown(res.Answers),
 	)
-	reply, err := h.AI.ChatCompletion(ctx, []morphai.Message{
+	reply, err := h.AI.ChatCompletion(ctx, []dorphai.Message{
 		{Role: "system", Content: infoSheetEventSummarizeSystem},
 		{Role: "user", Content: userPrompt},
 	})
