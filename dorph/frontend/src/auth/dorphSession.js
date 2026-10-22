@@ -92,11 +92,7 @@ export function clearDorphSession() {
   } catch {
     /* ignore */
   }
-  try {
-    window.dispatchEvent(new CustomEvent('dorph-auth-updated'));
-  } catch {
-    /* ignore */
-  }
+  dispatchDorphAuthUpdated();
 }
 
 export function jwtSubjectUnsafe(token) {
@@ -117,6 +113,7 @@ export function jwtSubjectUnsafe(token) {
 function dispatchDorphAuthUpdated() {
   try {
     window.dispatchEvent(new CustomEvent('dorph-auth-updated'));
+    window.dispatchEvent(new CustomEvent('morph-auth-updated'));
   } catch {
     /* ignore */
   }

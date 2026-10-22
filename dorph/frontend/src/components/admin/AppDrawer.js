@@ -44,7 +44,11 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
   useEffect(() => {
     const onAuth = () => setAuthTick((n) => n + 1);
     window.addEventListener('dorph-auth-updated', onAuth);
-    return () => window.removeEventListener('dorph-auth-updated', onAuth);
+    window.addEventListener('morph-auth-updated', onAuth);
+    return () => {
+      window.removeEventListener('dorph-auth-updated', onAuth);
+      window.removeEventListener('morph-auth-updated', onAuth);
+    };
   }, []);
 
   const isSelected = (path) => location.pathname === path || location.pathname.startsWith(path + '/');

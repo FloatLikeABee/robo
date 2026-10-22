@@ -8,6 +8,9 @@ import (
 // ensureTranSQLiteSchema creates Dorph-owned relational tables for embedded SQLite.
 // Column sets follow openspec/changes/dorph-embedded-dbs/inventory.md (handler current usage).
 func ensureTranSQLiteSchema(db *sql.DB) error {
+	if err := renameLegacyMorphTables(db); err != nil {
+		return err
+	}
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS District (
 			ID INTEGER PRIMARY KEY AUTOINCREMENT,

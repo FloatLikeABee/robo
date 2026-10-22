@@ -153,12 +153,23 @@ func processOutbox(ctx context.Context, db *sql.DB, store *dorphgraph.Store, cfg
 }
 
 func applyOutbox(ctx context.Context, db *sql.DB, store *dorphgraph.Store, cfg dorphgraph.Config, source, etype, eid, op string) error {
+	legacyUID := ""
+	if source == "morph" || source == "dorph" {
+		legacyUID = dorphgraph.UID("morph", etype, eid)
+	}
+	if source == "morph" {
+		source = "dorph"
+	}
 	uid := dorphgraph.UID(source, etype, eid)
 	if op == "delete" {
-		if store != nil {
-			return store.DeleteEntity(ctx, uid)
+		if store == nil {
+			return nil
 		}
-		return nil
+		err := store.DeleteEntity(ctx, uid)
+		if legacyUID != "" && legacyUID != uid {
+			_ = store.DeleteEntity(ctx, legacyUID)
+		}
+		return err
 	}
 	switch {
 	case source == "dorph" && etype == "knowledge_file":
@@ -182,6 +193,9 @@ func applyOutbox(ctx context.Context, db *sql.DB, store *dorphgraph.Store, cfg d
 }
 
 func backfill(ctx context.Context, db *sql.DB, store *dorphgraph.Store, cfg dorphgraph.Config, source string) error {
+	if source == "morph" {
+		source = "dorph"
+	}
 	if source == "all" || source == "dorph" {
 		log.Println("backfill dorph…")
 		if err := backfillDorph(ctx, db, store); err != nil {

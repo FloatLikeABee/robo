@@ -112,6 +112,76 @@ func sqliteHasColumn(db *sql.DB, table, column string) (bool, error) {
 	return false, rows.Err()
 }
 
+func sqliteTableRowCount(db *sql.DB, table string) (int, error) {
+	var n int
+	err := db.QueryRow("SELECT COUNT(*) FROM " + quoteIdent(table)).Scan(&n)
+	return n, err
+}
+
+// sqliteRenameTableIfLegacy moves oldName to newName when the old table is
+// present. If an empty new table was already created, it is dropped first so
+// the owner's leftover rows are not stranded.
+func sqliteRenameTableIfLegacy(db *sql.DB, oldName, newName string) error {
+	hasOld, err := sqliteTableExists(db, oldName)
+	if err != nil || !hasOld {
+		return err
+	}
+	hasNew, err := sqliteTableExists(db, newName)
+	if err != nil {
+		return err
+	}
+	if hasNew {
+		n, err := sqliteTableRowCount(db, newName)
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			return nil
+		}
+		if _, err := db.Exec("DROP TABLE " + quoteIdent(newName)); err != nil {
+			return err
+		}
+	}
+	_, err = db.Exec("ALTER TABLE " + quoteIdent(oldName) + " RENAME TO " + quoteIdent(newName))
+	return err
+}
+
+func renameLegacyMorphTables(db *sql.DB) error {
+	for _, p := range [][2]string{
+		{"morph_knowledge_files", "dorph_knowledge_files"},
+		{"morph_knowledge_chunks", "dorph_knowledge_chunks"},
+		{"morph_agent_context_cache", "dorph_agent_context_cache"},
+	} {
+		if err := sqliteRenameTableIfLegacy(db, p[0], p[1]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func mysqlRenameTableIfLegacy(db *sql.DB, oldName, newName string) error {
+	var n int
+	err := db.QueryRow(
+		`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?`,
+		oldName,
+	).Scan(&n)
+	if err != nil || n == 0 {
+		return err
+	}
+	var nNew int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?`,
+		newName,
+	).Scan(&nNew); err != nil {
+		return err
+	}
+	if nNew > 0 {
+		return nil
+	}
+	_, err = db.Exec("RENAME TABLE `" + strings.ReplaceAll(oldName, "`", "") + "` TO `" + strings.ReplaceAll(newName, "`", "") + "`")
+	return err
+}
+
 func sqliteTableExists(db *sql.DB, table string) (bool, error) {
 	var name string
 	err := db.QueryRow(

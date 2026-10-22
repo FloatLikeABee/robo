@@ -13,6 +13,7 @@ import (
 )
 
 const dorphAIAgentPrefix = "dorph_ai_agent:"
+const legacyAIAgentPrefix = "morph_ai_agent:"
 
 // DefaultDorphAIAgents are seeded when none exist yet.
 func DefaultDorphAIAgents() []models.DorphAIAgent {
@@ -102,17 +103,29 @@ func dorphAIAgentKey(id string) []byte {
 	return []byte(fmt.Sprintf("%s%s", dorphAIAgentPrefix, id))
 }
 
+func legacyAIAgentKey(id string) []byte {
+	return []byte(fmt.Sprintf("%s%s", legacyAIAgentPrefix, id))
+}
+
+func countAIAgentKeys(txn *badger.Txn) int {
+	count := 0
+	for _, prefix := range []string{dorphAIAgentPrefix, legacyAIAgentPrefix} {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte(prefix)
+		it := txn.NewIterator(opts)
+		for it.Rewind(); it.Valid(); it.Next() {
+			count++
+		}
+		it.Close()
+	}
+	return count
+}
+
 // EnsureDorphAIAgentsSeed writes default agents only if none are stored yet.
 func (d *DB) EnsureDorphAIAgentsSeed() error {
 	var count int
 	_ = d.badgerDB.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.Prefix = []byte(dorphAIAgentPrefix)
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			count++
-		}
+		count = countAIAgentKeys(txn)
 		return nil
 	})
 	if count > 0 {
@@ -139,6 +152,11 @@ func (d *DB) EnsureDorphAISystemAgents() error {
 			_, err := txn.Get(dorphAIAgentKey(def.ID))
 			if err == nil {
 				exists = true
+				return nil
+			}
+			_, err = txn.Get(legacyAIAgentKey(def.ID))
+			if err == nil {
+				exists = true
 			}
 			return nil
 		})
@@ -158,26 +176,33 @@ func (d *DB) ListDorphAIAgents() ([]models.DorphAIAgent, error) {
 	if err := d.EnsureDorphAISystemAgents(); err != nil {
 		return nil, err
 	}
-	var list []models.DorphAIAgent
+	byID := map[string]models.DorphAIAgent{}
 	err := d.badgerDB.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.Prefix = []byte(dorphAIAgentPrefix)
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			var a models.DorphAIAgent
-			if err := item.Value(func(val []byte) error {
-				return json.Unmarshal(val, &a)
-			}); err != nil {
-				return err
+		for _, prefix := range []string{legacyAIAgentPrefix, dorphAIAgentPrefix} {
+			opts := badger.DefaultIteratorOptions
+			opts.Prefix = []byte(prefix)
+			it := txn.NewIterator(opts)
+			for it.Rewind(); it.Valid(); it.Next() {
+				item := it.Item()
+				var a models.DorphAIAgent
+				if err := item.Value(func(val []byte) error {
+					return json.Unmarshal(val, &a)
+				}); err != nil {
+					it.Close()
+					return err
+				}
+				byID[a.ID] = a
 			}
-			list = append(list, a)
+			it.Close()
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	list := make([]models.DorphAIAgent, 0, len(byID))
+	for _, a := range byID {
+		list = append(list, a)
 	}
 	sort.Slice(list, func(i, j int) bool {
 		if list[i].SortOrder != list[j].SortOrder {
@@ -200,6 +225,9 @@ func (d *DB) GetDorphAIAgent(id string) (*models.DorphAIAgent, error) {
 	var out *models.DorphAIAgent
 	err := d.badgerDB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(dorphAIAgentKey(id))
+		if err != nil {
+			item, err = txn.Get(legacyAIAgentKey(id))
+		}
 		if err != nil {
 			return err
 		}
@@ -237,6 +265,7 @@ func (d *DB) PutDorphAIAgent(a *models.DorphAIAgent) error {
 		return err
 	}
 	return d.badgerDB.Update(func(txn *badger.Txn) error {
+		_ = txn.Delete(legacyAIAgentKey(a.ID))
 		return txn.Set(dorphAIAgentKey(a.ID), data)
 	})
 }
@@ -255,6 +284,11 @@ func (d *DB) DeleteDorphAIAgent(id string) error {
 		return fmt.Errorf("cannot delete built-in agent")
 	}
 	return d.badgerDB.Update(func(txn *badger.Txn) error {
-		return txn.Delete(dorphAIAgentKey(id))
+		_ = txn.Delete(legacyAIAgentKey(id))
+		err := txn.Delete(dorphAIAgentKey(id))
+		if err == badger.ErrKeyNotFound {
+			return nil
+		}
+		return err
 	})
 }

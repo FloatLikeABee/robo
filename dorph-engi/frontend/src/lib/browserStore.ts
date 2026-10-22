@@ -1,6 +1,7 @@
 import { renderMarkdownHtml } from './markdown'
 
 const KEY = 'dorph-engi-browser-store'
+const LEGACY_KEY = 'morph-engi-browser-store'
 const TOKEN = 'local-preview'
 
 type Project = {
@@ -51,7 +52,7 @@ function now() {
 
 function load(): Store {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY)
     if (raw) return JSON.parse(raw) as Store
   } catch {
     /* ignore */
@@ -61,6 +62,7 @@ function load(): Store {
 
 function save(store: Store) {
   localStorage.setItem(KEY, JSON.stringify(store))
+  localStorage.removeItem(LEGACY_KEY)
 }
 
 function alloc(store: Store) {

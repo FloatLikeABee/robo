@@ -74,7 +74,26 @@ func (s *Store) BootstrapSchema(ctx context.Context) error {
 			}
 		}
 	}
+	_ = s.migrateLegacyUIDs(ctx, sess)
 	return nil
+}
+
+func (s *Store) migrateLegacyUIDs(ctx context.Context, sess neo4j.SessionWithContext) error {
+	_, err := sess.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		_, err := tx.Run(ctx, `
+MATCH (old)
+WHERE old.uid STARTS WITH 'morph:'
+WITH old, 'dorph:' + substring(old.uid, 6) AS newUid
+OPTIONAL MATCH (dup {uid: newUid})
+FOREACH (_ IN CASE WHEN dup IS NULL THEN [1] ELSE [] END |
+  SET old.uid = newUid, old.source = 'dorph'
+)
+FOREACH (_ IN CASE WHEN dup IS NOT NULL AND id(dup) <> id(old) THEN [1] ELSE [] END |
+  DETACH DELETE old
+)`, nil)
+		return nil, err
+	})
+	return err
 }
 
 // NodeProps are properties for MERGE upsert.

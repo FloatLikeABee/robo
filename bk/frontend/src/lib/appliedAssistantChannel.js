@@ -1,10 +1,18 @@
 const CHANNEL_NAME = 'dorph-ai-applied-assistant';
+const LEGACY_CHANNEL_NAME = 'morph-ai-applied-assistant';
 
 export const APPLIED_ASSISTANT_MSG = {
   APPLY: 'dorph-ai:apply-assistant',
   DISMISS: 'dorph-ai:dismiss-assistant',
   REQUEST: 'dorph-ai:request-applied-assistant',
   STATE: 'dorph-ai:applied-assistant-state',
+};
+
+const LEGACY_APPLIED_ASSISTANT_MSG = {
+  'morph-ai:apply-assistant': APPLIED_ASSISTANT_MSG.APPLY,
+  'morph-ai:dismiss-assistant': APPLIED_ASSISTANT_MSG.DISMISS,
+  'morph-ai:request-applied-assistant': APPLIED_ASSISTANT_MSG.REQUEST,
+  'morph-ai:applied-assistant-state': APPLIED_ASSISTANT_MSG.STATE,
 };
 
 export function isFramedInParent() {
@@ -40,38 +48,44 @@ export function normalizeAssistant(value) {
 
 export function parseAppliedAssistantMessage(data) {
   if (!data || typeof data !== 'object') return null;
-  const type = data.type;
+  const type = LEGACY_APPLIED_ASSISTANT_MSG[data.type] || data.type;
   if (!Object.values(APPLIED_ASSISTANT_MSG).includes(type)) return null;
   return { type, assistant: normalizeAssistant(data.assistant) };
 }
 
-function getChannel() {
+function openChannel(name) {
   if (typeof BroadcastChannel === 'undefined') return null;
   try {
-    return new BroadcastChannel(CHANNEL_NAME);
+    return new BroadcastChannel(name);
   } catch {
     return null;
   }
 }
 
+function getChannels() {
+  return [CHANNEL_NAME, LEGACY_CHANNEL_NAME].map(openChannel).filter(Boolean);
+}
+
 export function postAppliedAssistantChannel(payload) {
-  const ch = getChannel();
-  if (!ch) return;
-  try {
-    ch.postMessage(payload);
-  } finally {
-    ch.close();
+  for (const ch of getChannels()) {
+    try {
+      ch.postMessage(payload);
+    } finally {
+      ch.close();
+    }
   }
 }
 
 export function subscribeAppliedAssistantChannel(handler) {
-  const ch = getChannel();
-  if (!ch) return () => {};
+  const channels = getChannels();
+  if (!channels.length) return () => {};
   const onMessage = (event) => handler(event.data);
-  ch.addEventListener('message', onMessage);
+  channels.forEach((ch) => ch.addEventListener('message', onMessage));
   return () => {
-    ch.removeEventListener('message', onMessage);
-    ch.close();
+    channels.forEach((ch) => {
+      ch.removeEventListener('message', onMessage);
+      ch.close();
+    });
   };
 }
 

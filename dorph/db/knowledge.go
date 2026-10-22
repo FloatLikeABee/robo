@@ -43,6 +43,12 @@ func (m *TranSQL) EnsureGraphKnowledgeSchema() error {
 		// Tables are created in ensureTranSQLiteSchema.
 		return nil
 	}
+	if err := mysqlRenameTableIfLegacy(m.DB, "morph_knowledge_files", "dorph_knowledge_files"); err != nil {
+		return err
+	}
+	if err := mysqlRenameTableIfLegacy(m.DB, "morph_knowledge_chunks", "dorph_knowledge_chunks"); err != nil {
+		return err
+	}
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS graph_sync_outbox (
 		  id BIGINT NOT NULL AUTO_INCREMENT,

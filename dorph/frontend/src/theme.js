@@ -5,6 +5,7 @@ const STORAGE_KEY = 'dorphdata-theme-mode';
 export function getStoredThemeMode() {
   try {
     localStorage.setItem(STORAGE_KEY, 'dark');
+    localStorage.removeItem('morphdata-theme-mode');
   } catch {}
   return 'dark';
 }

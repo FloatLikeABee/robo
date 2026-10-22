@@ -287,6 +287,14 @@ function getFieldOrder(storageKey, keys) {
   try {
     let raw = localStorage.getItem(STORAGE_PREFIX + storageKey);
     if (!raw) {
+      const leftover = localStorage.getItem('morphdata-detail-order-' + storageKey);
+      if (leftover) {
+        localStorage.setItem(STORAGE_PREFIX + storageKey, leftover);
+        localStorage.removeItem('morphdata-detail-order-' + storageKey);
+        raw = leftover;
+      }
+    }
+    if (!raw) {
       migrateLegacyNamedLayoutsToLastOrder(storageKey, keys);
       raw = localStorage.getItem(STORAGE_PREFIX + storageKey);
     }
