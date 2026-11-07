@@ -113,7 +113,7 @@ func TestPersistBigNoteMarkdownRegeneratesHTML(t *testing.T) {
 
 func TestBigNoteHTMLStaysDarkSansEvenWhenThemeSaysLight(t *testing.T) {
 	html := buildBigNoteHTML("Agent", "A short note.", "story", nil, "light")
-	for _, needle := range []string{"Arial", "#38bdf8", "#a78bfa", "#34d399", "color-scheme:dark"} {
+	for _, needle := range []string{"Arial", "#8b5cf6", "#a78bfa", "#f97316", "color-scheme:dark"} {
 		if !strings.Contains(html, needle) {
 			t.Fatalf("missing %q", needle)
 		}

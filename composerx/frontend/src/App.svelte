@@ -986,9 +986,9 @@
           <svg viewBox="0 0 64 64" class="brand-glyph-svg">
             <defs>
               <linearGradient id="brandGlyphBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#60a5fa" />
-                <stop offset="55%" stop-color="#3b82f6" />
-                <stop offset="100%" stop-color="#1d4ed8" />
+                <stop offset="0%" stop-color="#a78bfa" />
+                <stop offset="55%" stop-color="#8b5cf6" />
+                <stop offset="100%" stop-color="#7c3aed" />
               </linearGradient>
             </defs>
             <rect x="3" y="3" width="58" height="58" rx="16" fill="url(#brandGlyphBg)" />
@@ -1447,6 +1447,7 @@
     padding: 0.65rem 0.85rem 0.5rem;
     border-bottom: 1px solid var(--color-border-subtle);
     background: linear-gradient(160deg, var(--sidebar-bg-start), var(--sidebar-bg-end));
+    backdrop-filter: blur(16px);
     color: var(--sidebar-text);
   }
 
@@ -1531,32 +1532,32 @@
     padding: 1rem;
     color-scheme: dark;
     background:
-      radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.14), transparent 45%),
-      radial-gradient(circle at 85% 88%, rgba(37, 99, 235, 0.12), transparent 48%),
-      linear-gradient(165deg, #1a2636 0%, #1f354a 52%, #1a2839 100%);
+      radial-gradient(circle at 18% 14%, rgba(139, 92, 246, 0.22), transparent 45%),
+      radial-gradient(circle at 85% 88%, rgba(249, 115, 22, 0.1), transparent 48%),
+      linear-gradient(165deg, #2c2640 0%, #352e4a 52%, #2c2640 100%);
   }
 
   :global([data-theme='dark']) .tm-login-shell {
     background:
-      radial-gradient(circle at 18% 14%, rgba(96, 165, 250, 0.12), transparent 45%),
-      radial-gradient(circle at 85% 78%, rgba(30, 58, 138, 0.22), transparent 50%),
-      linear-gradient(165deg, #151f2e 0%, #1c2d42 55%, #172536 100%);
+      radial-gradient(circle at 18% 14%, rgba(167, 139, 250, 0.2), transparent 45%),
+      radial-gradient(circle at 85% 78%, rgba(249, 115, 22, 0.1), transparent 50%),
+      linear-gradient(165deg, #2c2640 0%, #352e4a 55%, #2c2640 100%);
   }
 
   .tm-login-card {
     width: 100%;
     max-width: 24rem;
     border-radius: 1rem;
-    border: 1px solid rgba(106, 174, 204, 0.38);
-    background: rgba(28, 42, 58, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(53, 46, 74, 0.78);
     padding: 2rem;
     box-shadow: 0 16px 42px rgba(8, 14, 24, 0.42);
     backdrop-filter: blur(10px);
   }
 
   :global([data-theme='dark']) .tm-login-card {
-    border-color: rgba(96, 165, 250, 0.22);
-    background: rgba(22, 34, 48, 0.94);
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(53, 46, 74, 0.78);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.48);
   }
 
@@ -1633,19 +1634,19 @@
   }
 
   .tm-login-input:focus {
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.28);
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.28);
   }
 
   :global([data-theme='dark']) .tm-login-input {
-    border-color: rgba(96, 165, 250, 0.28);
-    background: #182738;
-    color: #f1f5f9;
+    border-color: rgba(167, 139, 250, 0.35);
+    background: rgba(44, 38, 64, 0.88);
+    color: #f4f0fa;
   }
 
   :global([data-theme='dark']) .tm-login-input:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.22);
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.28);
   }
 
   .tm-login-remember {
@@ -1660,7 +1661,7 @@
 
   .tm-login-remember input {
     margin: 0;
-    accent-color: #0284c7;
+    accent-color: #8b5cf6;
   }
 
   :global([data-theme='dark']) .tm-login-remember {
@@ -1691,14 +1692,14 @@
     font-size: 0.875rem;
     font-weight: 500;
     color: #fff;
-    background: #0284c7;
+    background: #8b5cf6;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
     transition: background 0.15s ease;
   }
 
   .tm-login-submit:hover:not(:disabled) {
-    background: #0369a1;
+    background: #7c3aed;
   }
 
   .tm-login-submit:disabled {

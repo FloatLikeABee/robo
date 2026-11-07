@@ -1,4 +1,4 @@
-# Vercel only builds dorph-engi/frontend (+ platform-chat). Skip the rest of the monorepo.
+# Vercel only builds dorph-engi/frontend. Skip the rest of the monorepo.
 UsersPanel
 dorph
 dorph-utils

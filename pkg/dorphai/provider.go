@@ -16,6 +16,8 @@ const (
 	ProviderMistral          ProviderID = "mistral"
 	ProviderGroq             ProviderID = "groq"
 	ProviderOpenAICompatible ProviderID = "openai-compatible"
+	ProviderSiliconFlow      ProviderID = "siliconflow"
+	ProviderNVIDIA           ProviderID = "nvidia"
 )
 
 const (
@@ -261,6 +263,36 @@ var providerCatalog = []providerSpec{
 			Capabilities:    fullCaps,
 			APIKeyEnv:       "OPENAI_COMPATIBLE_API_KEY",
 			BaseURLEnv:      "OPENAI_COMPATIBLE_BASE_URL",
+		},
+	},
+	{
+		Kind: adapterOpenAI,
+		Info: ProviderInfo{
+			ID:             ProviderNVIDIA,
+			DisplayName:    "NVIDIA NIM",
+			RequiresKey:    true,
+			DefaultBaseURL: "https://integrate.api.nvidia.com/v1",
+			SuggestedModels: []string{
+				"nvidia/nemotron-3-ultra-550b-a55b",
+			},
+			Capabilities: fullCaps,
+			APIKeyEnv:    "NVIDIA_API_KEY",
+			BaseURLEnv:   "NVIDIA_BASE_URL",
+		},
+	},
+	{
+		Kind: adapterOpenAI,
+		Info: ProviderInfo{
+			ID:             ProviderSiliconFlow,
+			DisplayName:    "SiliconFlow",
+			RequiresKey:    true,
+			DefaultBaseURL: "https://api.siliconflow.cn/v1",
+			SuggestedModels: []string{
+				"Qwen/Qwen3.6-27B",
+			},
+			Capabilities: fullCaps,
+			APIKeyEnv:    "SILICONFLOW_API_KEY",
+			BaseURLEnv:   "SILICONFLOW_BASE_URL",
 		},
 	},
 }

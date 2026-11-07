@@ -171,13 +171,12 @@ Only after step 2 has copied the `dorph-utils` origin: on the `dorph` service, s
 
 ### 5. Env matrix for the DorphNotes modal embeds
 
-Dorph AI opens DorphNotes in a modal. That UI embeds Event Logs, Content Maker, and Project. Data Access is not a product embed. Set these keys for the Dorph frontend build. They are read when that UI is built. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
+Dorph AI opens DorphNotes in a modal. That UI embeds Event Logs and Content Maker. Data Access is not a product embed. Set these keys for the Dorph frontend build. They are read when that UI is built. Copy the origin the dashboard shows. Do not guess an `onrender.com` host from the service name. `bk` and invite-signup are not required for this stack.
 
 | Key | Product | Placeholder | Example already live (example, do not recreate) | Recorded origin |
 |-----|---------|-------------|--------------------------------------------------|-----------------|
 | `REACT_APP_SHEETX_URL` (alias `REACT_APP_FORMSX_URL`) | Event Logs | `https://<event-logs public host>` | `https://formx-vucj.onrender.com` | |
 | `REACT_APP_COMPOSERX_URL` | Content Maker | `https://<composerx public host>` | `https://composerx.onrender.com` | |
-| `REACT_APP_PROJECTS_URL` (alias `REACT_APP_DORPH_ENGI_URL`) | Project | `https://<dorph-engi public host>` | `https://dorph-engi.onrender.com` | |
 
 ### 6. Env matrix for the DorphUtils embeds
 

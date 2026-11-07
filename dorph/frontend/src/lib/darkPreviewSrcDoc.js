@@ -18,24 +18,24 @@ const LEGACY_THEME_RE = /#2dd4bf|#134e4a|#10b981|#059669|#0f766e/i;
 
 const LEGACY_THEME_OVERRIDE = `<style id="dorph-dark-theme-override">
 :root {
-  --ink: #e8eef7;
-  --muted: #94a3b8;
-  --line: #1e293b;
-  --bg: #0b1220;
-  --card: #111827;
-  --accent: #38bdf8;
+  --ink: #f4f0fa;
+  --muted: #c4b8d4;
+  --line: #3d3458;
+  --bg: #221c34;
+  --card: #322a4a;
+  --accent: #8b5cf6;
   --accent-2: #a78bfa;
-  --accent-3: #34d399;
+  --accent-3: #f97316;
   --accent-purple: #a78bfa;
 }
 body {
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
-  background: #070b14 !important;
-  color: #e8eef7 !important;
+  background: #221c34 !important;
+  color: #f4f0fa !important;
 }
-a, .prose a { color: #38bdf8 !important; }
+a, .prose a { color: #8b5cf6 !important; }
 h2, .prose h2 { color: #a78bfa !important; }
-h3, .prose h3 { color: #34d399 !important; }
+h3, .prose h3 { color: #f97316 !important; }
 </style>`;
 
 function needsLegacyThemeOverride(html) {

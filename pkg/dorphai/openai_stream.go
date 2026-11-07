@@ -52,6 +52,11 @@ func streamOpenAI(ctx context.Context, rc resolved, r io.Reader, ch chan<- Strea
 				return ctx.Err()
 			}
 		}
+		if reasoning := decodeContent(choice.Delta.ReasoningContent); reasoning != "" {
+			if !sendEvent(ctx, ch, StreamEvent{ReasoningDelta: reasoning}) {
+				return ctx.Err()
+			}
+		}
 		for _, tc := range choice.Delta.ToolCalls {
 			if tc.Index < 0 || tc.Index > 64 {
 				return fmt.Errorf("openai stream: tool call index %d is out of range", tc.Index)

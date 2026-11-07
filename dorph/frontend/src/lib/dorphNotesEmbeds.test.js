@@ -1,10 +1,9 @@
 import { DORPH_NOTES_EMBEDS, resolveEmbedUrl, withSessionToken } from './dorphNotesEmbeds';
 
-test('embed list is Event Logs, Content Maker, and Project', () => {
+test('embed list is Event Logs and Contents & Data', () => {
   expect(DORPH_NOTES_EMBEDS.map((item) => item.label)).toEqual([
     'Event Logs',
-    'Content Maker',
-    'Project',
+    'Contents & Data',
   ]);
   expect(DORPH_NOTES_EMBEDS.some((item) => /data access/i.test(item.label))).toBe(false);
 });

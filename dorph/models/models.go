@@ -17,6 +17,8 @@ type ChatRequest struct {
 	IncludeKnowledge *bool             `json:"include_knowledge,omitempty"`
 	ContextCacheKey  string            `json:"context_cache_key,omitempty"`
 	PinnedFiles      []AgentPinnedFile `json:"pinned_files,omitempty"`
+	// Stream requests SSE (reasoning + content) for the final agent reply when supported.
+	Stream bool `json:"stream,omitempty"`
 }
 
 // AgentPinnedFile is a workspace file the client pinned for prompt context.
@@ -69,6 +71,7 @@ type StoredChatMessage struct {
 
 type ChatResponse struct {
 	Response         string                        `json:"response"`
+	Reasoning        string                        `json:"reasoning,omitempty"`
 	SQL              string                        `json:"sql,omitempty"`
 	FormJSON         string                        `json:"form_json,omitempty"`
 	ConfirmationCard *RegistrationConfirmationCard `json:"confirmation_card,omitempty"`

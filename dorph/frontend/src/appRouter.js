@@ -15,7 +15,7 @@ import { ADMIN_BASE_PATH } from './adminPaths';
 import DistrictsSchools from './pages/admin/DistrictsSchools';
 import CaseTasks from './pages/admin/CaseTasks';
 import Timelines from './pages/admin/Timelines';
-import GenericData from './pages/admin/GenericData';
+import ContentsAndData from './pages/admin/ContentsAndData';
 import BigNotes from './pages/admin/BigNotes';
 import Research from './pages/admin/Research';
 import EmbeddedModule from './pages/admin/EmbeddedModule';
@@ -64,22 +64,23 @@ export const appRoutes = [
           {
             element: <AdminLayout />,
             children: [
-          { index: true, element: <Navigate to="generic-data" replace /> },
-          { path: 'assets', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'resources', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'people', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'members', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'students', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'employees', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'staff', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { index: true, element: <Navigate to="contents-data" replace /> },
+          { path: 'assets', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'resources', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'people', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'members', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'students', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'employees', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'staff', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
           { path: 'places', element: <DistrictsSchools /> },
           { path: 'facilities', element: <Navigate to={`${ADMIN_BASE_PATH}/places`} replace /> },
           { path: 'districts-schools', element: <Navigate to={`${ADMIN_BASE_PATH}/places`} replace /> },
-          { path: 'contacts', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'vehicles', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'activities', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'trips', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
-          { path: 'generic-data', element: <GenericData /> },
+          { path: 'contacts', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'vehicles', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'activities', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'trips', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
+          { path: 'contents-data', element: <ContentsAndData /> },
+          { path: 'generic-data', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
           { path: 'case-tasks', element: <CaseTasks /> },
           { path: 'timelines', element: <Timelines /> },
           { path: 'stories', element: <Navigate to={`${ADMIN_BASE_PATH}/timelines`} replace /> },
@@ -87,42 +88,42 @@ export const appRoutes = [
           { path: 'big-notes', element: <BigNotes /> },
           { path: 'research', element: <Research /> },
           { path: 'event-logs', element: <EmbeddedModule id="event-logs" /> },
-          { path: 'content-maker', element: <EmbeddedModule id="content-maker" /> },
-          { path: 'project', element: <EmbeddedModule id="project" /> },
+          { path: 'content-maker', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data?tab=publish`} replace /> },
+          { path: 'project', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
           { path: 'quick-sheets/*', element: <Navigate to={`${ADMIN_BASE_PATH}/big-notes`} replace /> },
           {
             path: 'configuration',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/udfs',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/custom-attributes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/disability-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/ethnic-codes',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/grades',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
           {
             path: 'settings/mailing',
-            element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace />,
+            element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace />,
           },
-          { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/generic-data`} replace /> },
+          { path: '*', element: <Navigate to={`${ADMIN_BASE_PATH}/contents-data`} replace /> },
             ],
           },
         ],

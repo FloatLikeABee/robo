@@ -1,6 +1,6 @@
 # Dorph AI and DorphNotes
 
-Go API + React SPA. **Dorph AI** is the system chat (port **3031**). **DorphNotes** at `/dorphdata` is Tasks, Timelines, Big notes, Research, and Generic data.
+Go API + React SPA. **Dorph AI** is the system chat (port **3031**). **DorphNotes** at `/dorphdata` is Tasks, Timelines, Big notes, Research, Event Logs, and Contents & Data.
 
 New accounts are created in Invite Signup at `http://localhost:3051` (`invite-signup-ui`). Nav, Research publish, and redeem/admin flows: [`docs/agents/03-dorph.md`](../docs/agents/03-dorph.md).
 

@@ -26,6 +26,9 @@ html.public-form-page #root {
   height: auto;
   min-height: 100%;
   overflow: auto;
+  background: #2c2640;
+  color: #f4f0fa;
+  animation: none;
 }
 
 /* ── Scrollbars (light) ── */

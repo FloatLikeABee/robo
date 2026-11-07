@@ -17,7 +17,7 @@ const tabClass = (isDark: boolean) => ({ isActive }: { isActive: boolean }) =>
   `shrink-0 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
     isActive
       ? isDark
-        ? 'bg-sky-700/35 text-sky-100 border border-sky-500/40'
+        ? 'bg-[#8b5cf6]/35 text-[#f4f0fa] border border-[#a78bfa]/50'
         : 'bg-[#d8eef8] text-[#0f4c66] border border-[#b7deee]'
       : isDark
         ? 'text-slate-200 hover:bg-slate-700/70 hover:text-white border border-transparent'
@@ -45,14 +45,14 @@ export function Layout() {
     <div
       className={
         isDark
-          ? 'min-h-dvh md:h-screen overflow-hidden bg-linear-to-b from-[#14213d] via-[#0f172a] to-[#0b1120] text-slate-100 flex flex-col'
+          ? 'min-h-dvh md:h-screen overflow-hidden bg-[#221c34] text-[#f4f0fa] flex flex-col'
           : 'min-h-dvh md:h-screen overflow-hidden bg-[#e8e4dc] text-slate-900 flex flex-col'
       }
     >
       <header
         className={
           'shrink-0 z-20 border-b ' +
-          (isDark ? 'border-slate-700/80 bg-slate-800/95' : 'border-[#c6e3ef] bg-[#eaf6fb]/95')
+          (isDark ? 'border-white/20 bg-white/10 backdrop-blur-xl' : 'border-[#c6e3ef] bg-[#eaf6fb]/95')
         }
       >
         <div className="px-3 md:px-4 py-3 flex items-center justify-between gap-2">

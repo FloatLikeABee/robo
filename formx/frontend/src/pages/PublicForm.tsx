@@ -94,17 +94,10 @@ function PublicFormShell({
     <div
       className={
         isDark
-          ? 'relative min-h-dvh bg-[#06060b] text-slate-100'
+          ? 'relative min-h-dvh bg-[#2c2640] text-[#f4f0fa]'
           : 'relative min-h-dvh bg-gradient-to-b from-slate-50 via-white to-violet-50/30 text-slate-900'
       }
     >
-      {isDark && (
-        <>
-          <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-10%,rgba(139,92,246,0.22),transparent)]" />
-          <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_50%_40%_at_100%_80%,rgba(34,211,238,0.07),transparent)]" />
-          <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_40%_30%_at_0%_60%,rgba(217,70,239,0.06),transparent)]" />
-        </>
-      )}
       <div className="relative mx-auto max-w-xl px-4 py-12 pb-24 sm:py-14 sm:pb-28">{children}</div>
     </div>
   );
@@ -112,7 +105,7 @@ function PublicFormShell({
 
 function cardClass(isDark: boolean) {
   return isDark
-    ? 'rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl'
+    ? 'rounded-2xl border border-white/15 bg-[#352e4a] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]'
     : 'rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm';
 }
 
@@ -120,14 +113,14 @@ function primaryBtnClass(isDark: boolean) {
   const base =
     'flex-1 rounded-xl py-3.5 text-sm font-semibold tracking-wide transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50';
   if (isDark) {
-    return `${base} bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600 bg-[length:200%_auto] text-white shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:bg-right hover:shadow-[0_6px_28px_rgba(168,85,247,0.45)]`;
+    return `${base} bg-[#8b5cf6] text-white shadow-[0_4px_24px_rgba(139,92,246,0.35)] hover:bg-[#7c3aed]`;
   }
   return `${base} bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:brightness-105`;
 }
 
 function secondaryBtnClass(isDark: boolean) {
   return isDark
-    ? 'flex-1 rounded-xl border border-white/15 bg-white/5 py-3.5 text-sm font-medium text-slate-200 backdrop-blur-sm transition hover:border-white/25 hover:bg-white/10'
+    ? 'flex-1 rounded-xl border border-white/15 bg-[#3d3458] py-3.5 text-sm font-medium text-[#f4f0fa] transition hover:border-white/25 hover:bg-[#352e4a]'
     : 'flex-1 rounded-xl border border-slate-200 bg-white py-3.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50';
 }
 

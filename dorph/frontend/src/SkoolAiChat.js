@@ -6,8 +6,13 @@ import HybridContextDrawer from './HybridContextDrawer';
 import ChatNotesTodosDrawer from './components/chat/ChatNotesTodosDrawer';
 import AiToolsWorkspaceDrawer from './components/chat/AiToolsWorkspaceDrawer';
 import AgentNotesModal from './components/chat/AgentNotesModal';
+import ChatProviderSettings from './components/chat/ChatProviderSettings';
 import SkillsModal from './components/SkillsModal';
 import { tranApi } from './api/tranClient';
+import { CHAT_THEME_KEY, resolveChatTheme } from './lib/chatTheme';
+import { assistantHasBody } from './lib/assistantHasBody';
+import { sessionColorsFor } from './lib/sessionSwatch';
+import { postChatStream } from './lib/chatStreamClient';
 import { runAiProgress } from './lib/aiProgress';
 import { contextFingerprint, inferSubAgents } from './lib/agentContext';
 import AgentWorkspace, {
@@ -44,40 +49,8 @@ import { useT } from './lib/localeReact';
 import { useConfirm } from './components/ConfirmDialog';
 import { EnlargeImg, VisualLightboxProvider } from './lib/visualLightbox';
 import './App.css';
-const THEME_KEY = 'skool-ai-chat-theme';
 const PROMPT_HISTORY_KEY = 'skool-ai-chat-prompt-history';
 const MAX_PROMPTS = 10;
-const SESSION_SWATCH_COLORS = [
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#38bdf8',
-  '#818cf8',
-  '#e879f9',
-  '#fb7185',
-];
-
-function hashSessionId(id) {
-  const s = String(id || '');
-  let h = 0;
-  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function sessionSwatchColor(id, usedIndexes) {
-  const n = SESSION_SWATCH_COLORS.length;
-  const start = hashSessionId(id) % n;
-  for (let k = 0; k < n; k += 1) {
-    const idx = (start + k) % n;
-    if (!usedIndexes.has(idx)) {
-      usedIndexes.add(idx);
-      return SESSION_SWATCH_COLORS[idx];
-    }
-  }
-  return SESSION_SWATCH_COLORS[start];
-}
-
 function loadPromptHistory() {
   try {
     const raw = localStorage.getItem(PROMPT_HISTORY_KEY);
@@ -130,7 +103,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const [currentSessionId, setCurrentSessionId] = useState(
     () => (singleSession ? 'default' : readLastSessionId() || 'default')
   );
-  const theme = 'dark';
+  const theme = resolveChatTheme();
   const [sidebarNavOpen, setSidebarNavOpen] = useState(false);
   const sessionsSheetRef = useRef(null);
   const sessionsCloseRef = useRef(null);
@@ -152,6 +125,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   const [aiToolsOpen, setAiToolsOpen] = useState(false);
   const [dorphNotesOpen, setDorphNotesOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
+  const [providerSettingsOpen, setProviderSettingsOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [agentNotesOpen, setAgentNotesOpen] = useState(() => searchParams.get('agent-notes') === '1');
   const agentNotesRestoreRef = useRef(null);
@@ -195,7 +169,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   useEffect(() => {
     document.documentElement.setAttribute('data-chat-theme', theme);
     try {
-      localStorage.setItem(THEME_KEY, theme);
+      localStorage.setItem(CHAT_THEME_KEY, theme);
     } catch {}
     try {
       window.dispatchEvent(new CustomEvent('dorph-chat-theme', { detail: theme }));
@@ -422,7 +396,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
       {
         id: 'dorphdata',
         label: t('dorphNotes'),
-        color: '#3b82f6',
+        color: 'var(--chat-accent)',
         icon: HEADER_APP_ICONS.dorphdata,
         hasPopup: 'dialog',
         expanded: dorphNotesOpen,
@@ -523,6 +497,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
     try {
       let response;
+      let streamedAssistant = false;
       const skillIds = selectedSkillIds.slice();
       const agentId = dorphAgentId(appliedAssistantRef.current);
       if (effectiveFile) {
@@ -548,41 +523,81 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           signal,
         });
       } else {
-        response = await tranApi.post(
-          '/api/chat',
-          {
-            message: userMessage,
-            session_id: sessionId,
-            ...(agentId ? { agent_id: agentId } : {}),
-            ...(skillIds.length > 0 ? { skill_ids: skillIds } : {}),
-            ...(selectedRAG.length > 0 ? { rag_collections: selectedRAG } : {}),
-            locale: getLocale(),
-            ...agentFields,
+        const payload = {
+          message: userMessage,
+          session_id: sessionId,
+          ...(agentId ? { agent_id: agentId } : {}),
+          ...(skillIds.length > 0 ? { skill_ids: skillIds } : {}),
+          ...(selectedRAG.length > 0 ? { rag_collections: selectedRAG } : {}),
+          locale: getLocale(),
+          ...agentFields,
+        };
+
+        const streamIdxRef = { current: -1 };
+        setMessages((prev) => {
+          streamIdxRef.current = prev.length;
+          return [...prev, { type: 'assistant', content: '', reasoning: '' }];
+        });
+        streamedAssistant = true;
+
+        const patchStreamMsg = (update) => {
+          setMessages((prev) => {
+            const idx = streamIdxRef.current;
+            if (idx < 0 || idx >= prev.length) {
+              return prev;
+            }
+            const next = prev.slice();
+            next[idx] = update(next[idx]);
+            return next;
+          });
+        };
+
+        const data = await postChatStream(payload, {
+          signal,
+          onReasoning: (delta) => {
+            patchStreamMsg((m) => ({ ...m, reasoning: (m.reasoning || '') + delta }));
           },
-          { signal }
-        );
+          onContent: (delta) => {
+            patchStreamMsg((m) => ({ ...m, content: (m.content || '') + delta }));
+          },
+        });
+
+        patchStreamMsg((m) => ({
+          ...m,
+          content: data.response || m.content || '',
+          reasoning: data.reasoning || m.reasoning || '',
+          sql: data.sql,
+          confirmationCard: data.confirmation_card || null,
+          proposedForm: data.proposed_form || null,
+          researchContent: data.research_content || null,
+          images: Array.isArray(data.images) ? data.images : null,
+        }));
+
+        response = { data };
       }
 
-      const aiResponse = response.data.response;
       setResponseTimeMs(Math.round(performance.now() - startedAt));
-      const sql = response.data.sql;
-      const confirmationCard = response.data.confirmation_card || null;
-      const proposedForm = response.data.proposed_form || null;
-      const researchContent = response.data.research_content || null;
-      const images = Array.isArray(response.data.images) ? response.data.images : null;
+      if (!streamedAssistant) {
+        const aiResponse = response.data.response;
+        const sql = response.data.sql;
+        const confirmationCard = response.data.confirmation_card || null;
+        const proposedForm = response.data.proposed_form || null;
+        const researchContent = response.data.research_content || null;
+        const images = Array.isArray(response.data.images) ? response.data.images : null;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: 'assistant',
-          content: aiResponse,
-          sql,
-          confirmationCard,
-          proposedForm,
-          researchContent,
-          images,
-        },
-      ]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'assistant',
+            content: aiResponse,
+            sql,
+            confirmationCard,
+            proposedForm,
+            researchContent,
+            images,
+          },
+        ]);
+      }
       if (!singleSession) loadSessions();
       historyNavIndexRef.current = -1;
       if (trimmed) {
@@ -780,10 +795,11 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
   }, [sidebarNavOpen, closeSessions]);
 
   const sessionColorById = useMemo(() => {
-    const used = new Set();
+    const list = sessions || [];
+    const colors = sessionColorsFor(list.map((s) => s.id));
     const map = {};
-    (sessions || []).forEach((s) => {
-      map[s.id] = sessionSwatchColor(s.id, used);
+    list.forEach((s, i) => {
+      map[s.id] = colors[i];
     });
     return map;
   }, [sessions]);
@@ -880,6 +896,18 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
               })}
             </div>
           </div>
+          <button
+            type="button"
+            className="sidebar-provider-settings"
+            title="AI settings"
+            aria-label="AI settings"
+            onClick={() => setProviderSettingsOpen(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </aside>
       )}
       <div className="chat-container">
@@ -1068,6 +1096,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
           )}
 
           {messages.map((msg, idx) => (
+            msg.type === 'assistant' && !assistantHasBody(msg) ? null : (
             <div key={idx} className={`message ${msg.type}`}>
               <div className="message-content">
                 {msg.type === 'user' && (
@@ -1079,6 +1108,12 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 )}
                 {msg.type === 'assistant' && (
                   <AssistantReply text={msg.content} modal={<ChatMarkdown text={msg.content} />}>
+                    {msg.reasoning ? (
+                      <details className="chat-reasoning-block">
+                        <summary>Thinking</summary>
+                        <pre className="chat-reasoning-text">{msg.reasoning}</pre>
+                      </details>
+                    ) : null}
                     <ChatMarkdown text={msg.content} />
                     {Array.isArray(msg.images) && msg.images.length > 0 && (
                       <div className="chat-generated-images">
@@ -1249,9 +1284,10 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
                 )}
               </div>
             </div>
+            )
           ))}
 
-          {loading && (
+          {loading && !messages.some(assistantHasBody) && (
             <div className="message assistant">
               <div className="message-bubble assistant-bubble ai-progress-status">
                 <span className="ai-progress-dot" aria-hidden="true" />
@@ -1283,6 +1319,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
         />
         <DorphNotesModal open={dorphNotesOpen} onClose={() => setDorphNotesOpen(false)} />
         <SkillsModal open={skillsOpen} onClose={() => setSkillsOpen(false)} />
+        <ChatProviderSettings open={providerSettingsOpen} onClose={() => setProviderSettingsOpen(false)} />
         {agentNotesOpen ? (
           <AgentNotesModal
             onClose={closeAgentNotes}
@@ -1705,7 +1742,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
     return (
       <VisualLightboxProvider>
         <div
-          className={`skool-ai-chat--embedded${singleSession ? ' skool-ai-chat--single-session' : ''}`}
+          className={`skool-ai-chat skool-ai-chat--embedded${singleSession ? ' skool-ai-chat--single-session' : ''}`}
           style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
           {chatInner}
@@ -1716,7 +1753,7 @@ export default function SkoolAiChat({ variant = 'page', enableFileUpload = true,
 
   return (
     <VisualLightboxProvider>
-      <div className="app-outer">{chatInner}</div>
+      <div className="app-outer skool-ai-chat">{chatInner}</div>
     </VisualLightboxProvider>
   );
 }

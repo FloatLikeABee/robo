@@ -49,7 +49,7 @@ func TestTimelinePromptAsksForShape(t *testing.T) {
 		if !strings.Contains(text, "Do not invent numbers") || !strings.Contains(text, "never raw HTML") {
 			t.Fatalf("forbid lines: %s", text)
 		}
-		for _, needle := range []string{"html-anything", "Arial", "#38bdf8"} {
+		for _, needle := range []string{"html-anything", "Arial", "#8b5cf6"} {
 			if !strings.Contains(text, needle) {
 				t.Fatalf("missing HTML skill %q in: %s", needle, text)
 			}

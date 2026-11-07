@@ -1,5 +1,7 @@
 <script>
   import ButtonLeadingIcon from '../lib/ButtonLeadingIcon.svelte'
+  import { buildDataSource, dorphParentOrigin } from '../lib/contentDataSource.js'
+  import { previewCanEnlarge } from '../lib/previewEnlarge.js'
   import { runAiProgress } from '../lib/aiProgress'
   import AssistantMarkdown from './AssistantMarkdown.svelte'
 
@@ -40,6 +42,13 @@
 
   let pageHtml = $state('')
   const previewHtml = $derived(buildSafePreviewHtml(pageHtml, theme))
+  const canEnlarge = $derived(previewCanEnlarge(pageHtml))
+  let previewOpen = $state(false)
+  let dataPickerOpen = $state(false)
+  let dataListLoading = $state(false)
+  let dataListError = $state('')
+  /** @type {Array<{ id: number, title?: string, source_type?: string }>} */
+  let dataRecords = $state([])
   let publishPath = $state('')
   let pathLoading = $state(false)
   let publishLoading = $state(false)
@@ -58,6 +67,8 @@
   let aiLogEl = $state(null)
   /** @type {HTMLDivElement | null} */
   let aiEndEl = $state(null)
+  /** @type {HTMLInputElement | null} */
+  let sourceFileInput = $state(null)
 
   function endpoint(path) {
     return `${apiBase}${path}`
@@ -231,6 +242,62 @@
     await runPublishAI(msg)
   }
 
+  $effect(() => {
+    if (!previewOpen) return undefined
+    const onKey = (event) => {
+      if (event.key === 'Escape') previewOpen = false
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  async function openDataPicker() {
+    dataPickerOpen = true
+    dataListError = ''
+    dataRecords = []
+    const origin = dorphParentOrigin(document.referrer)
+    if (!origin) {
+      dataListError = 'Open Content from DorphNotes to pick a data record.'
+      return
+    }
+    dataListLoading = true
+    try {
+      const res = await fetch(`${origin}/api/tran/generic-data`, { headers: getAuthHeaders() })
+      if (!res.ok) throw new Error(`Could not load data records (${res.status})`)
+      const rows = await res.json()
+      dataRecords = Array.isArray(rows) ? rows : []
+    } catch (err) {
+      dataListError = err instanceof Error ? err.message : 'Could not load data records.'
+    } finally {
+      dataListLoading = false
+    }
+  }
+
+  async function generateFromRecord(row) {
+    const origin = dorphParentOrigin(document.referrer)
+    if (!origin || !row?.id) return
+    dataListLoading = true
+    dataListError = ''
+    try {
+      const res = await fetch(`${origin}/api/tran/generic-data/${row.id}/full`, { headers: getAuthHeaders() })
+      if (!res.ok) throw new Error(`Could not load that record (${res.status})`)
+      const full = await res.json()
+      const built = buildDataSource(full)
+      sourceText = built.text
+      if (!publishName.trim()) publishName = built.title
+      if (!publishTheme.trim()) publishTheme = 'twilight glass'
+      dataPickerOpen = false
+      const shape = built.layout === 'table'
+        ? 'Include the data table and the summary counts. Do not turn the rows into an essay.'
+        : 'Write an article with headings and prose, not a dashboard of rows.'
+      await runPublishAI(`Generate a polished HTML page from the provided source. ${shape} Theme: ${publishTheme}.`)
+    } catch (err) {
+      dataListError = err instanceof Error ? err.message : 'Could not load that record.'
+    } finally {
+      dataListLoading = false
+    }
+  }
+
   async function generateFromSourceText() {
     const src = sourceText.trim()
     const hasMaterials = sourceMaterials.some((m) => String(m?.summary || '').trim())
@@ -325,7 +392,7 @@
     <div class="compose-publish-actions">
       <button type="button" class="btn-secondary" onclick={saveDraft} disabled={saveDraftLoading}>
         <ButtonLeadingIcon name="save" />
-        {saveDraftLoading ? 'Saving…' : 'Save HTML'}
+        {saveDraftLoading ? 'Saving…' : 'Save'}
       </button>
       <button type="button" class="primary-action" onclick={publishPage} disabled={publishLoading}>
         <ButtonLeadingIcon name="send" />
@@ -353,6 +420,9 @@
         </div>
         <div class="publish-preview-head">
           <span class="pill-label">HTML Preview</span>
+          {#if canEnlarge}
+            <button type="button" class="btn-ghost btn-sm" onclick={() => (previewOpen = true)}>Enlarge</button>
+          {/if}
         </div>
         <div class="publish-preview-frame-wrap">
           <iframe
@@ -366,19 +436,15 @@
       <div class="publish-source-box">
         <div class="publish-source-head">
           <label for="publish-source-text">Source text &amp; files</label>
-          <div class="publish-source-toolbar">
-            <label class="btn-secondary btn-sm btn-file">
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.gif,.webp,image/*"
-                onchange={processSourceFiles}
-                disabled={sourceProcessing}
-              />
-              <ButtonLeadingIcon name="upload" />
-              {sourceProcessing ? 'Summarizing…' : 'Upload & summarize'}
-            </label>
-          </div>
+          <input
+            bind:this={sourceFileInput}
+            class="publish-source-file"
+            type="file"
+            multiple
+            accept=".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.gif,.webp,image/*"
+            onchange={processSourceFiles}
+            disabled={sourceProcessing}
+          />
         </div>
         {#if sourceMaterials.length > 0}
           <ul class="publish-source-summaries">
@@ -397,19 +463,30 @@
         {/if}
         <textarea
           id="publish-source-text"
-          rows="4"
-          placeholder="Paste rough content, or upload files above. PDFs and text files are summarized; images get an AI description. All of this feeds HTML generation."
+          placeholder="Paste rough content. PDFs and text files are summarized; images get an AI description. All of this feeds HTML generation."
           bind:value={sourceText}
         ></textarea>
         <div class="publish-source-actions">
           <button
             type="button"
             class="btn-secondary"
+            onclick={() => sourceFileInput?.click()}
+            disabled={sourceProcessing}
+          >
+            <ButtonLeadingIcon name="upload" />
+            {sourceProcessing ? 'Summarizing…' : 'Upload'}
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
             onclick={generateFromSourceText}
             disabled={aiChatLoading || (!sourceText.trim() && !sourceMaterials.some((m) => String(m?.summary || '').trim()))}
           >
+            From text
+          </button>
+          <button type="button" class="primary-action" onclick={openDataPicker} disabled={aiChatLoading}>
             <ButtonLeadingIcon name="ai" />
-            Generate from sources
+            From data
           </button>
         </div>
       </div>
@@ -431,7 +508,7 @@
                 <div class="ai-chat-apply-row">
                   <button type="button" class="btn-secondary" onclick={() => applyProposedHtml(msg.proposedHtml)}>
                     <ButtonLeadingIcon name="code" />
-                    Apply HTML to preview
+                    Apply
                   </button>
                 </div>
               {/if}
@@ -475,19 +552,76 @@
       </div>
     </aside>
   </div>
+
+  {#if previewOpen}
+    <div class="preview-modal" role="presentation" onclick={() => (previewOpen = false)}>
+      <div
+        class="preview-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="HTML preview"
+        onclick={(event) => event.stopPropagation()}
+      >
+        <button type="button" class="btn-ghost" onclick={() => (previewOpen = false)}>Close</button>
+        <iframe
+          title="Enlarged HTML preview"
+          srcdoc={previewHtml}
+          class="preview-modal-frame"
+          sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+        ></iframe>
+      </div>
+    </div>
+  {/if}
+
+  {#if dataPickerOpen}
+    <div class="preview-modal" role="presentation" onclick={() => (dataPickerOpen = false)}>
+      <div
+        class="data-picker"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Choose a data record"
+        onclick={(event) => event.stopPropagation()}
+      >
+        <div class="data-picker-head">
+          <strong>Choose a data record</strong>
+          <button type="button" class="btn-ghost" onclick={() => (dataPickerOpen = false)}>Close</button>
+        </div>
+        {#if dataListLoading}
+          <p class="sidebar-hint">Loading records…</p>
+        {:else if dataListError}
+          <p class="publish-source-summaries-err">{dataListError}</p>
+        {:else if dataRecords.length === 0}
+          <p class="sidebar-hint">No data records yet.</p>
+        {:else}
+          <ul class="data-picker-list">
+            {#each dataRecords as row (row.id)}
+              <li>
+                <button type="button" class="btn-secondary" onclick={() => generateFromRecord(row)} disabled={dataListLoading}>
+                  {row.title || 'Untitled data'} <span>({row.source_type || 'file'})</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    </div>
+  {/if}
 </section>
 
 <style>
   .btn-secondary {
-    background: var(--color-bg-elevated);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    background: var(--color-surface);
     color: var(--color-text);
-    border-color: var(--color-border-subtle);
+    border: 1px solid transparent;
   }
 
   .btn-ghost {
     background: transparent;
     color: var(--color-text-subtle);
-    border-color: transparent;
+    border: 1px solid transparent;
     box-shadow: none;
   }
 
@@ -498,7 +632,8 @@
 
   .primary-action {
     background: var(--color-primary);
-    color: #fff;
+    color: #f4f0fa;
+    border: 1px solid transparent;
   }
 
   .pill-label {
@@ -622,8 +757,8 @@
   .compose-publish-left {
     min-height: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    gap: 16px;
   }
 
   .publish-preview-shell {
@@ -637,9 +772,81 @@
   }
 
   .publish-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     border-bottom: 1px solid var(--color-border-subtle);
     padding: 0.45rem 0.65rem;
     background: linear-gradient(90deg, var(--color-primary-soft), transparent);
+  }
+
+  .preview-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(26, 16, 40, 0.72);
+    backdrop-filter: blur(8px);
+  }
+
+  .preview-modal-panel {
+    width: min(96vw, 1100px);
+    height: min(92dvh, 900px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(53, 46, 74, 0.94);
+  }
+
+  .preview-modal-frame {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0.6rem;
+    background: #2c2640;
+  }
+
+  .data-picker {
+    width: min(32rem, 96vw);
+    max-height: min(80dvh, 640px);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.9rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(53, 46, 74, 0.96);
+    color: #f4f0fa;
+  }
+
+  .data-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .data-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .data-picker-list button {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .publish-preview-frame-wrap {
@@ -662,10 +869,13 @@
     border: 1px solid var(--color-border-subtle);
     border-radius: 0.9rem;
     background: var(--color-bg-elevated);
-    padding: 0.6rem;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 16px;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
   }
 
   .publish-source-head {
@@ -676,15 +886,9 @@
     flex-wrap: wrap;
   }
 
-  .publish-source-head label {
+  .publish-source-head > label {
     font-size: 0.76rem;
     color: var(--color-text-subtle);
-  }
-
-  .publish-source-toolbar {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
   }
 
   .btn-sm {
@@ -692,7 +896,7 @@
     padding: 0.28rem 0.5rem;
   }
 
-  .btn-file input[type='file'] {
+  .publish-source-file {
     display: none;
   }
 
@@ -746,21 +950,32 @@
   }
 
   .publish-source-box textarea {
+    flex: 1;
+    min-height: 12rem;
     border-radius: 0.65rem;
     border: 1px solid var(--color-border-subtle);
     background: var(--color-bg);
     color: var(--color-text);
     padding: 0.55rem 0.65rem;
     resize: none;
-    height: 5.6rem;
-    min-height: 5.6rem;
-    max-height: 5.6rem;
     font-family: inherit;
   }
 
   .publish-source-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .publish-source-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .publish-source-actions .primary-action {
+    padding: 0.8rem 1.1rem;
+    font-weight: 650;
   }
 
   .composer-ai-rail {
@@ -895,13 +1110,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(96, 165, 250, 0.45);
-    color: #eaf3ff;
-    background:
-      radial-gradient(circle at 30% 25%, rgba(147, 197, 253, 0.35), transparent 55%),
-      linear-gradient(145deg, rgba(37, 99, 235, 0.95), rgba(29, 78, 216, 0.88));
+    border: 1px solid transparent;
+    color: #f4f0fa;
+    background: var(--color-primary);
     box-shadow:
-      0 8px 22px rgba(29, 78, 216, 0.35),
+      0 8px 22px rgba(124, 58, 237, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition:
       transform 160ms ease,
@@ -920,8 +1133,8 @@
     transform: translateY(-1px) scale(1.03);
     filter: saturate(1.08);
     box-shadow:
-      0 12px 26px rgba(29, 78, 216, 0.42),
-      0 0 0 4px rgba(59, 130, 246, 0.2);
+      0 12px 26px rgba(124, 58, 237, 0.42),
+      0 0 0 4px rgba(139, 92, 246, 0.2);
   }
 
   .btn-send-fancy:active:not(:disabled) {
@@ -940,7 +1153,8 @@
   }
 
   @media (max-width: 1080px) {
-    .compose-publish-main {
+    .compose-publish-main,
+    .compose-publish-left {
       grid-template-columns: 1fr;
     }
   }

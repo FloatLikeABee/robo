@@ -1,21 +1,13 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SkillsPanel } from '../components/SkillsModal';
+import { resolveChatTheme } from '../lib/chatTheme';
 import '../App.css';
-
-const THEME_KEY = 'skool-ai-chat-theme';
-
-function getStoredChatTheme() {
-  try {
-    localStorage.setItem(THEME_KEY, 'dark');
-  } catch {}
-  return 'dark';
-}
 
 /** Bookmark fallback for /skills — same themed panel as the chat modal. */
 export default function SkillsPage() {
   useEffect(() => {
-    document.documentElement.setAttribute('data-chat-theme', getStoredChatTheme());
+    document.documentElement.setAttribute('data-chat-theme', resolveChatTheme());
   }, []);
 
   return (

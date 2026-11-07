@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,10 +14,12 @@ import (
 )
 
 type AIService struct {
-	apiKey    string
-	modelName string
-	cache     *cache.Cache
-	llm       *dorphai.Client
+	apiKey       string
+	modelName    string
+	cache        *cache.Cache
+	llm          *dorphai.Client
+	orchestrator *dorphai.Client
+	coordinator  *dorphai.Client
 }
 
 type DashScopeMessage struct {
@@ -32,17 +35,39 @@ func New(apiKey string, modelName string, appCache *cache.Cache) (*AIService, er
 	if strings.TrimSpace(modelName) != "" {
 		cfg.Model = strings.TrimSpace(modelName)
 	}
+	orchCfg := dorphai.LoadOrchestratorFromEnv()
+	if strings.TrimSpace(apiKey) != "" && dorphai.OrchestratorProviderFromEnv() == "" {
+		orchCfg.APIKey = strings.TrimSpace(apiKey)
+	}
+	coordCfg := dorphai.LoadCoordinatorFromEnv()
 	return &AIService{
-		apiKey:    cfg.APIKey,
-		modelName: cfg.Model,
-		cache:     appCache,
-		llm:       dorphai.NewClient(cfg),
+		apiKey:       cfg.APIKey,
+		modelName:    cfg.Model,
+		cache:        appCache,
+		llm:          dorphai.NewClient(cfg),
+		orchestrator: dorphai.NewClient(orchCfg),
+		coordinator:  dorphai.NewClient(coordCfg),
 	}, nil
 }
 
 func (a *AIService) Close() error {
 	// HTTP client doesn't require explicit closing
 	return nil
+}
+
+// ForChatConfig returns a request-local copy whose chat client is cfg.
+// The shared service stays on the environment client for other requests.
+func (a *AIService) ForChatConfig(cfg dorphai.Config) *AIService {
+	client := dorphai.NewClient(cfg)
+	if a == nil {
+		return &AIService{llm: client, orchestrator: client, apiKey: cfg.APIKey, modelName: cfg.Model}
+	}
+	next := *a
+	next.llm = client
+	next.orchestrator = client
+	next.apiKey = cfg.APIKey
+	next.modelName = cfg.Model
+	return &next
 }
 
 func (a *AIService) callDashScopeAPI(ctx context.Context, messages []DashScopeMessage) (string, error) {
@@ -291,6 +316,99 @@ func (a *AIService) ChatCompletion(ctx context.Context, messages []DashScopeMess
 		return "", fmt.Errorf("no messages")
 	}
 	return a.callDashScopeAPI(ctx, messages)
+}
+
+func (a *AIService) orchestratorClient() *dorphai.Client {
+	if a != nil && a.orchestrator != nil && a.orchestrator.Configured() {
+		return a.orchestrator
+	}
+	if a != nil && a.llm != nil {
+		return a.llm
+	}
+	return nil
+}
+
+func (a *AIService) coordinatorClient() *dorphai.Client {
+	if a != nil && dorphai.CoordinatorProviderFromEnv() != "" && a.coordinator != nil && a.coordinator.Configured() {
+		return a.coordinator
+	}
+	return a.orchestratorClient()
+}
+
+// OrchestratorChatCompletion is the primary agent loop model.
+func (a *AIService) OrchestratorChatCompletion(ctx context.Context, messages []DashScopeMessage) (string, error) {
+	c := a.orchestratorClient()
+	if c == nil {
+		return "", fmt.Errorf("AI not configured")
+	}
+	return c.ChatCompletion(ctx, toDorphMessages(messages))
+}
+
+// StreamEmit receives incremental reasoning and/or answer text from a streaming completion.
+type StreamEmit func(reasoningDelta, contentDelta string) error
+
+// OrchestratorStreamCompletion streams the orchestrator reply when the provider supports it.
+// Returns the full answer text and accumulated reasoning. Falls back to non-streaming on capability errors.
+func (a *AIService) OrchestratorStreamCompletion(ctx context.Context, messages []DashScopeMessage, emit StreamEmit) (answer, reasoning string, err error) {
+	c := a.orchestratorClient()
+	if c == nil {
+		return "", "", fmt.Errorf("AI not configured")
+	}
+	ch, err := c.Stream(ctx, dorphai.CompletionRequest{Messages: toDorphMessages(messages)})
+	if err != nil {
+		if errors.Is(err, dorphai.ErrCapabilityUnsupported) {
+			text, err2 := c.ChatCompletion(ctx, toDorphMessages(messages))
+			return text, "", err2
+		}
+		return "", "", err
+	}
+	var content, think strings.Builder
+	for ev := range ch {
+		if ev.Err != nil {
+			return "", "", ev.Err
+		}
+		if ev.ReasoningDelta != "" {
+			think.WriteString(ev.ReasoningDelta)
+			if emit != nil {
+				if err := emit(ev.ReasoningDelta, ""); err != nil {
+					return content.String(), think.String(), err
+				}
+			}
+		}
+		if ev.Delta != "" {
+			content.WriteString(ev.Delta)
+			if emit != nil {
+				if err := emit("", ev.Delta); err != nil {
+					return content.String(), think.String(), err
+				}
+			}
+		}
+	}
+	return content.String(), think.String(), nil
+}
+
+// CoordinatorChatCompletion is the lightweight coordinator model.
+func (a *AIService) CoordinatorChatCompletion(ctx context.Context, messages []DashScopeMessage) (string, error) {
+	c := a.coordinatorClient()
+	if c == nil {
+		return "", fmt.Errorf("AI not configured")
+	}
+	return c.ChatCompletion(ctx, toDorphMessages(messages))
+}
+
+// CoordinatorConfigured reports whether a distinct coordinator provider is set and configured.
+func (a *AIService) CoordinatorConfigured() bool {
+	return a != nil && dorphai.CoordinatorProviderFromEnv() != "" && a.coordinator != nil && a.coordinator.Configured()
+}
+
+// OrchestratorModelIdentityLine returns provider/model for the orchestrator client.
+func (a *AIService) OrchestratorModelIdentityLine() string {
+	c := a.orchestratorClient()
+	if c == nil {
+		return dorphai.ModelIdentityInstructions("", "")
+	}
+	provider, model := c.ModelIdentity()
+	return dorphai.ModelIdentityInstructions(provider, model)
 }
 
 // ChatCompletionLong is like ChatCompletion but uses the longer HTTP timeout.

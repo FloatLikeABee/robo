@@ -223,7 +223,7 @@ The assistant must perform **every functional UI action** via tools:
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │  Svelte 5 + Vite + Tailwind (port 5179)                 │
-│  Booki-like layout · platform-chat drawer               │
+│  Booki-like layout · no satellite chat drawer           │
 └───────────────────────────┬─────────────────────────────┘
                             │ REST /api/v1/*
 ┌───────────────────────────▼─────────────────────────────┐

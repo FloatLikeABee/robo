@@ -45,13 +45,18 @@ type oaiResponseFormat struct {
 }
 
 type oaiChatRequest struct {
-	Model          string             `json:"model"`
-	Messages       []oaiMessage       `json:"messages"`
-	Tools          []oaiToolDef       `json:"tools,omitempty"`
-	ResponseFormat *oaiResponseFormat `json:"response_format,omitempty"`
-	Stream         bool               `json:"stream,omitempty"`
-	MaxTokens      int                `json:"max_tokens,omitempty"`
-	EnableThinking *bool              `json:"enable_thinking,omitempty"`
+	Model               string             `json:"model"`
+	Messages            []oaiMessage       `json:"messages"`
+	Tools               []oaiToolDef       `json:"tools,omitempty"`
+	ResponseFormat      *oaiResponseFormat `json:"response_format,omitempty"`
+	Stream              bool               `json:"stream,omitempty"`
+	MaxTokens           int                `json:"max_tokens,omitempty"`
+	EnableThinking      *bool              `json:"enable_thinking,omitempty"`
+	ChatTemplateKwargs  *oaiChatTemplateKwargs `json:"chat_template_kwargs,omitempty"`
+}
+
+type oaiChatTemplateKwargs struct {
+	EnableThinking *bool `json:"enable_thinking,omitempty"`
 }
 
 type oaiVisionRequest struct {
@@ -135,6 +140,10 @@ func marshalOpenAI(rc resolved, req outbound, stream bool) ([]byte, error) {
 	if rc.EnableThinkingOff {
 		off := false
 		body.EnableThinking = &off
+	}
+	if rc.Provider == ProviderNVIDIA && rc.NVIDIAEnableThinking {
+		on := true
+		body.ChatTemplateKwargs = &oaiChatTemplateKwargs{EnableThinking: &on}
 	}
 	return json.Marshal(body)
 }
@@ -265,8 +274,9 @@ func decodeArgs(raw json.RawMessage) string {
 type oaiStreamChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content   json.RawMessage `json:"content"`
-			ToolCalls []struct {
+			Content          json.RawMessage `json:"content"`
+			ReasoningContent json.RawMessage `json:"reasoning_content"`
+			ToolCalls        []struct {
 				Index    int    `json:"index"`
 				ID       string `json:"id"`
 				Function struct {

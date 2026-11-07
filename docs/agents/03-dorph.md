@@ -4,8 +4,8 @@
 
 **Dorph** is the Go API (`:9090`) plus React CRA UI (`:3031`). It is two products in one SPA:
 
-- **Dorph AI** — system chat and header **Skills**. The agent workspace tabs are **Notes & TODOs** and **Context & Knowledge**. Header **AI tools** opens the AI tools drawer for `bk` (Assistants, RAG, Documents, System).
-- **DorphNotes** — Tasks, Timelines, Big notes, Research, Generic data
+- **Dorph AI** — system chat and header **Skills**. Chat UI uses the **twilight glass** preset (purple/orange, frosted panels). The agent workspace tabs are **Notes & TODOs** and **Context & Knowledge**. Header **AI tools** opens the AI tools drawer for `bk` (Assistants, RAG, Documents, System). Visual QA: standalone `/` and DorphNotes embedded chat after frontend changes.
+- **DorphNotes** — Tasks, Timelines, Big notes, Research, Event Logs, Contents & Data
 
 Deep operator notes: [`dorph/README.md`](../../dorph/README.md).
 
@@ -23,7 +23,7 @@ This is **not** a Transfinder / school / SQL Server product. DorphNotes UI lives
 
 1. `pkg/repoenv` + `config.GetConfig()` (root `.env`), then the `DORPH_ENV` startup guard (local defaults still start; `production` refuses weak JWT/admin secrets before listen). See [`docs/security-hosting-checklist.md`](../security-hosting-checklist.md).
 2. Badger + in-memory cache
-3. DorphAI client from `DORPH_AI_API_KEY`
+3. DorphAI client from `DORPH_AI_API_KEY` (optional **dual-model** agent: `DORPH_AI_ORCHESTRATOR_PROVIDER=nvidia` with `NVIDIA_API_KEY` for the tool loop; `DORPH_AI_COORDINATOR_PROVIDER=siliconflow` with `SILICONFLOW_*` for coordinator/memory distill — see repo-root `.env.example`)
 4. SQLite Tran store (`TRAN_SQLITE_PATH`) including `plat_users` (production also checks stored admin passwords)
 5. Gin: CORS, `AuthzMiddleware`, Swagger, API, static SPA
 6. Listen on `PORT` (default `9090`)
@@ -40,9 +40,10 @@ Drawer order in `AppDrawer.js` (base `/dorphdata`):
 | Timelines | `/dorphdata/timelines` |
 | Big notes | `/dorphdata/big-notes` |
 | Research | `/dorphdata/research` |
-| Generic data | `/dorphdata/generic-data` |
+| Event Logs | `/dorphdata/event-logs` |
+| Contents & Data | `/dorphdata/contents-data` |
 
-These are the drawer items, not a claim that no other `/dorphdata` route exists. `/dorphdata/settings` and `/dorphdata/configuration` redirect to `/dorphdata/generic-data`.
+These are the drawer items, not a claim that no other `/dorphdata` route exists. `/dorphdata/generic-data` and `/dorphdata/content-maker` redirect into Contents & Data (`?tab=publish` for the HTML publisher). `/dorphdata/settings` and `/dorphdata/configuration` redirect to `/dorphdata/contents-data`.
 
 Case tasks require `start_at` / `end_at`. Do not add Dorph AI / Notes header shortcuts on the DorphNotes chrome; chat is the Dorph AI SPA.
 

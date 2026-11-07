@@ -389,7 +389,7 @@ export function EventsInfo() {
             value={titleQuery}
             onChange={(e) => setTitleQuery(e.target.value)}
             placeholder="Search titles"
-            className="w-full sm:max-w-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-[#f0ece4] dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100"
+            className="w-full sm:max-w-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-[#f0ece4] dark:bg-[#322a4a] px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100"
           />
         </div>
         <div className="shrink-0 flex flex-wrap gap-2">
@@ -432,9 +432,13 @@ export function EventsInfo() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700/50 bg-[#f0ece4] dark:bg-slate-900/20">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700/50 bg-[#f0ece4] dark:bg-[#322a4a]/20">
         {loading ? (
-          <div className="p-6 text-slate-500 dark:text-slate-400 text-sm">Loading…</div>
+          <div className="bento-skeleton grid gap-4 p-4" aria-busy="true">
+            <div className="h-16 rounded-2xl bg-[#3d3148]" />
+            <div className="h-16 rounded-2xl bg-[#3d3148]" />
+            <div className="h-16 rounded-2xl bg-[#3d3148]" />
+          </div>
         ) : events.length === 0 ? (
           <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-sm">
             {titleQueryDebounced ? 'No matching titles.' : 'No events yet.'}
@@ -520,7 +524,7 @@ export function EventsInfo() {
           <div
             role="dialog"
             aria-modal="true"
-            className="w-full max-w-2xl max-h-[min(92dvh,52rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden"
+            className="w-full max-w-2xl max-h-[min(92dvh,52rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#322a4a] shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
@@ -649,7 +653,7 @@ export function EventsInfo() {
           onClick={closeAddModal}
         >
           <div
-            className="w-full max-w-lg max-h-[min(92dvh,48rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-900/25 overflow-hidden"
+            className="w-full max-w-lg max-h-[min(92dvh,48rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#322a4a] shadow-2xl shadow-slate-900/25 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/80 space-y-2">
@@ -710,7 +714,7 @@ export function EventsInfo() {
           <div
             role="dialog"
             aria-modal="true"
-            className="w-full max-w-xl max-h-[min(90dvh,44rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden"
+            className="w-full max-w-xl max-h-[min(90dvh,44rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#322a4a] shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
@@ -828,7 +832,7 @@ export function EventsInfo() {
             aria-label="Close drawer"
             onClick={closeDrawer}
           />
-          <div className="relative z-10 h-full w-full max-w-xl md:max-w-2xl shadow-2xl border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col">
+          <div className="relative z-10 h-full w-full max-w-xl md:max-w-2xl shadow-2xl border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-[#322a4a] flex flex-col">
             <div className="shrink-0 flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white leading-snug break-words">

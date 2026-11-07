@@ -130,6 +130,12 @@ func LoadFromEnv() Config {
 			cfg.Model = ""
 		}
 	}
+	if provider == ProviderSiliconFlow {
+		if model := strings.TrimSpace(os.Getenv("SILICONFLOW_MODEL")); model != "" {
+			cfg.Model = model
+			cfg.legacyDefaultModel = false
+		}
+	}
 	return cfg
 }
 

@@ -2,6 +2,12 @@
 
 Durable rules from past chats. Newest first. Each lesson is 1–4 lines. Update via `learning-from-sessions`.
 
+## 2026-11-01 — Upload & summarize is a button
+
+- Trigger: Content Maker Compose content “Upload & summarize”, file pickers next to field captions
+- Rule: That control is a `<button>` that opens a hidden file input. Do not wrap the picker in a `<label>` inside a header that styles `label` as caption text.
+- Source: [Upload summarize button](current)
+
 ## 2026-10-22 — Every first-party Morph name is Dorph
 
 - Trigger: Morph, MorphAI, Morph Notes, MorphNotes, MorphUtils, morph-engi, morph-utils, morph-notes, any identifier with morph

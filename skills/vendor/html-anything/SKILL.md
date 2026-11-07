@@ -29,8 +29,8 @@ Keep the format the caller asked for.
 ## Ge overlay (wins)
 
 - Font: Arial, Helvetica Neue, Helvetica, sans-serif.
-- Futuristic dark mode only. Background `#070b14`. Text `#e8eef7`.
-- Varied colours: cyan `#38bdf8`, violet `#a78bfa`, mint `#34d399`.
+- Futuristic dark mode only. Background `#221c34`. Text `#f4f0fa`.
+- Varied colours: `#8b5cf6`, `#a78bfa`, `#f97316`.
 - Clear content. No light page.
 
 Agents: see `docs/agents/16-dorph-for-agents.md`. The compact text Dorph injects is `condensed.md`.

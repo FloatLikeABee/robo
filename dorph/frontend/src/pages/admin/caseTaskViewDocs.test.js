@@ -9,6 +9,6 @@ test('mermaid fence keeps language class for HTML preview', () => {
   expect(html).toContain('flowchart LR');
   expect(html).toContain('Arial');
   expect(html).toContain('#a78bfa');
-  expect(html).toContain('#34d399');
+  expect(html).toContain('#f97316');
   expect(html).not.toContain('Georgia');
 });

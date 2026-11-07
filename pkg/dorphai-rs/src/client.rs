@@ -46,6 +46,13 @@ struct DashScopeChoiceMessage {
 struct OpenAIRequest<'a> {
     model: &'a str,
     messages: &'a [Message],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    chat_template_kwargs: Option<ChatTemplateKwargs>,
+}
+
+#[derive(Serialize)]
+struct ChatTemplateKwargs {
+    enable_thinking: bool,
 }
 
 #[derive(Deserialize)]
@@ -118,6 +125,10 @@ impl Client {
         Self::new(Config::from_env())
     }
 
+    pub fn from_orchestrator_env() -> Self {
+        Self::new(Config::from_orchestrator_env())
+    }
+
     pub async fn chat_completion(&self, messages: &[Message]) -> Result<String, String> {
         if messages.is_empty() {
             return Err("no messages".into());
@@ -164,9 +175,19 @@ impl Client {
 
     async fn chat_openai_compatible(&self, messages: &[Message]) -> Result<String, String> {
         let url = self.cfg.chat_completions_url();
+        let chat_template_kwargs = if self.cfg.provider.as_deref() == Some("nvidia")
+            && self.cfg.nvidia_enable_thinking
+        {
+            Some(ChatTemplateKwargs {
+                enable_thinking: true,
+            })
+        } else {
+            None
+        };
         let body = OpenAIRequest {
             model: &self.cfg.model,
             messages,
+            chat_template_kwargs,
         };
 
         let resp = self

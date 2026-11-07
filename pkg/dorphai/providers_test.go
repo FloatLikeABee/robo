@@ -73,6 +73,8 @@ func TestListProviders(t *testing.T) {
 		ProviderMistral,
 		ProviderGroq,
 		ProviderOpenAICompatible,
+		ProviderNVIDIA,
+		ProviderSiliconFlow,
 	}
 	if len(got) != len(want) {
 		t.Fatalf("len = %d, want %d", len(got), len(want))
@@ -95,6 +97,13 @@ func TestListProviders(t *testing.T) {
 	}
 	if ollama.DefaultBaseURL != "http://127.0.0.1:11434/v1" {
 		t.Fatalf("ollama base = %s", ollama.DefaultBaseURL)
+	}
+	silicon, _ := LookupProvider(ProviderSiliconFlow)
+	if !silicon.RequiresKey || silicon.DefaultBaseURL != "https://api.siliconflow.cn/v1" {
+		t.Fatalf("siliconflow meta = %+v", silicon)
+	}
+	if len(silicon.SuggestedModels) == 0 || silicon.SuggestedModels[0] != "Qwen/Qwen3.6-27B" {
+		t.Fatalf("siliconflow models = %v", silicon.SuggestedModels)
 	}
 	compat, _ := LookupProvider(ProviderOpenAICompatible)
 	if compat.DefaultBaseURL != "" || !compat.RequiresKey {
@@ -472,6 +481,7 @@ func TestNamedOpenAIFamilyAdapters(t *testing.T) {
 		{ProviderMistral, "sk-mi", "Bearer sk-mi", false, "/chat/completions"},
 		{ProviderGroq, "sk-groq", "Bearer sk-groq", false, "/chat/completions"},
 		{ProviderOpenAICompatible, "sk-compat", "Bearer sk-compat", false, "/chat/completions"},
+		{ProviderSiliconFlow, "sk-sf", "Bearer sk-sf", true, "/chat/completions"},
 	}
 	for _, preset := range presets {
 		preset := preset

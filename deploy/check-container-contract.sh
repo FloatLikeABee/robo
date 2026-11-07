@@ -37,7 +37,7 @@ fi
 
 ignore="$root/.dockerignore"
 [ -f "$ignore" ] || fail "missing .dockerignore"
-for needle in node_modules .env data formx composerx SharpReport dorph-engi bk dorph-utils invite-signup platform-chat; do
+for needle in node_modules .env data formx composerx SharpReport dorph-engi bk dorph-utils invite-signup; do
   grep -q "$needle" "$ignore" || fail ".dockerignore missing $needle"
 done
 if grep -E '^pkg/?$' "$ignore" >/dev/null || grep -E '^dorph/?$' "$ignore" >/dev/null; then

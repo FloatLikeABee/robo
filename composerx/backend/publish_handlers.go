@@ -293,8 +293,8 @@ CRITICAL: Output one JSON object only with exactly these keys:
 
 Goal:
 - Transform plain text ideas into a polished, readable HTML page.
-- Dark mode only. Font stack: Arial, Helvetica Neue, Helvetica, sans-serif. Background near #070b14, text #e8eef7, clear headings and spacing.
-- Use several accents, not one hue: cyan #38bdf8, violet #a78bfa, and mint #34d399.
+- Dark mode only. Font stack: Arial, Helvetica Neue, Helvetica, sans-serif. Background near #221c34, text #f4f0fa, clear headings and spacing.
+- Use several accents, not one hue: #8b5cf6, #a78bfa, and #f97316.
 - Do not emit a light page.
 - Keep semantic structure (header/main/section/footer where useful).
 - Avoid scripts unless explicitly requested.`

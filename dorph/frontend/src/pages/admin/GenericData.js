@@ -28,6 +28,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import DataObjectOutlinedIcon from '@mui/icons-material/DataObjectOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
@@ -39,8 +40,9 @@ import { tranApi, tranEndpoints } from '../../api/tranClient';
 import { API_BASE_URL as API_BASE } from '../../apiBase';
 import { getDorphToken } from '../../auth/dorphSession';
 import { RecordSheetJsonDetail } from '../../components/admin/jsonDetailViews';
-import { usePlatformUi } from '../../PlatformUiContext';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { buildPublishPayload } from '../../lib/contentsDataPublish';
+import ReadMore from '../../components/ReadMore';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import {
   ADMIN_RIGHT_PANEL_TOP,
@@ -283,7 +285,7 @@ function GenericDataContentView({ record, markdown, onMarkdownChange, onMarkdown
   );
 }
 
-function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord }) {
+function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord, onPublish, publishLoading }) {
   const theme = useTheme();
 
   return (
@@ -323,16 +325,30 @@ function AiAnalysisPanel({ analysis, loading, onAnalyze, hasRecord }) {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
               Summarize patterns, flag data quality issues, and suggest next steps from your imported material.
             </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeOutlinedIcon />}
-              onClick={onAnalyze}
-              disabled={!hasRecord || loading}
-              sx={{ mt: 1.5, textTransform: 'none', borderRadius: 2 }}
-            >
-              {loading ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Run AI analysis'}
-            </Button>
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} flexWrap="wrap">
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeOutlinedIcon />}
+                onClick={onAnalyze}
+                disabled={!hasRecord || loading}
+                sx={{ textTransform: 'none', borderRadius: 2 }}
+              >
+                {loading ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Run AI analysis'}
+              </Button>
+              {onPublish ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={publishLoading ? <CircularProgress size={16} color="inherit" /> : <PublishOutlinedIcon />}
+                  onClick={onPublish}
+                  disabled={!hasRecord || loading || publishLoading || !String(analysis || '').trim()}
+                  sx={{ textTransform: 'none', borderRadius: 2 }}
+                >
+                  {publishLoading ? 'Publishing…' : 'Publish as HTML'}
+                </Button>
+              ) : null}
+            </Stack>
           </Box>
         </Stack>
       </Paper>
@@ -675,10 +691,9 @@ function ImportDialog({ open, onClose, onImported }) {
   );
 }
 
-export default function GenericData() {
+export default function GenericData({ onPublished }) {
   const { confirm } = useConfirm();
   const theme = useTheme();
-  const { labels } = usePlatformUi();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -694,6 +709,8 @@ export default function GenericData() {
   const [rowSelectionModel, setRowSelectionModel] = useState([]);
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishOk, setPublishOk] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -785,6 +802,31 @@ export default function GenericData() {
       setActionError(err.response?.data?.error || err.message || 'Delete failed');
     } finally {
       setDeleteBusy(false);
+    }
+  };
+
+  const handlePublishHtml = async () => {
+    if (!detail) return;
+    if (!String(detail.ai_analysis || '').trim()) {
+      setActionError('Run AI analysis before publishing as HTML.');
+      return;
+    }
+    setPublishLoading(true);
+    setActionError(null);
+    setPublishOk(null);
+    try {
+      const res = await tranApi.post('/api/composerx/publishes', buildPublishPayload(detail));
+      const publicPath = res.data?.public_path || '';
+      setPublishOk(publicPath || 'Published.');
+      if (typeof onPublished === 'function') onPublished(res.data);
+    } catch (err) {
+      setActionError(
+        err.response?.data?.error ||
+          err.message ||
+          'Content Maker is not available. Import and analyze still work.'
+      );
+    } finally {
+      setPublishLoading(false);
     }
   };
 
@@ -896,10 +938,10 @@ export default function GenericData() {
             </Box>
             <Box>
               <Typography variant="h6" fontWeight={800} lineHeight={1.2}>
-                {labels.nav_generic_data || 'Generic data'}
+                Data
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Import any CSV, Excel, JSON, PDF, or Markdown — extract JSON and Markdown, edit, then Save. Run AI analysis on the saved record.
+                Import CSV, Excel, JSON, PDF, or Markdown. Run AI analysis, then publish as HTML from the record.
               </Typography>
             </Box>
           </Stack>
@@ -932,10 +974,17 @@ export default function GenericData() {
             </Button>
           </Stack>
         )}
+        {loading && rows.length === 0 ? (
+          <Box className="bento-skeleton" sx={{ p: 2, display: 'grid', gap: '16px' }} aria-busy="true">
+            {[0, 1, 2].map((key) => (
+              <Box key={key} sx={{ height: 64, borderRadius: '16px', bgcolor: '#3d3148' }} />
+            ))}
+          </Box>
+        ) : (
         <DataGrid
           rows={rows}
           columns={gridColumns}
-          loading={loading}
+          loading={loading && rows.length > 0}
           getRowId={(r) => r.id}
           checkboxSelection
           checkboxSelectionVisibleOnly
@@ -952,6 +1001,7 @@ export default function GenericData() {
             '& .MuiDataGrid-row': { cursor: 'pointer' },
           }}
         />
+        )}
       </Paper>
 
       <Dialog open={batchDeleteOpen} onClose={() => !deleteBusy && setBatchDeleteOpen(false)}>
@@ -1020,6 +1070,18 @@ export default function GenericData() {
             )}
           </Box>
           <Stack direction="row" spacing={0.5}>
+            <Tooltip title={detail?.ai_analysis ? 'Publish as HTML' : 'Run AI analysis first'}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handlePublishHtml}
+                  disabled={!detail || detailLoading || publishLoading || !String(detail?.ai_analysis || '').trim()}
+                  aria-label="Publish as HTML"
+                >
+                  <PublishOutlinedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
             <Tooltip title="Delete">
               <IconButton size="small" onClick={handleDelete} disabled={!detail || detailLoading}>
                 <DeleteOutlineIcon fontSize="small" />
@@ -1055,6 +1117,11 @@ export default function GenericData() {
               {actionError}
             </Alert>
           )}
+          {publishOk && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setPublishOk(null)}>
+              Published{publishOk.startsWith('/') ? ` at ${publishOk}` : ''}.
+            </Alert>
+          )}
           {detailLoading ? (
             <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
               <CircularProgress />
@@ -1066,8 +1133,8 @@ export default function GenericData() {
                   <Typography variant="overline" color="text.secondary">
                     Description
                   </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {detail.description}
+                  <Typography variant="body2" component="div">
+                    <ReadMore text={detail.description} />
                   </Typography>
                 </Paper>
               )}
@@ -1085,6 +1152,8 @@ export default function GenericData() {
               loading={analyzeLoading}
               onAnalyze={handleAnalyze}
               hasRecord={Boolean(detail)}
+              onPublish={handlePublishHtml}
+              publishLoading={publishLoading}
             />
           )}
         </Box>

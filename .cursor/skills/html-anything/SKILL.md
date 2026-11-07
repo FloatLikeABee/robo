@@ -9,6 +9,6 @@ Dorph's HTML base skill, vendored from nexu-io/html-anything (Apache-2.0). Files
 
 Keep the format the caller asked for. HTML pages are self-contained. Note and grill drafts stay body text.
 
-Ge overlay: Arial (or Helvetica Neue / sans), futuristic dark `#070b14`, text `#e8eef7`, accents `#38bdf8` `#a78bfa` `#34d399`. Clear content. Varied colours. No light page.
+Ge overlay: Arial (or Helvetica Neue / sans), futuristic dark `#221c34`, text `#f4f0fa`, accents `#8b5cf6` `#a78bfa` `#f97316`. Clear content. Varied colours. No light page.
 
 Cover every user point. Do not invent facts. Contrast at least 4.5.

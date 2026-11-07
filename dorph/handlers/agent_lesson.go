@@ -138,7 +138,7 @@ func (h *Handlers) distillSessionLesson(ctx context.Context, transcript string) 
 	if h.aiService == nil {
 		return "", "", fmt.Errorf("AI service not configured")
 	}
-	raw, err := h.aiService.ChatCompletion(ctx, []ai.DashScopeMessage{
+	raw, err := h.aiService.CoordinatorChatCompletion(ctx, []ai.DashScopeMessage{
 		{Role: "user", Content: agentLessonDistillPrompt(transcript)},
 	})
 	if err != nil {

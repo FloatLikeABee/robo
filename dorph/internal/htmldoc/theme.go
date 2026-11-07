@@ -1,15 +1,15 @@
 // Package htmldoc holds shared dark HTML document styling for DorphNotes exports.
 package htmldoc
 
-// Dark document palette: near-black base, cyan / violet / mint / amber accents.
+// Twilight glass palette. Source: dorph/frontend/src/App.css html[data-chat-theme='twilight'].
 // Keep in sync with dorph-engi/backend/src/api/project_docs.rs build_project_html
 // and dorph/frontend case-task preview CSS.
 
 const sansStack = `Arial, "Helvetica Neue", Helvetica, sans-serif`
 
-const darkRootVars = `--ink:#e8eef7;--muted:#94a3b8;--line:#1e293b;--bg:#070b14;--card:#111827;--accent:#38bdf8;--accent-2:#a78bfa;--accent-3:#34d399;--accent-4:#fbbf24;--accent-purple:#a78bfa`
+const darkRootVars = `--ink:#f4f0fa;--muted:#c4b8d4;--line:#3d3458;--bg:#221c34;--card:#322a4a;--accent:#8b5cf6;--accent-2:#a78bfa;--accent-3:#f97316;--accent-4:#fbbf24;--accent-purple:#a78bfa`
 
-const darkBodyGradient = `radial-gradient(900px 480px at 8% -12%, rgba(167,139,250,.55) 0%, transparent 58%), radial-gradient(720px 420px at 100% 0%, rgba(56,189,248,.35) 0%, transparent 52%), var(--bg)`
+const darkBodyGradient = `radial-gradient(900px 480px at 8% -12%, rgba(167,139,250,.45) 0%, transparent 58%), radial-gradient(720px 420px at 100% 0%, rgba(249,115,22,.22) 0%, transparent 52%), var(--bg)`
 
 // DarkProseCSS is shared prose typography for generated HTML documents.
 func DarkProseCSS() string {
@@ -34,14 +34,14 @@ func DarkProseCSS() string {
 
 // VisualBlockCSS styles section cards, milestone rails, callouts, stats, and bar charts.
 func VisualBlockCSS() string {
-	return `.doc-card{margin:1.1rem 0;padding:1rem 1.15rem 1.15rem;border:1px solid var(--line);border-radius:16px;background:rgba(17,24,39,.78);box-shadow:0 0 0 1px rgba(56,189,248,.12)}
+	return `.doc-card{margin:1.1rem 0;padding:1rem 1.15rem 1.15rem;border:1px solid var(--line);border-radius:16px;background:rgba(53,46,74,.78);box-shadow:0 0 0 1px rgba(139,92,246,.18)}
 .doc-card>h2{margin:.1rem 0 .45rem;font-size:1.2rem}
 .rail{list-style:none;margin:.4rem 0 0;padding:0}
-.rail>li{position:relative;margin:0;padding:.4rem 0 .4rem 1.35rem;border-left:2px solid rgba(52,211,153,.55)}
-.rail>li:before{content:"";position:absolute;left:-5px;top:.65rem;width:8px;height:8px;border-radius:50%;background:#34d399}
-.callout{margin:1rem 0;padding:.8rem 1rem;border-radius:12px;background:rgba(167,139,250,.16);border:1px solid rgba(167,139,250,.45);color:#e2e8f0}
+.rail>li{position:relative;margin:0;padding:.4rem 0 .4rem 1.35rem;border-left:2px solid rgba(249,115,22,.55)}
+.rail>li:before{content:"";position:absolute;left:-5px;top:.65rem;width:8px;height:8px;border-radius:50%;background:#f97316}
+.callout{margin:1rem 0;padding:.8rem 1rem;border-radius:12px;background:rgba(167,139,250,.16);border:1px solid rgba(167,139,250,.45);color:#f4f0fa}
 .stat-row{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0}
-.stat{min-width:6.5rem;padding:.65rem .8rem;border-radius:12px;background:#0f172a;border:1px solid var(--line)}
+.stat{min-width:6.5rem;padding:.65rem .8rem;border-radius:12px;background:#322a4a;border:1px solid var(--line)}
 .stat b{display:block;font:700 1.3rem/1.1 Arial,"Helvetica Neue",Helvetica,sans-serif;color:var(--accent)}
 .stat span{font:11px/1.3 Arial, "Helvetica Neue", Helvetica, sans-serif;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .chart{margin:.35rem 0 .2rem}

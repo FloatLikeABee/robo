@@ -32,6 +32,7 @@ type resolved struct {
 	Kind              adapterKind
 	Caps              Capabilities
 	EnableThinkingOff bool
+	NVIDIAEnableThinking bool
 }
 
 func (rc resolved) public() ResolvedConfig {
@@ -201,8 +202,12 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 	}
 
 	thinkingOff := false
-	if kind == adapterOpenAI && (spec.Info.ID == ProviderDashScope || strings.Contains(strings.ToLower(base), "dashscope.aliyuncs.com")) {
+	if kind == adapterOpenAI && (spec.Info.ID == ProviderDashScope || spec.Info.ID == ProviderSiliconFlow || strings.Contains(strings.ToLower(base), "dashscope.aliyuncs.com")) {
 		thinkingOff = true
+	}
+	nvidiaThinking := false
+	if spec.Info.ID == ProviderNVIDIA {
+		nvidiaThinking = NVIDIAEnableThinkingFromEnv()
 	}
 
 	rc := resolved{
@@ -217,6 +222,7 @@ func resolveExplicit(cfg Config, spec providerSpec) (resolved, error) {
 		Kind:              kind,
 		Caps:              caps,
 		EnableThinkingOff: thinkingOff,
+		NVIDIAEnableThinking: nvidiaThinking,
 	}
 
 	if spec.Info.RequiresKey && key == "" {

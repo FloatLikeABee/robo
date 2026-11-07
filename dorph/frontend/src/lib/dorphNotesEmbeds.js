@@ -17,17 +17,10 @@ export const DORPH_NOTES_EMBEDS = [
   },
   {
     id: 'content-maker',
-    label: 'Content Maker',
+    label: 'Contents & Data',
     path: '',
     start: './start-all.sh start composerx-ui',
     devOrigin: 'http://localhost:8044',
-  },
-  {
-    id: 'project',
-    label: 'Project',
-    path: '',
-    start: './start-all.sh start dorph-engi-ui',
-    devOrigin: 'http://localhost:5179',
   },
 ];
 

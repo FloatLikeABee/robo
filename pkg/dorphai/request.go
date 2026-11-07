@@ -49,11 +49,12 @@ type CompletionResponse struct {
 // Delta is a text fragment. ToolCalls and FinishReason are set on the event
 // that has Done set. Err is terminal; the channel is then closed.
 type StreamEvent struct {
-	Delta        string
-	ToolCalls    []ToolCall
-	FinishReason string
-	Done         bool
-	Err          error
+	Delta            string
+	ReasoningDelta   string
+	ToolCalls        []ToolCall
+	FinishReason     string
+	Done             bool
+	Err              error
 }
 
 // CollectStream reads ch until it closes and joins the text deltas.

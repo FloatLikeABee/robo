@@ -1,4 +1,4 @@
-// Package assistmd formats assistant chat replies as Markdown for platform-chat rendering.
+// Package assistmd formats assistant chat replies as Markdown for Dorph AI rendering.
 package assistmd
 
 import (

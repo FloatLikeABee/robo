@@ -18,7 +18,7 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
                          Dorph AI  :3031 / API :9090
                          login, chat, DorphNotes
                          Tasks, Timelines, Big notes,
-                         Research, Generic data
+                         Research, Event Logs, Contents & Data
                                    │
                     JWT cookie  userspanel_session_token
                                    │
@@ -67,7 +67,7 @@ Booki, Academi, and a standalone UsersPanel app are **not** in the supported sta
 
 | Say this | Folder / URL id (do not “fix”) |
 |----------|--------------------------------|
-| Dorph AI, DorphNotes (Tasks, Timelines, Big notes, Research, Generic data) | `dorph/`, UI `/dorphdata` |
+| Dorph AI, DorphNotes (Tasks, Timelines, Big notes, Research, Event Logs, Contents & Data) | `dorph/`, UI `/dorphdata` |
 | Invite Signup | `invite-signup/`, launcher `invite-signup-ui`, UI :3051 |
 | DorphUtils | `dorph-utils/` |
 | Event Logs | `formx/`, embed id `sheetx`, default embed `/events-info` |

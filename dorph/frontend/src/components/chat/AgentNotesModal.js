@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { tranApi, tranEndpoints } from '../../api/tranClient';
+import { noteSelectionAfterLoad } from '../../lib/agentNotesSelection';
 import { onSheetKeyDown } from '../../lib/phoneSheet';
 
 // ponytail: overlay chrome is copied from the AI tools drawer, with the dialog
@@ -36,7 +37,9 @@ export default function AgentNotesModal({ onClose, restoreFocusRef, fallbackFocu
       .get(tranEndpoints.agentNotes)
       .then((res) => {
         if (!live) return;
-        setNotes(Array.isArray(res.data) ? res.data : []);
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setNotes(rows);
+        setSelectedId((current) => noteSelectionAfterLoad(rows, current));
       })
       .catch((err) => {
         if (!live) return;

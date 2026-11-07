@@ -14,7 +14,7 @@
 
 | User-facing | Implementation id (keep) |
 |-------------|--------------------------|
-| Dorph AI, DorphNotes | `dorph/`, `/dorphdata` |
+| Dorph AI, DorphNotes (drawer Contents & Data is `/dorphdata/contents-data`) | `dorph/`, `/dorphdata` |
 | DorphUtils | `dorph-utils/` (no space: not “Dorph Utils”) |
 | Event Logs | folder `formx/`, module id `sheetx`, embed `/events-info` (legacy `/survey-bot` may still exist) |
 | Content Maker | `composerx/` |

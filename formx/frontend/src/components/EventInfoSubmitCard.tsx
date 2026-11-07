@@ -58,7 +58,7 @@ export function EventInfoSubmitCard({
     ? 'flex flex-col flex-1 min-h-0 overflow-hidden'
     : isPublic
       ? 'w-full max-w-2xl rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl shadow-black/40 overflow-hidden'
-      : 'w-full max-w-lg max-h-[min(90dvh,44rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-900/25 overflow-hidden';
+      : 'w-full max-w-lg max-h-[min(90dvh,44rem)] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#322a4a] shadow-2xl shadow-slate-900/25 overflow-hidden';
 
   const headerClass = isPublic
     ? 'px-6 py-4 border-b border-slate-700 bg-slate-800/80'

@@ -2,27 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import SkoolAiChat from './SkoolAiChat';
 import { getAdminTheme } from './theme';
-
-const CHAT_THEME_KEY = 'skool-ai-chat-theme';
-
-function readInitialChatTheme() {
-  try {
-    localStorage.setItem(CHAT_THEME_KEY, 'dark');
-  } catch {}
-  return 'dark';
-}
+import { chatThemeToAdminMode, resolveChatTheme } from './lib/chatTheme';
 
 function App() {
-  const [mode, setMode] = useState(readInitialChatTheme);
+  const [adminMode, setAdminMode] = useState(() => chatThemeToAdminMode(resolveChatTheme()));
   useEffect(() => {
     const fn = (e) => {
       const d = e?.detail;
-      if (d === 'dark' || d === 'light') setMode(d);
+      if (d === 'dark' || d === 'light' || d === 'twilight') {
+        setAdminMode(chatThemeToAdminMode(d));
+      }
     };
     window.addEventListener('dorph-chat-theme', fn);
     return () => window.removeEventListener('dorph-chat-theme', fn);
   }, []);
-  const theme = getAdminTheme(mode);
+  const theme = getAdminTheme(adminMode);
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline enableColorScheme />

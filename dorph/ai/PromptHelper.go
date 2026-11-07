@@ -36,10 +36,10 @@ func BuildFormHTMLPrompt(formJSON string, formName string, formDescription strin
 
 	promptBuilder.WriteString("Theme (STRICT, dark only):\n")
 	promptBuilder.WriteString("- Font: Arial, Helvetica Neue, Helvetica, sans-serif.\n")
-	promptBuilder.WriteString("- Background: near-black (#070b14). Do not use a light page.\n")
-	promptBuilder.WriteString("- Text: light (#e8eef7) with clear heading sizes and spacing.\n")
-	promptBuilder.WriteString("- Accents: use several, not one hue. #38bdf8 for links, #a78bfa for section headings, #34d399 for a third accent. Hex values only; never write a colour name before a hex.\n")
-	promptBuilder.WriteString("- Inputs: dark cards (#111827) with light text and a visible border (#1e293b).\n\n")
+	promptBuilder.WriteString("- Background: dark purple (#221c34). Do not use a light page.\n")
+	promptBuilder.WriteString("- Text: light (#f4f0fa) with clear heading sizes and spacing.\n")
+	promptBuilder.WriteString("- Accents: use several, not one hue. #8b5cf6 for links, #a78bfa for section headings, #f97316 for a third accent. Hex values only; never write a colour name before a hex.\n")
+	promptBuilder.WriteString("- Inputs: dark cards (#322a4a) with light text and a visible border (#3d3458).\n\n")
 
 	promptBuilder.WriteString("Form Information:\n")
 	if formName != "" {

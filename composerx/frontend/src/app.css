@@ -52,43 +52,42 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* Deep midnight blue canvas */
-  --color-bg: #030712;
-  --color-bg-elevated: #0a1628;
-  --color-surface: #0c1929;
-  --color-border-subtle: rgba(96, 165, 250, 0.1);
-  --color-text: #e8f0ff;
-  --color-text-subtle: #94a3b8;
-  /* Accent reads on very dark blue */
-  --color-primary: #2563eb;
-  --color-primary-hover: #3b82f6;
-  --color-primary-soft: rgba(37, 99, 235, 0.22);
-  --color-primary-muted: #1d4ed8;
-  --color-secondary: #172554;
-  --color-secondary-hover: #1e40af;
+  /* Twilight glass. Source: dorph/frontend/src/App.css html[data-chat-theme='twilight']. */
+  --color-bg: #221c34;
+  --color-bg-elevated: #322a4a;
+  --color-surface: #3d3148;
+  --color-border-subtle: rgba(232, 222, 255, 0.55);
+  --color-text: #f4f0fa;
+  --color-text-subtle: #c4b8d4;
+  --color-primary: #8b5cf6;
+  --color-primary-hover: #a78bfa;
+  --color-primary-soft: rgba(139, 92, 246, 0.22);
+  --color-primary-muted: #7c3aed;
+  --color-secondary: #352e4a;
+  --color-secondary-hover: #7c3aed;
   --color-danger: #fca5a5;
   --color-danger-soft: rgba(248, 113, 113, 0.12);
   --color-danger-border: rgba(248, 113, 113, 0.35);
 
-  --shell-gradient-a: rgba(30, 58, 138, 0.35);
-  --shell-gradient-b: rgba(15, 23, 42, 0.5);
-  --sidebar-bg-start: #020617;
-  --sidebar-bg-end: #0a1628;
-  --sidebar-text: #e8f0ff;
-  --sidebar-text-muted: rgba(232, 240, 255, 0.65);
-  --sidebar-border: rgba(96, 165, 250, 0.12);
-  --sidebar-nav-active-start: #1d4ed8;
-  --sidebar-nav-active-end: #172554;
-  --sidebar-brand-pill-start: #1e3a8a;
-  --sidebar-brand-pill-end: #2563eb;
-  --sidebar-brand-pill-text: #e8f0ff;
-  --badge-bg: rgba(37, 99, 235, 0.25);
-  --badge-border: rgba(96, 165, 250, 0.35);
-  --badge-text: #bfdbfe;
+  --shell-gradient-a: rgba(139, 92, 246, 0.28);
+  --shell-gradient-b: rgba(249, 115, 22, 0.12);
+  --sidebar-bg-start: rgba(50, 44, 72, 0.72);
+  --sidebar-bg-end: rgba(44, 38, 64, 0.88);
+  --sidebar-text: #f4f0fa;
+  --sidebar-text-muted: #c4b8d4;
+  --sidebar-border: rgba(255, 255, 255, 0.22);
+  --sidebar-nav-active-start: #8b5cf6;
+  --sidebar-nav-active-end: #7c3aed;
+  --sidebar-brand-pill-start: #7c3aed;
+  --sidebar-brand-pill-end: #8b5cf6;
+  --sidebar-brand-pill-text: #f4f0fa;
+  --badge-bg: rgba(139, 92, 246, 0.25);
+  --badge-border: rgba(167, 139, 250, 0.45);
+  --badge-text: #f4f0fa;
 
-  --shadow-soft: 0 20px 50px rgba(0, 0, 0, 0.55);
-  --focus-ring: #60a5fa;
-  --flash-info-border: rgba(96, 165, 250, 0.35);
+  --shadow-soft: 0 20px 50px rgba(26, 16, 40, 0.45);
+  --focus-ring: #a78bfa;
+  --flash-info-border: rgba(167, 139, 250, 0.45);
 }
 
 *,
@@ -197,5 +196,5 @@ textarea {
 }
 
 .locale-switch button[aria-pressed='true'] {
-  background: rgba(56, 189, 248, 0.22);
+  background: rgba(139, 92, 246, 0.22);
 }

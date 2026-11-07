@@ -254,7 +254,7 @@ export function FormResults() {
 
       {openResponse && (
         <div className="print-sheet-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="print-sheet-paper flex h-[min(90vh,720px)] w-[min(92vw,42rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl dark:border-white/10 dark:bg-[#0a0a12] dark:text-slate-100">
+          <div className="print-sheet-paper flex h-[min(90vh,720px)] w-[min(92vw,42rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl dark:border-white/10 dark:bg-[#322a4a] dark:text-slate-100">
             <div className="sheet-header flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-slate-50/90 px-5 py-4 dark:border-white/10 dark:bg-white/[0.04]">
               <div className="min-w-0">
                 <h2 className="truncate text-base font-semibold leading-tight text-slate-900 dark:text-white">

@@ -21,14 +21,12 @@ import {
   AssignmentTurnedIn as CaseTaskIcon,
   Timeline as TimelinesIcon,
   NotesOutlined as BigNotesIcon,
-  DatasetOutlined as GenericDataIcon,
   TravelExplore as ResearchIcon,
   EventNoteOutlined as EventLogsIcon,
   EditNoteOutlined as ContentMakerIcon,
-  AccountTreeOutlined as ProjectIcon,
 } from '@mui/icons-material';
 
-/** Fixed desktop width — sized for longest labels (Generic data / Settings). */
+/** Fixed desktop width — sized for longest labels (Contents & Data). */
 export const DRAWER_WIDTH = 200;
 const DORPH_DATA_LOGO = `${process.env.PUBLIC_URL || ''}/icons/dorph-data-icon.svg`;
 
@@ -178,16 +176,6 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemText primary={t('research')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
-          selected={isSelected(base + '/generic-data')}
-          onClick={() => go(`${base}/generic-data`)}
-          sx={navButtonSx}
-        >
-          <ListItemIcon sx={iconSx}>
-            <GenericDataIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
-          </ListItemIcon>
-          <ListItemText primary={t('genericData')} sx={textPrimarySx} />
-        </ListItemButton>
-        <ListItemButton
           selected={isSelected(base + '/event-logs')}
           onClick={() => go(`${base}/event-logs`)}
           sx={navButtonSx}
@@ -198,24 +186,18 @@ export default function AppDrawer({ mobileOpen = false, onMobileClose }) {
           <ListItemText primary={t('eventLogs')} sx={textPrimarySx} />
         </ListItemButton>
         <ListItemButton
-          selected={isSelected(base + '/content-maker')}
-          onClick={() => go(`${base}/content-maker`)}
+          selected={
+            isSelected(base + '/contents-data') ||
+            isSelected(base + '/generic-data') ||
+            isSelected(base + '/content-maker')
+          }
+          onClick={() => go(`${base}/contents-data`)}
           sx={navButtonSx}
         >
           <ListItemIcon sx={iconSx}>
             <ContentMakerIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
           </ListItemIcon>
           <ListItemText primary={t('contentMaker')} sx={textPrimarySx} />
-        </ListItemButton>
-        <ListItemButton
-          selected={isSelected(base + '/project')}
-          onClick={() => go(`${base}/project`)}
-          sx={navButtonSx}
-        >
-          <ListItemIcon sx={iconSx}>
-            <ProjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
-          </ListItemIcon>
-          <ListItemText primary={t('project')} sx={textPrimarySx} />
         </ListItemButton>
       </List>
     </>

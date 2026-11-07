@@ -1,23 +1,23 @@
 import { createTheme } from '@mui/material/styles';
 
-// Sci-Fi Color Palette — dark blue & grey
+// Twilight glass. Source: dorph/frontend/src/App.css html[data-chat-theme='twilight'].
 const colors = {
-  darkBlue: '#0a0f1a',
-  darkerBlue: '#060a12',
-  blue: '#1a2d4a',
-  lightBlue: '#243b5c',
-  highlight: '#38bdf8',
-  highlightDark: '#0ea5e9',
-  accent: '#3b82f6',
-  accentLight: '#60a5fa',
-  accentDark: '#1d4ed8',
-  darkGrey: '#1a1f2e',
-  black: '#000000',
-  lightGrey: '#2d3748',
-  midGrey: '#64748b',
-  silver: '#94a3b8',
-  textPrimary: '#e2e8f0',
-  textSecondary: '#94a3b8',
+  darkBlue: '#221c34',
+  darkerBlue: '#352e4a',
+  blue: '#3d3458',
+  lightBlue: '#4c4370',
+  highlight: '#f97316',
+  highlightDark: '#ea580c',
+  accent: '#8b5cf6',
+  accentLight: '#a78bfa',
+  accentDark: '#7c3aed',
+  darkGrey: '#352e4a',
+  black: '#1a1028',
+  lightGrey: '#4c4370',
+  midGrey: '#c4b8d4',
+  silver: '#c4b8d4',
+  textPrimary: '#f4f0fa',
+  textSecondary: '#c4b8d4',
 };
 
 const theme = createTheme({
@@ -37,7 +37,7 @@ const theme = createTheme({
     },
     background: {
       default: colors.darkBlue,
-      paper: colors.darkerBlue,
+      paper: '#322a4a',
     },
     text: {
       primary: colors.textPrimary,
@@ -384,7 +384,7 @@ const theme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          background: `linear-gradient(135deg, ${colors.darkerBlue} 0%, ${colors.darkGrey} 100%)`,
+          background: '#322a4a',
           border: `2px solid ${colors.accent}40`,
           boxShadow: `0 20px 60px ${colors.black}90, 0 0 40px ${colors.accent}20`,
         },

@@ -525,14 +525,6 @@ export const getSavedConversationContent = async (filename) => {
   return response.data;
 };
 
-// Graphic Document Generator (LLM + several image downloads; allow long server time)
-export const generateGraphicDocument = async (payload) => {
-  const response = await api.post('/graphic-document/generate', payload, {
-    timeout: 900000, // 15 minutes
-  });
-  return response.data;
-};
-
 // Browser Automation
 export const executeBrowserAutomation = async (payload) => {
   const response = await api.post('/browser-automation/execute', payload);
@@ -623,8 +615,6 @@ const apiService = {
   getConversationHistory,
   listSavedConversations,
   getSavedConversationContent,
-  // Graphic Document Generator
-  generateGraphicDocument,
   // Browser Automation
   executeBrowserAutomation,
 };

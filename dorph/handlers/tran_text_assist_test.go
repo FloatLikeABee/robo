@@ -73,7 +73,7 @@ func TestTextAssistImprovePromptIncludesTitle(t *testing.T) {
 
 func TestTextAssistGenerateNotePromptLoadsHTMLSkill(t *testing.T) {
 	p := textAssistGenerateNotePrompt("onboarding flow")
-	for _, needle := range []string{"html-anything", "Arial", "#38bdf8", "#a78bfa"} {
+	for _, needle := range []string{"html-anything", "Arial", "#8b5cf6", "#a78bfa"} {
 		if !strings.Contains(p, needle) {
 			t.Fatalf("missing %q in:\n%s", needle, p)
 		}

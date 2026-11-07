@@ -147,7 +147,7 @@ func (h *Handlers) modelIdentityLine() string {
 	if h == nil || h.aiService == nil {
 		return dorphai.ModelIdentityInstructions("", "")
 	}
-	return h.aiService.ModelIdentityLine()
+	return h.aiService.OrchestratorModelIdentityLine()
 }
 
 const maxToolResultRunes = 40_000
@@ -341,8 +341,9 @@ func persistManagementCachesAsync(cacheKey, userID, sessionID, prompt, reply str
 // chatWithManagementTools runs a multi-turn loop: the model may issue JSON API calls executed against the local Gin router.
 // agentInstructions is optional extra persona text from a selected Dorph AI agent.
 // skillIDs optionally loads full skill bodies in addition to the enabled skills catalog.
-func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, userPrompt, agentInstructions string, skillIDs []string) (string, []string, error) {
+func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, userPrompt, agentInstructions string, skillIDs []string, agentMemoryContext string, emit ai.StreamEmit) (string, string, []string, error) {
 	ctx := context.Background()
+	svc := h.aiForChat(c)
 	// Key the exact cache on the bearer subject and the enabled-lesson fingerprint.
 	// The userID argument is the chat header, which a client can set. No trusted
 	// identity means the exact cache is neither read nor written.
@@ -351,21 +352,31 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 	if trusted && !(h.hybridStore != nil && h.hybridStore.IsAttached(userID, sessionID)) {
 		if fp, fpOK := h.enabledLessonCacheFingerprint(lessonUser); fpOK {
 			cacheKey = managementExactQueryKey(lessonUser, fp, agentInstructions, userPrompt)
+			if cfg, ok := h.savedChatConfig(c); ok {
+				cacheKey += "\n" + string(cfg.Provider) + "\n" + cfg.Model
+			}
 		}
 	}
 	if cacheKey != "" {
 		if cached, ok := managementExactQueryCache.Get(cacheKey); ok {
 			if reply, ok := cached.(string); ok && strings.TrimSpace(reply) != "" {
 				log.Printf("[MGMT-CHAT] exact-query cache hit user=%s session=%s", lessonUser, sessionID)
-				return reply, nil, nil
+				return reply, "", nil, nil
 			}
 		}
 	}
 
 	hist := h.toolChatHistory(userID, sessionID)
-	first := managementChatLead(h.modelIdentityLine())
+	identity := ""
+	if svc != nil {
+		identity = svc.OrchestratorModelIdentityLine()
+	}
+	first := managementChatLead(identity)
 	if skillsBlock := h.agentSkillsAndLessonsContext(c, skillIDs); skillsBlock != "" {
 		first += "\n\n" + skillsBlock
+	}
+	if mem := strings.TrimSpace(agentMemoryContext); mem != "" {
+		first += "\n\n" + mem
 	}
 	if strings.TrimSpace(agentInstructions) != "" {
 		first += "\n\n--- Selected agent focus ---\n" + strings.TrimSpace(agentInstructions)
@@ -393,30 +404,67 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 
 	for round := 0; round < managementToolMaxRounds; round++ {
 		var reply string
+		var reasoning string
 		var err error
 		if h.managementReply != nil {
 			reply, err = h.managementReply(ctx, userPrompt)
+		} else if emit != nil {
+			var thinkAcc, contentAcc strings.Builder
+			silent := func(r, c string) error {
+				if r != "" {
+					thinkAcc.WriteString(r)
+				}
+				if c != "" {
+					contentAcc.WriteString(c)
+				}
+				return nil
+			}
+			ans, think, streamErr := svc.OrchestratorStreamCompletion(ctx, messages, silent)
+			if streamErr != nil {
+				return "", "", toolLog, streamErr
+			}
+			reply = strings.TrimSpace(ans)
+			if reply == "" {
+				reply = strings.TrimSpace(contentAcc.String())
+			}
+			reasoning = strings.TrimSpace(think)
+			if reasoning == "" {
+				reasoning = strings.TrimSpace(thinkAcc.String())
+			}
+			err = nil
 		} else {
-			reply, err = h.aiService.ChatCompletion(ctx, messages)
+			reply, err = svc.OrchestratorChatCompletion(ctx, messages)
 		}
 		if err != nil {
-			return "", toolLog, err
+			return "", "", toolLog, err
 		}
 		reply = strings.TrimSpace(reply)
 		if reply == "" {
-			return "", toolLog, fmt.Errorf("empty model response")
+			return "", "", toolLog, fmt.Errorf("empty model response")
 		}
 
 		obj, ok := dorphai.ExtractJSONObject(reply)
 		if !ok {
+			if emit != nil {
+				if reasoning != "" {
+					if err := emit(reasoning, ""); err != nil {
+						return reply, reasoning, toolLog, err
+					}
+				}
+				if reply != "" {
+					if err := emit("", reply); err != nil {
+						return reply, reasoning, toolLog, err
+					}
+				}
+			}
 			persistManagementCachesAsync(cacheKey, userID, sessionID, userPrompt, reply, toolLog)
-			return reply, toolLog, nil
+			return reply, reasoning, toolLog, nil
 		}
 
 		call, err := parseManagementCall(obj)
 		if err != nil {
 			persistManagementCachesAsync(cacheKey, userID, sessionID, userPrompt, reply, toolLog)
-			return reply, toolLog, nil
+			return reply, "", toolLog, nil
 		}
 
 		code, body := h.execManagementAPI(c, call.Method, call.Path, call.Query, call.Body)
@@ -429,5 +477,5 @@ func (h *Handlers) chatWithManagementTools(c *gin.Context, userID, sessionID, us
 		messages = append(messages, ai.DashScopeMessage{Role: "user", Content: followUp})
 	}
 
-	return "", toolLog, fmt.Errorf("management tool loop exceeded %d rounds", managementToolMaxRounds)
+	return "", "", toolLog, fmt.Errorf("management tool loop exceeded %d rounds", managementToolMaxRounds)
 }

@@ -41,6 +41,7 @@ var DorphOwnedTablesFKOrder = []string{
 	"neo4j_ingest_outbox",
 	"ai_skills",
 	"agent_lesson",
+	"agent_working_memory",
 	"StaffType",
 	"StaffStaffType",
 	"email_agent",

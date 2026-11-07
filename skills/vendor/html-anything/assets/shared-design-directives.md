@@ -21,4 +21,4 @@ Design:
 - Clear heading hierarchy, 8px baseline, prose max ~65ch.
 - Contrast ≥ 4.5. Real user data only; no lorem ipsum.
 
-Dorph overlay (wins): Arial / Helvetica Neue / Helvetica / sans-serif; dark `#070b14`; text `#e8eef7`; accents cyan `#38bdf8`, violet `#a78bfa`, mint `#34d399`.
+Dorph overlay (wins): Arial / Helvetica Neue / Helvetica / sans-serif; dark `#221c34`; text `#f4f0fa`; accents `#8b5cf6`, `#a78bfa`, `#f97316`.

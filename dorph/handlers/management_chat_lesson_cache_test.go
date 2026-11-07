@@ -36,7 +36,7 @@ func managementAsk(t *testing.T, h *Handlers, user *dorphdb.PlatUser, bearer boo
 		setBearer(t, h, c.Request, user)
 	}
 	c.Request.Header.Set("X-User-ID", userID)
-	reply, _, err := h.chatWithManagementTools(c, userID, "default", prompt, "", nil)
+	reply, _, _, err := h.chatWithManagementTools(c, userID, "default", prompt, "", nil, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -74,11 +74,7 @@ const Header = () => {
             fontSize: '0.8rem',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            background: (t) => `linear-gradient(135deg, ${t.palette.primary.main} 0%, ${t.palette.info.main} 100%)`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            textShadow: (t) => `0 0 30px ${alpha(t.palette.primary.main, 0.5)}`,
+            color: '#f4f0fa',
           }}
         >
           {t('dorphTools')}

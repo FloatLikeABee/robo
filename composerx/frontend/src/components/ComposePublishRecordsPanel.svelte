@@ -131,7 +131,7 @@
           {#if loading && rows.length === 0}
             <tr class="grid-empty"><td colspan="5">Loading…</td></tr>
           {:else if rows.length === 0}
-            <tr class="grid-empty"><td colspan="5">No saved or published HTML yet. Use <strong>Save HTML</strong> or <strong>Publish</strong> in Compose &amp; Publish.</td></tr>
+            <tr class="grid-empty"><td colspan="5">No saved or published HTML yet. Use <strong>Save</strong> or <strong>Publish</strong> in Compose &amp; Publish.</td></tr>
           {:else}
             {#each rows as row (row.key)}
               <tr>
@@ -162,9 +162,9 @@
 
 <style>
   .btn-secondary {
-    background: var(--color-bg-elevated);
+    background: var(--color-surface);
     color: var(--color-text);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid transparent;
     border-radius: 0.65rem;
     padding: 0.38rem 0.58rem;
     font-size: 0.79rem;

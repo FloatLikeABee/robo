@@ -44,6 +44,9 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 		req.IncludeKnowledge = parseOptionalBoolForm(c, "include_knowledge")
 		req.ContextCacheKey = c.PostForm("context_cache_key")
 		req.PinnedFiles = parsePinnedFilesForm(c)
+		if v := parseOptionalBoolForm(c, "stream"); v != nil {
+			req.Stream = *v
+		}
 		action := c.PostForm("action")
 		file, err := c.FormFile("file")
 		if err == nil && file != nil {
@@ -220,16 +223,28 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 
 	userVisible := req.Message
 	applied := h.applyAgentContext(userID, sessionID, &req)
+	coord, _ := h.runCoordinatorTurn(c, userID, sessionID, userVisible)
+	if len(coord.SubAgents) > 0 {
+		applied.subAgents = intersectSubAgents(applied.subAgents, coord.SubAgents)
+	}
 	llmMessage := applied.message
 	if applied.includeKnowledge {
 		llmMessage = h.hybridAugmentMessage(userID, sessionID, llmMessage)
 	}
 
+	if req.Stream && h.ginEngine != nil {
+		memoryBlock := h.buildAgentMemoryPromptBlock(c, userID, sessionID, coord.Plan)
+		h.chatHandlerStream(c, userID, sessionID, userVisible, llmMessage, agentInstructions, req.SkillIDs, memoryBlock, applied.subAgents, applied.hasDocuments)
+		return
+	}
+
 	var chatResponse string
+	var reasoning string
 	var toolLog []string
 	var genErr error
 	if h.ginEngine != nil {
-		chatResponse, toolLog, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs)
+		memoryBlock := h.buildAgentMemoryPromptBlock(c, userID, sessionID, coord.Plan)
+		chatResponse, reasoning, toolLog, genErr = h.chatWithManagementTools(c, userID, sessionID, llmMessage, agentInstructions, req.SkillIDs, memoryBlock, nil)
 	} else {
 		skillsCtx := h.agentSkillsAndLessonsContext(c, req.SkillIDs)
 		agentExtra := agentInstructions
@@ -240,7 +255,7 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 				agentExtra = skillsCtx
 			}
 		}
-		chatResponse, genErr = h.aiService.GenerateChatResponseWithAgent(llmMessage, agentExtra)
+		chatResponse, genErr = h.aiForChat(c).GenerateChatResponseWithAgent(llmMessage, agentExtra)
 	}
 	if genErr != nil {
 		log.Printf("Error generating chat response: %v", genErr)
@@ -250,6 +265,7 @@ func (h *Handlers) ChatHandler(c *gin.Context) {
 
 	response := models.ChatResponse{
 		Response:  chatResponse,
+		Reasoning: reasoning,
 		SQL:       "",
 		SubAgents: applied.subAgents,
 	}

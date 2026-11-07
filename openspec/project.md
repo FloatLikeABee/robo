@@ -15,3 +15,7 @@ These archived changes are history, not work to re-implement, and their delta sp
 - `2026-09-24-dorphai-pinned-files-readable-context`
 
 Active changes that still mention a Files tab are not permission to bring it back: `dorphai-agent-workspace`, `dorphai-restore-missing-webpack-modules`, and `platform-trim-readme-chat-skills`. Their proposals mark that part superseded.
+
+## Dorph AI chat visual preset
+
+Dorph AI uses a **single twilight glass** chat preset (`data-chat-theme='twilight'`): mid-luminance background, purple primary and orange highlight accents, frosted panels. There is no end-user light/dark toggle; legacy `dark` / `light` localStorage keys migrate to `twilight` once.

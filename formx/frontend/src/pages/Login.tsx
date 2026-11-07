@@ -39,7 +39,7 @@ export function Login() {
           'radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.14), transparent 45%), radial-gradient(circle at 85% 88%, rgba(37, 99, 235, 0.12), transparent 48%), linear-gradient(165deg, #1a2636 0%, #1f354a 52%, #1a2839 100%)',
       }}
     >
-      <div className="w-full max-w-sm rounded-2xl border border-cyan-400/35 bg-[#1c2a3c]/95 p-8 shadow-[0_16px_42px_rgba(8,14,24,0.42)] backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-[#e8deff]/55 bg-[#322a4a] p-8 shadow-[0_16px_42px_rgba(8,14,24,0.42)] backdrop-blur-sm">
         <div className="mb-6 flex items-center gap-2">
           <span className="text-2xl">📄</span>
           <div>

@@ -525,7 +525,7 @@ function QuestionsEditorBody({
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {!isNew && pages.length > 0 && (
-        <div className="flex-shrink-0 flex flex-wrap items-center gap-1 px-2.5 py-1.5 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/20">
+        <div className="flex-shrink-0 flex flex-wrap items-center gap-1 px-2.5 py-1.5 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-[#322a4a]/20">
           {pages.map((page, idx) => (
             <button
               key={page.id}
@@ -596,10 +596,10 @@ function QuestionsEditorModal({ children, onClose }: { children: React.ReactNode
         role="dialog"
         aria-modal="true"
         aria-labelledby="questions-editor-modal-title"
-        className="relative flex flex-col w-full max-w-4xl h-[min(92vh,920px)] rounded-2xl border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-900 shadow-2xl overflow-hidden"
+        className="relative flex flex-col w-full max-w-4xl h-[min(92vh,920px)] rounded-2xl border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-[#322a4a] shadow-2xl overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/90">
+        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#322a4a]/90">
           <h2 id="questions-editor-modal-title" className="text-base font-semibold text-slate-900 dark:text-white">
             Question editor
           </h2>

@@ -418,6 +418,14 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			updated_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_ai_skills_enabled ON ai_skills(enabled)`,
+		`CREATE TABLE IF NOT EXISTS user_ai_provider (
+			user_id TEXT NOT NULL PRIMARY KEY,
+			provider TEXT NOT NULL,
+			base_url TEXT NOT NULL DEFAULT '',
+			api_key TEXT NOT NULL DEFAULT '',
+			model TEXT NOT NULL DEFAULT '',
+			updated_at TEXT NOT NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS agent_lesson (
 			id TEXT NOT NULL PRIMARY KEY,
 			trigger TEXT NOT NULL,
@@ -428,6 +436,13 @@ func ensureTranSQLiteSchema(db *sql.DB) error {
 			owner_user_id TEXT NOT NULL DEFAULT ''
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_agent_lesson_created ON agent_lesson(created_at)`,
+		`CREATE TABLE IF NOT EXISTS agent_working_memory (
+			owner_user_id TEXT NOT NULL,
+			session_id TEXT NOT NULL,
+			summary TEXT NOT NULL DEFAULT '',
+			updated_at TEXT NOT NULL,
+			PRIMARY KEY (owner_user_id, session_id)
+		)`,
 		`CREATE TABLE IF NOT EXISTS dorph_agent_context_cache (
 			user_id TEXT NOT NULL,
 			session_id TEXT NOT NULL,

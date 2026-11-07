@@ -8,7 +8,6 @@ import { useT } from '../../lib/localeReact';
 const LABEL_KEY = {
   'event-logs': 'eventLogs',
   'content-maker': 'contentMaker',
-  project: 'project',
 };
 
 function configuredOrigin(id) {
@@ -16,7 +15,7 @@ function configuredOrigin(id) {
     return process.env.REACT_APP_SHEETX_URL || process.env.REACT_APP_FORMSX_URL || '';
   }
   if (id === 'content-maker') return process.env.REACT_APP_COMPOSERX_URL || '';
-  return process.env.REACT_APP_PROJECTS_URL || process.env.REACT_APP_DORPH_ENGI_URL || process.env.REACT_APP_MORPH_ENGI_URL || '';
+  return '';
 }
 
 async function probeOrigin(url) {
@@ -32,7 +31,7 @@ export default function EmbeddedModule({ id }) {
   const t = useT();
   const frameRef = useRef(null);
   const spec = DORPH_NOTES_EMBEDS.find((item) => item.id === id);
-  const label = t(LABEL_KEY[id] || 'project');
+  const label = t(LABEL_KEY[id] || id);
   const url = resolveEmbedUrl({
     id,
     nodeEnv: process.env.NODE_ENV,
@@ -69,7 +68,13 @@ export default function EmbeddedModule({ id }) {
 
   let body = null;
   if (!url) {
-    body = <Alert severity="info">{t('notConfigured', { label })}</Alert>;
+    body = (
+      <Alert severity="info">
+        {id === 'content-maker'
+          ? 'HTML publisher is not configured. Import and analyze still work on the Data tab.'
+          : t('notConfigured', { label })}
+      </Alert>
+    );
   } else if (up === null) {
     body = (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
@@ -82,9 +87,13 @@ export default function EmbeddedModule({ id }) {
     body = (
       <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
         <Typography variant="body2">
-          {local
-            ? t('notRunning', { label, start: spec.start })
-            : t('notReachable', { label })}
+          {id === 'content-maker'
+            ? local
+              ? `HTML publisher isn’t running. Start it with ${spec.start}. Import and analyze still work on the Data tab.`
+              : 'HTML publisher isn’t reachable. Import and analyze still work on the Data tab.'
+            : local
+              ? t('notRunning', { label, start: spec.start })
+              : t('notReachable', { label })}
         </Typography>
         <Button variant="outlined" onClick={() => setTryId((n) => n + 1)}>{t('retry')}</Button>
       </Box>

@@ -21,7 +21,7 @@ func TestHTMLSkillStaysUnderOllamaBudget(t *testing.T) {
 		t.Fatal("EstimateTokens must be runes/4 rounding up")
 	}
 	low := strings.ToLower(got)
-	for _, needle := range []string{"html-anything", "arial", "dark", "#38bdf8", "#a78bfa"} {
+	for _, needle := range []string{"html-anything", "arial", "dark", "#8b5cf6", "#a78bfa", "#f97316"} {
 		if !strings.Contains(low, strings.ToLower(needle)) {
 			t.Fatalf("missing %q in:\n%s", needle, got)
 		}
@@ -33,7 +33,7 @@ func TestHTMLSkillUsesHexOnly(t *testing.T) {
 	if n := EstimateTokens(got); n > HTMLSkillTokenBudget {
 		t.Fatalf("injected skill is %d tokens, budget is %d", n, HTMLSkillTokenBudget)
 	}
-	for _, banned := range []string{"cyan #38bdf8", "violet #a78bfa", "mint #34d399"} {
+	for _, banned := range []string{"cyan #38bdf8", "violet #a78bfa", "mint #34d399", "#38bdf8", "#34d399", "#070b14"} {
 		if strings.Contains(strings.ToLower(got), banned) {
 			t.Fatalf("colour name before hex %q in:\n%s", banned, got)
 		}
