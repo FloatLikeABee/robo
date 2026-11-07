@@ -17,8 +17,8 @@
 
 ## 4. Push to GitHub
 
-- [ ] 4.1 Stage remaining project work plus this cleanup (never `.env` or secrets). Commit on `main` with a message covering leftover deletion, Project restore, and the unpushed session work. Verify `git status` is clean except ignored files.
-- [ ] 4.2 Push `main` to `origin` (`https://github.com/FloatLikeABee/robo.git`) without `--force`. Verify `git status -sb` shows `main` in sync with `origin/main`.
+- [x] 4.1 Stage remaining project work plus this cleanup (never `.env` or secrets). Commit on `main` with a message covering leftover deletion, Project restore, and the unpushed session work. Verify `git status` is clean except ignored files.
+- [x] 4.2 Push `main` to `origin` (`https://github.com/FloatLikeABee/robo.git`) without `--force`. Verify `git status -sb` shows `main` in sync with `origin/main`.
 
 ## Workflow follow-up
 
